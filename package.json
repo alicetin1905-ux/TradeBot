@@ -1,0 +1,15 @@
+{
+  "name": "tradebot",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Pooled-balance paper-trading bot: one 1000 USDT balance, 25% margin per trade at 10x, max 4 open positions, on ATLAS + GoldenRatio + CRUCIBLE signals.",
+  "main": "src/run.js",
+  "scripts": {
+    "start": "node src/run.js",
+    "reset": "node src/run.js --reset"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "UNLICENSED"
+}

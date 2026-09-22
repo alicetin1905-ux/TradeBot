@@ -1,0 +1,38 @@
+name: Run trading bot
+
+on:
+  schedule:
+    # Every hour at :05 — a few minutes after each 1H candle closes, so the
+    # entry timeframe's last bar is actually final.
+    - cron: '5 * * * *'
+  workflow_dispatch: {}
+
+# Needed so the job can commit the updated state/*.json files back to the repo.
+permissions:
+  contents: write
+
+concurrency:
+  group: trading-bot-run
+  cancel-in-progress: false
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run bot
+        run: node src/run.js
+
+      - name: Commit updated state
+        run: |
+          git config user.name "tradebot"
+          git config user.email "actions@users.noreply.github.com"
+          git add state/
+          git diff --cached --quiet && echo "no state changes" && exit 0
+          git commit -m "Bot run $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          git push

@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>TradeBot</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* Palette matched to BTCLiveBoard ("the first page") so this reads as part
+     of the same family — --bot is this page's own identity colour (its tab
+     tint in the hub), no equivalent slot on the reference page. */
+  :root{
+    --bg:#070a09; --panel:#0e1412; --panel2:#121a17; --border:#1b2320;
+    --text-primary:#eef3f0; --text-secondary:#93a49c; --text-tertiary:#5c6b64;
+    --up:#35ffb0; --down:#ff4d6a; --warn:#ffc857; --bot:#b98bff;
+    --mono:'JetBrains Mono','SF Mono',Consolas,monospace;
+    --sans:'Inter',system-ui,sans-serif;
+  }
+  *{ box-sizing:border-box; }
+  html,body{
+    margin:0; padding:0; min-height:100%;
+    background:var(--bg); color:var(--text-primary);
+    font-family:var(--sans);
+    -webkit-font-smoothing:antialiased;
+  }
+  body{ padding:16px 16px max(16px, env(safe-area-inset-bottom)); padding-top:max(16px, env(safe-area-inset-top)); }
+
+  .head{ display:flex; align-items:baseline; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom:4px; }
+  .head h1{ margin:0; font-size:18px; letter-spacing:0.02em; }
+  .head .sub{ font-family:var(--mono); font-size:11px; color:var(--text-tertiary); letter-spacing:0.04em; text-transform:uppercase; }
+
+  .banner{
+    margin:12px 0 16px; padding:9px 12px; border-radius:10px;
+    background:rgba(185,139,255,0.08); border:1px solid rgba(185,139,255,0.25);
+    color:var(--text-secondary); font-size:11.5px; line-height:1.5;
+  }
+  .banner b{ color:var(--bot); }
+
+  .totalCard{
+    background:var(--panel); border:1px solid var(--border); border-radius:14px;
+    padding:16px; margin-bottom:14px;
+    display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;
+  }
+  .totalCard .label{ font-size:10px; letter-spacing:0.14em; text-transform:uppercase; color:var(--text-tertiary); margin-bottom:4px; }
+  .totalCard .value{ font-family:var(--mono); font-size:26px; font-weight:700; }
+  .totalCard .pnl{ font-family:var(--mono); font-size:13px; margin-top:2px; }
+  .totalCard .breakdown{ font-family:var(--mono); font-size:10.5px; color:var(--text-tertiary); margin-top:5px; }
+  .totalCard .breakdown:empty{ display:none; }
+  .up{ color:var(--up); } .down{ color:var(--down); } .flat{ color:var(--text-tertiary); }
+
+  .resetAccountBtn{
+    display:inline-block; margin-top:7px; padding:5px 10px; border-radius:7px;
+    background:var(--panel2); border:1px solid var(--border); color:var(--text-secondary);
+    font-family:var(--mono); font-size:10px; text-decoration:none; letter-spacing:0.03em;
+  }
+  .resetAccountBtn:active{ opacity:0.7; }
+
+  .grid{ display:grid; grid-template-columns:repeat(2, 1fr); gap:10px; margin-bottom:16px; }
+  @media (min-width:560px){ .grid{ grid-template-columns:repeat(3, 1fr); } }
+
+  .coin{
+    background:var(--panel); border:1px solid var(--border); border-radius:12px;
+    padding:12px; position:relative; overflow:hidden;
+  }
+  .coin .sym{ font-weight:700; font-size:13px; letter-spacing:0.02em; }
+  .coin .bal{ font-family:var(--mono); font-size:17px; margin-top:6px; }
+  .coin .pnl{ font-family:var(--mono); font-size:11px; margin-top:2px; }
+  .coin .pos{
+    margin-top:8px; padding-top:8px; border-top:1px solid var(--border);
+    font-family:var(--mono); font-size:10.5px; color:var(--text-secondary); line-height:1.6;
+  }
+  .coin .pos .dir{ font-weight:700; }
+  .coin .pos.long .dir{ color:var(--up); }
+  .coin .pos.short .dir{ color:var(--down); }
+  .coin .noPos{ margin-top:8px; padding-top:8px; border-top:1px solid var(--border); font-size:10.5px; color:var(--text-tertiary); }
+  .coin .proximity{ margin-top:8px; padding-top:8px; border-top:1px solid var(--border); }
+  .coin .proximityTrack{ height:5px; border-radius:3px; background:var(--panel2); overflow:hidden; }
+  .coin .proximityFill{ height:100%; background:var(--bot); border-radius:3px; }
+  .coin .proximityLabel{ margin-top:4px; font-family:var(--mono); font-size:9.5px; color:var(--text-tertiary); }
+
+  h2{ font-size:11px; letter-spacing:0.12em; text-transform:uppercase; color:var(--text-tertiary); margin:20px 0 8px; }
+
+  .trade{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    padding:9px 12px; border-bottom:1px solid var(--border); font-size:12px;
+  }
+  .trade:last-child{ border-bottom:0; }
+  .trade .sym{ font-weight:700; width:64px; flex:0 0 auto; }
+  .trade .reason{ color:var(--text-secondary); flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .trade .pnl{ font-family:var(--mono); font-weight:600; flex:0 0 auto; }
+  .tradesCard{ background:var(--panel); border:1px solid var(--border); border-radius:12px; overflow:hidden; }
+  .empty{ padding:16px 12px; color:var(--text-tertiary); font-size:12px; text-align:center; }
+
+  .statCard{ background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:14px; }
+  .statGrid{ display:grid; grid-template-columns:repeat(2, 1fr); gap:12px 10px; }
+  @media (min-width:480px){ .statGrid{ grid-template-columns:repeat(4, 1fr); } }
+  .statGrid .stat .k{ font-size:9.5px; letter-spacing:0.08em; text-transform:uppercase; color:var(--text-tertiary); }
+  .statGrid .stat .v{ font-family:var(--mono); font-size:16px; font-weight:700; margin-top:3px; }
+  .statGrid .stat .v2{ font-family:var(--mono); font-size:10px; color:var(--text-tertiary); margin-top:1px; }
+
+  .chartWrap{ margin-top:14px; padding-top:14px; border-top:1px solid var(--border); position:relative; }
+  .chartWrap .chartLabel{ font-size:9.5px; letter-spacing:0.08em; text-transform:uppercase; color:var(--text-tertiary); margin-bottom:6px; }
+  .chartWrap svg{ display:block; width:100%; height:auto; overflow:visible; }
+  .chartTip{
+    position:absolute; pointer-events:none; opacity:0; transition:opacity .1s ease;
+    background:var(--panel2); border:1px solid var(--border); border-radius:7px;
+    padding:5px 8px; font-family:var(--mono); font-size:10px; white-space:nowrap;
+    transform:translate(-50%, -100%); top:0; left:0;
+  }
+  .chartTip .t1{ color:var(--text-tertiary); }
+  .chartTip .t2{ font-weight:700; margin-top:1px; }
+
+  .posGrid{ display:grid; grid-template-columns:1fr; gap:10px; }
+  @media (min-width:560px){ .posGrid{ grid-template-columns:repeat(2, 1fr); } }
+  .posCard{ background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:14px; }
+  .posCard .posHead{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .posCard .posSymWrap{ display:flex; align-items:center; gap:7px; }
+  .posCard .posSym{ font-weight:700; font-size:14px; }
+  .posBadge{
+    font-family:var(--mono); font-size:9.5px; font-weight:700; letter-spacing:0.07em;
+    padding:2px 7px; border-radius:5px;
+  }
+  .posBadge.long{ color:var(--up); background:rgba(53,255,176,0.12); }
+  .posBadge.short{ color:var(--down); background:rgba(255,77,106,0.12); }
+  .posCard .posAge{ font-family:var(--mono); font-size:10px; color:var(--text-tertiary); }
+  .posCard .markRow{ margin-top:11px; display:flex; align-items:baseline; gap:9px; flex-wrap:wrap; }
+  .posCard .markPrice{ font-family:var(--mono); font-size:19px; font-weight:700; }
+  .posCard .markPnl{ font-family:var(--mono); font-size:12px; font-weight:600; }
+  .posCard .entryNote{ font-family:var(--mono); font-size:10px; color:var(--text-tertiary); margin-top:3px; }
+  .posStats{
+    margin-top:11px; padding-top:11px; border-top:1px solid var(--border);
+    display:grid; grid-template-columns:repeat(3, 1fr); gap:9px 6px;
+  }
+  .posStats .k{ font-size:9px; letter-spacing:0.07em; text-transform:uppercase; color:var(--text-tertiary); }
+  .posStats .v{ font-family:var(--mono); font-size:11.5px; margin-top:2px; }
+  .posStats .stat.hit .v{ color:var(--bot); }
+  .posCard .posFoot{
+    margin-top:9px; padding-top:9px; border-top:1px solid var(--border);
+    font-family:var(--mono); font-size:10px; color:var(--text-tertiary); display:flex; justify-content:space-between; gap:8px;
+  }
+
+  .footer{ margin-top:18px; display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .footer .hint{ font-size:10.5px; color:var(--text-tertiary); }
+  #refreshBtn{
+    background:var(--panel2); border:1px solid var(--border); color:var(--text-secondary);
+    font-family:var(--mono); font-size:10.5px; padding:6px 10px; border-radius:8px; cursor:pointer;
+  }
+  #refreshBtn:active{ opacity:0.7; }
+
+  #alertsToggle{
+    background:var(--panel2); border:1px solid var(--border); color:var(--text-secondary);
+    font-family:var(--mono); font-size:10.5px; padding:6px 10px; border-radius:8px; cursor:pointer;
+    flex:0 0 auto;
+  }
+  #alertsToggle.on{ color:var(--bot); border-color:rgba(185,139,255,0.45); }
+  #alertsHint{ font-size:10.5px; line-height:1.5; color:var(--text-tertiary); margin:-6px 0 14px; }
+  #alertsHint:empty{ display:none; margin:0; }
+
+  .navLink{ font-family:var(--mono); font-size:10.5px; color:var(--bot); text-decoration:none; }
+  .rules{ display:flex; flex-wrap:wrap; gap:6px; margin:0 0 14px; }
+  .rules .chip{
+    font-family:var(--mono); font-size:10.5px; padding:4px 9px; border-radius:7px;
+    background:var(--panel2); border:1px solid var(--border); color:var(--text-secondary);
+  }
+  .rules .chip b{ color:var(--text-primary); font-weight:700; }
+  .slotBar{ display:flex; gap:5px; margin-top:8px; }
+  .slotBar span{ width:26px; height:6px; border-radius:3px; background:var(--panel2); border:1px solid var(--border); }
+  .slotBar span.on{ background:var(--bot); border-color:var(--bot); }
+  .coin.inPos{ border-color:rgba(185,139,255,0.45); }
+</style>
+</head>
+<body>
+
+<div class="head">
+  <h1>TradeBot · 1000 USDT</h1>
+  <div class="sub">Paper trading · ATLAS + GoldenRatio + CRUCIBLE</div>
+</div>
+
+<div class="banner">
+  <b>Paper trading only</b> — one shared balance for all six coins,
+  same ATLAS + GoldenRatio + CRUCIBLE signals. When more coins qualify than there are free slots, the strongest score wins.
+  No API keys, no exchange account, no real orders.
+</div>
+
+<div style="display:flex; align-items:center; gap:8px; margin:-6px 0 6px;">
+  <button type="button" id="alertsToggle">Alerts off</button>
+  <span style="font-size:10.5px; color:var(--text-tertiary);">Notify when the bot takes a new entry</span>
+</div>
+<div id="alertsHint"></div>
+
+<div class="rules" id="rules"></div>
+
+<div class="totalCard">
+  <div>
+    <div class="label">Total equity</div>
+    <div class="value" id="totalValue">—</div>
+    <div class="pnl flat" id="totalPnl">—</div>
+    <div class="breakdown" id="totalBreakdown"></div>
+    <div class="slotBar" id="slotBar"></div>
+  </div>
+  <div style="text-align:right">
+    <div class="label">Started</div>
+    <div class="value" id="startedValue" style="font-size:15px; color:var(--text-secondary)">—</div>
+    <a class="resetAccountBtn" href="https://github.com/alicetin1905-ux/TradeBot/actions/workflows/reset.yml" target="_blank" rel="noopener" title="Opens GitHub — click &quot;Run workflow&quot; there to confirm">Reset account</a>
+  </div>
+</div>
+
+<h2>Signals</h2>
+<div class="grid" id="coinGrid"></div>
+
+<h2>Performance</h2>
+<div class="statCard" id="perfCard"><div class="empty">Loading…</div></div>
+
+<h2>Open positions</h2>
+<div id="openPositions"><div class="tradesCard"><div class="empty">Loading…</div></div></div>
+
+<h2>Recent trades</h2>
+<div class="tradesCard" id="tradeLog"><div class="empty">Loading…</div></div>
+
+<div class="footer">
+  <div class="hint" id="lastUpdated">—</div>
+  <button type="button" id="refreshBtn">Refresh</button>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var SYMBOLS = [
+    { id: 'BTCUSDT', label: 'BTC' },
+    { id: 'ETHUSDT', label: 'ETH' },
+    { id: 'SOLUSDT', label: 'SOL' },
+    { id: 'XRPUSDT', label: 'XRP' },
+    { id: 'BNBUSDT', label: 'BNB' },
+    { id: 'DOGEUSDT', label: 'DOGE' },
+  ];
+  var SCORE_THRESHOLD = 25; // matches config.js SCORE_THRESHOLD — the |score| that triggers an entry
+  var ENTRY_TF = '60';      // matches config.js ENTRY_TF — how flipEntries.json keys are built ("SYMBOL:60")
+  var RAW_BASE = 'https://raw.githubusercontent.com/alicetin1905-ux/TradeBot/main/state/';
+
+  var els = {
+    totalValue: document.getElementById('totalValue'),
+    totalPnl: document.getElementById('totalPnl'),
+    totalBreakdown: document.getElementById('totalBreakdown'),
+    rules: document.getElementById('rules'),
+    slotBar: document.getElementById('slotBar'),
+    startedValue: document.getElementById('startedValue'),
+    coinGrid: document.getElementById('coinGrid'),
+    openPositions: document.getElementById('openPositions'),
+    tradeLog: document.getElementById('tradeLog'),
+    perfCard: document.getElementById('perfCard'),
+    lastUpdated: document.getElementById('lastUpdated'),
+    refreshBtn: document.getElementById('refreshBtn'),
+    alertsToggle: document.getElementById('alertsToggle'),
+    alertsHint: document.getElementById('alertsHint'),
+  };
+
+  function fmtMoney(x) {
+    var n = Math.round(x * 100) / 100;
+    return (n < 0 ? '-$' : '$') + Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+  function fmtSigned(x) {
+    var n = Math.round(x * 100) / 100;
+    return (n >= 0 ? '+' : '-') + '$' + Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+  function pnlClass(x) { return x > 0.005 ? 'up' : x < -0.005 ? 'down' : 'flat'; }
+  function fmtPrice(x) {
+    if (x == null) return '—';
+    var abs = Math.abs(x);
+    var dp = abs >= 1000 ? 1 : abs >= 100 ? 2 : abs >= 1 ? 3 : 5;
+    return (+x).toLocaleString('en-US', { minimumFractionDigits: dp, maximumFractionDigits: dp });
+  }
+  function timeAgo(ts) {
+    if (!ts) return '—';
+    var s = Math.floor((Date.now() - ts) / 1000);
+    if (s < 60) return s + 's ago';
+    if (s < 3600) return Math.floor(s / 60) + 'm ago';
+    if (s < 86400) return Math.floor(s / 3600) + 'h ago';
+    return Math.floor(s / 86400) + 'd ago';
+  }
+
+  async function fetchJson(name) {
+    var res = await fetch(RAW_BASE + name + '.json?_=' + Date.now(), { cache: 'no-store' });
+    if (!res.ok) throw new Error(name + ' -> HTTP ' + res.status);
+    return res.json();
+  }
+
+  // One card per coin: its live score and how close it is to an entry, or
+  // the position it holds. There are no per-coin balances in this account.
+  function renderCoins(positions, scores, markPrices) {
+    els.coinGrid.innerHTML = SYMBOLS.map(function (s) {
+      var pos = positions[s.id];
+      var sc = scores[s.id];
+      var extraHtml;
+      if (pos) {
+        var dir = pos.bias === 1 ? 'long' : 'short';
+        var mark = markPrices[s.id];
+        var upnl = mark != null ? (mark - pos.entry) * pos.bias * pos.qtyRemaining : null;
+        extraHtml =
+          '<div class="pnl ' + (upnl == null ? 'flat' : pnlClass(upnl)) + '">' + (upnl == null ? 'mark unavailable' : fmtSigned(upnl) + ' open') + '</div>' +
+          '<div class="pos ' + dir + '">' +
+            '<span class="dir">' + dir.toUpperCase() + '</span> @ ' + fmtPrice(pos.entry) + '<br>' +
+            'SL ' + fmtPrice(pos.stop) + ' · T1 ' + fmtPrice(pos.t1) + (pos.filled && pos.filled.t1 ? ' ✓' : '') +
+            ' · T2 ' + fmtPrice(pos.t2) + (pos.filled && pos.filled.t2 ? ' ✓' : '') +
+            ' · T3 ' + fmtPrice(pos.t3) +
+          '</div>';
+      } else if (sc) {
+        var pct = Math.max(0, Math.min(100, Math.round((Math.abs(sc.score) / SCORE_THRESHOLD) * 100)));
+        var dirWord = sc.score > 0 ? 'long' : sc.score < 0 ? 'short' : '—';
+        extraHtml =
+          '<div class="pnl flat">no position</div>' +
+          '<div class="proximity">' +
+            '<div class="proximityTrack"><div class="proximityFill" style="width:' + pct + '%"></div></div>' +
+            '<div class="proximityLabel">' + pct + '% to entry · ' + dirWord + '</div>' +
+          '</div>';
+      } else {
+        extraHtml = '<div class="noPos">no score yet — waits for the next hourly run</div>';
+      }
+      var scoreTxt = sc ? (sc.score > 0 ? '+' : '') + sc.score : '—';
+      return (
+        '<div class="coin' + (pos ? ' inPos' : '') + '">' +
+          '<div class="sym">' + s.label + '</div>' +
+          '<div class="bal">score ' + scoreTxt + '</div>' +
+          extraHtml +
+        '</div>'
+      );
+    }).join('');
+  }
+
+  function renderRules(account, openCount) {
+    var max = account.maxOpenPositions || 4;
+    els.rules.innerHTML =
+      '<span class="chip">Margin <b>' + (account.marginPct != null ? account.marginPct : '—') + '%</b> of balance / trade</span>' +
+      '<span class="chip">Leverage <b>' + (account.leverage != null ? account.leverage : '—') + 'x</b></span>' +
+      (account.marginPct != null && account.leverage != null
+        ? '<span class="chip">Position value <b>' + fmtMoney(account.balance * account.marginPct / 100 * account.leverage) + '</b> / trade</span>' : '') +
+      '<span class="chip">Max <b>' + max + '</b> open positions</span>';
+    var bars = '';
+    for (var i = 0; i < max; i++) bars += '<span' + (i < openCount ? ' class="on"' : '') + '></span>';
+    els.slotBar.innerHTML = bars;
+  }
+
+  var OKX_BASE = 'https://www.okx.com';
+  function okxInstId(symbol) { return symbol.replace('USDT', '') + '-USDT-SWAP'; }
+
+  // Live mark price per open symbol, straight from OKX (client-side — same
+  // public endpoint the bot itself reads server-side). Failures per symbol
+  // just leave that card showing entry-only; never blocks the rest of the page.
+  async function fetchMarkPrices(symbols) {
+    var out = {};
+    await Promise.all(symbols.map(async function (symbol) {
+      try {
+        var res = await fetch(OKX_BASE + '/api/v5/public/mark-price?instType=SWAP&instId=' + okxInstId(symbol), { cache: 'no-store' });
+        var d = await res.json();
+        if (d.code === '0' && d.data && d.data[0]) out[symbol] = +d.data[0].markPx;
+      } catch (e) { /* leave this symbol out — card falls back to entry-only */ }
+    }));
+    return out;
+  }
+
+  function renderOpenPositions(positions, markPrices) {
+    var entries = SYMBOLS.map(function (s) { return positions[s.id] ? { s: s, pos: positions[s.id] } : null; }).filter(Boolean);
+    if (!entries.length) { els.openPositions.innerHTML = '<div class="tradesCard"><div class="empty">No open positions right now.</div></div>'; return; }
+
+    els.openPositions.innerHTML = '<div class="posGrid">' + entries.map(function (e) {
+      var pos = e.pos;
+      var dir = pos.bias === 1 ? 'long' : 'short';
+      var mark = markPrices[pos.symbol];
+
+      var markHtml;
+      if (mark != null) {
+        var pnl = (mark - pos.entry) * pos.bias * pos.qtyRemaining;
+        var pnlPct = pos.margin ? (pnl / pos.margin) * 100 : 0;
+        var moveCls = pos.bias === 1 ? (mark >= pos.entry ? 'up' : 'down') : (mark <= pos.entry ? 'up' : 'down');
+        markHtml =
+          '<div class="markRow">' +
+            '<span class="markPrice">' + fmtPrice(mark) + '</span>' +
+            '<span class="markPnl ' + pnlClass(pnl) + '">' + fmtSigned(pnl) + ' (' + (pnlPct >= 0 ? '+' : '') + pnlPct.toFixed(1) + '%)</span>' +
+          '</div>' +
+          '<div class="entryNote">entry ' + fmtPrice(pos.entry) + ' · <span class="' + moveCls + '">' + (mark >= pos.entry ? '+' : '') + (((mark - pos.entry) / pos.entry) * 100).toFixed(2) + '%</span> from entry</div>';
+      } else {
+        markHtml = '<div class="markRow"><span class="markPrice">' + fmtPrice(pos.entry) + '</span></div><div class="entryNote">mark price unavailable — showing entry</div>';
+      }
+
+      var stat = function (label, value, hit) {
+        return '<div class="stat' + (hit ? ' hit' : '') + '"><div class="k">' + label + '</div><div class="v">' + value + '</div></div>';
+      };
+
+      return (
+        '<div class="posCard">' +
+          '<div class="posHead">' +
+            '<div class="posSymWrap"><span class="posSym">' + e.s.label + '</span><span class="posBadge ' + dir + '">' + dir.toUpperCase() + '</span></div>' +
+            '<span class="posAge">' + timeAgo(pos.openedAt) + '</span>' +
+          '</div>' +
+          markHtml +
+          '<div class="posStats">' +
+            stat('Stop', fmtPrice(pos.stop)) +
+            stat('T1', fmtPrice(pos.t1), pos.filled && pos.filled.t1) +
+            stat('T2', fmtPrice(pos.t2), pos.filled && pos.filled.t2) +
+            stat('T3', fmtPrice(pos.t3), pos.filled && pos.filled.t3) +
+            stat('Risk', fmtMoney(pos.riskAmt)) +
+            stat('Margin', fmtMoney(pos.margin)) +
+          '</div>' +
+          '<div class="posFoot"><span>score ' + (pos.score > 0 ? '+' : '') + pos.score + '</span><span>' + pos.qtyRemaining + ' ' + e.s.label + '</span></div>' +
+        '</div>'
+      );
+    }).join('') + '</div>';
+  }
+  var lastMarkPrices = {};
+
+  function renderTrades(trades) {
+    if (!trades.length) { els.tradeLog.innerHTML = '<div class="empty">No closed trades yet.</div>'; return; }
+    var recent = trades.slice(-25).reverse();
+    els.tradeLog.innerHTML = recent.map(function (t) {
+      var label = (SYMBOLS.find(function (s) { return s.id === t.symbol; }) || { label: t.symbol }).label;
+      return (
+        '<div class="trade">' +
+          '<span class="sym">' + label + '</span>' +
+          '<span class="reason">' + t.reason + '</span>' +
+          '<span class="pnl ' + pnlClass(t.pnl) + '">' + fmtSigned(t.pnl) + '</span>' +
+        '</div>'
+      );
+    }).join('');
+  }
+
+  // Groups trades.json's per-fill records (T1/T2/T3 partials plus the
+  // terminal exit) back into one realized P&L per real position, keyed by
+  // symbol+openedAt — a position that scaled out across three fills is one
+  // win or one loss, not three.
+  function computePositionStats(trades) {
+    var groups = {};
+    trades.forEach(function (t) {
+      var key = t.symbol + ':' + t.openedAt;
+      if (!groups[key]) groups[key] = { symbol: t.symbol, openedAt: t.openedAt, closedAt: t.closedAt, pnl: 0 };
+      groups[key].pnl += t.pnl;
+      if (t.closedAt > groups[key].closedAt) groups[key].closedAt = t.closedAt;
+    });
+    var positions = Object.keys(groups).map(function (k) { return groups[k]; });
+    var wins = positions.filter(function (p) { return p.pnl > 0.005; });
+    var losses = positions.filter(function (p) { return p.pnl < -0.005; });
+    var sum = function (arr) { return arr.reduce(function (s, p) { return s + p.pnl; }, 0); };
+    var extreme = function (better) {
+      return positions.reduce(function (a, p) { return (!a || better(p.pnl, a.pnl)) ? p : a; }, null);
+    };
+    return {
+      positions: positions, wins: wins, losses: losses,
+      totalPnl: sum(positions),
+      avgWin: wins.length ? sum(wins) / wins.length : 0,
+      avgLoss: losses.length ? sum(losses) / losses.length : 0,
+      best: extreme(function (a, b) { return a > b; }),
+      worst: extreme(function (a, b) { return a < b; }),
+    };
+  }
+
+  // Reconstructs equity-over-time from trades.json alone (no separate
+  // history file to maintain): sort every realized fill chronologically and
+  // walk a running total forward from the shared starting balance.
+  function buildEquitySeries(trades, startedTotal) {
+    var sorted = trades.slice().sort(function (a, b) { return a.closedAt - b.closedAt; });
+    var running = startedTotal;
+    var points = [{ t: sorted.length ? sorted[0].closedAt - 1 : Date.now(), equity: startedTotal }];
+    sorted.forEach(function (t) {
+      running += t.pnl;
+      points.push({ t: t.closedAt, equity: running });
+    });
+    return points;
+  }
+
+  function renderPerformance(trades, started) {
+    var stats = computePositionStats(trades);
+    var statHtml =
+      '<div class="statGrid">' +
+        '<div class="stat"><div class="k">Realized P&amp;L</div><div class="v ' + pnlClass(stats.totalPnl) + '">' + fmtSigned(stats.totalPnl) + '</div></div>' +
+        '<div class="stat"><div class="k">Win rate</div><div class="v">' + (stats.positions.length ? Math.round((stats.wins.length / stats.positions.length) * 100) + '%' : '—') + '</div><div class="v2">' + stats.wins.length + 'W / ' + stats.losses.length + 'L</div></div>' +
+        '<div class="stat"><div class="k">Avg win / loss</div><div class="v up">' + (stats.wins.length ? fmtSigned(stats.avgWin) : '—') + '</div><div class="v2 down">' + (stats.losses.length ? fmtSigned(stats.avgLoss) : '—') + '</div></div>' +
+        '<div class="stat"><div class="k">Best / worst</div><div class="v up">' + (stats.best ? fmtSigned(stats.best.pnl) : '—') + '</div><div class="v2">' + (stats.worst ? fmtSigned(stats.worst.pnl) + ' worst' : 'no closed positions yet') + '</div></div>' +
+      '</div>';
+
+    if (!trades.length) {
+      els.perfCard.innerHTML = statHtml + '<div class="chartWrap"><div class="chartLabel">Equity</div><div class="empty">No closed trades yet — nothing to chart.</div></div>';
+      return;
+    }
+
+    var series = buildEquitySeries(trades, started);
+    els.perfCard.innerHTML = statHtml + buildEquityChartHtml(series);
+    wireChartHover(series);
+  }
+
+  var CHART_W = 600, CHART_H = 140, CHART_PAD = 10;
+
+  function buildEquityChartHtml(series) {
+    var values = series.map(function (p) { return p.equity; });
+    var minV = Math.min.apply(null, values), maxV = Math.max.apply(null, values);
+    if (minV === maxV) { minV -= 1; maxV += 1; } // flat series still needs a usable y-range
+    var pad = (maxV - minV) * 0.12;
+    minV -= pad; maxV += pad;
+    var minT = series[0].t, maxT = series[series.length - 1].t;
+    var spanT = Math.max(1, maxT - minT);
+
+    var x = function (t) { return CHART_PAD + ((t - minT) / spanT) * (CHART_W - CHART_PAD * 2); };
+    var y = function (v) { return CHART_H - CHART_PAD - ((v - minV) / (maxV - minV)) * (CHART_H - CHART_PAD * 2); };
+
+    var last = series[series.length - 1].equity, first = series[0].equity;
+    var color = last >= first ? 'var(--up)' : 'var(--down)';
+
+    var linePoints = series.map(function (p) { return x(p.t) + ',' + y(p.equity); });
+    var linePath = 'M' + linePoints.join(' L');
+    var areaPath = 'M' + x(minT) + ',' + (CHART_H - CHART_PAD) + ' L' + linePoints.join(' L') + ' L' + x(maxT) + ',' + (CHART_H - CHART_PAD) + ' Z';
+    var lastX = x(maxT), lastY = y(last);
+
+    return (
+      '<div class="chartWrap">' +
+        '<div class="chartLabel">Equity</div>' +
+        '<svg id="equityChart" viewBox="0 0 ' + CHART_W + ' ' + CHART_H + '" preserveAspectRatio="none">' +
+          '<line x1="' + CHART_PAD + '" y1="' + y(first) + '" x2="' + (CHART_W - CHART_PAD) + '" y2="' + y(first) + '" stroke="var(--border)" stroke-width="1" />' +
+          '<path d="' + areaPath + '" fill="' + color + '" fill-opacity="0.1" stroke="none" />' +
+          '<path d="' + linePath + '" fill="none" stroke="' + color + '" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" />' +
+          '<circle cx="' + lastX + '" cy="' + lastY + '" r="5" fill="' + color + '" stroke="var(--panel)" stroke-width="2" />' +
+          '<text x="' + Math.max(CHART_PAD, lastX - 66) + '" y="' + Math.max(11, lastY - 9) + '" font-family="var(--mono)" font-size="10" fill="var(--text-secondary)">' + fmtMoney(last) + '</text>' +
+          '<g id="chartHoverLayer" opacity="0"><line id="chartCrosshair" y1="' + CHART_PAD + '" y2="' + (CHART_H - CHART_PAD) + '" stroke="var(--text-tertiary)" stroke-width="1" stroke-dasharray="2,2" /><circle id="chartHoverDot" r="4" stroke="var(--panel)" stroke-width="2" /></g>' +
+          '<rect id="chartHitArea" x="0" y="0" width="' + CHART_W + '" height="' + CHART_H + '" fill="transparent" />' +
+        '</svg>' +
+        '<div class="chartTip" id="chartTip"><div class="t1" id="chartTipDate"></div><div class="t2" id="chartTipValue"></div></div>' +
+      '</div>'
+    );
+  }
+
+  // Crosshair + tooltip on pointer move — the dataviz baseline for any
+  // line/area chart, not an optional extra.
+  function wireChartHover(series) {
+    var svg = document.getElementById('equityChart');
+    var hitArea = document.getElementById('chartHitArea');
+    var hoverLayer = document.getElementById('chartHoverLayer');
+    var crosshair = document.getElementById('chartCrosshair');
+    var dot = document.getElementById('chartHoverDot');
+    var tip = document.getElementById('chartTip');
+    var tipDate = document.getElementById('chartTipDate');
+    var tipValue = document.getElementById('chartTipValue');
+    if (!svg || !hitArea) return;
+
+    var minT = series[0].t, maxT = series[series.length - 1].t;
+    var spanT = Math.max(1, maxT - minT);
+    var values = series.map(function (p) { return p.equity; });
+    var minV = Math.min.apply(null, values), maxV = Math.max.apply(null, values);
+    if (minV === maxV) { minV -= 1; maxV += 1; }
+    var pad = (maxV - minV) * 0.12;
+    minV -= pad; maxV += pad;
+    var x = function (t) { return CHART_PAD + ((t - minT) / spanT) * (CHART_W - CHART_PAD * 2); };
+    var y = function (v) { return CHART_H - CHART_PAD - ((v - minV) / (maxV - minV)) * (CHART_H - CHART_PAD * 2); };
+
+    function nearestPoint(vx) {
+      var t = minT + (vx / CHART_W) * spanT;
+      var best = series[0], bestDist = Infinity;
+      series.forEach(function (p) {
+        var d = Math.abs(p.t - t);
+        if (d < bestDist) { bestDist = d; best = p; }
+      });
+      return best;
+    }
+
+    function move(clientX, clientY) {
+      var rect = svg.getBoundingClientRect();
+      var vx = ((clientX - rect.left) / rect.width) * CHART_W;
+      var p = nearestPoint(vx);
+      var px = x(p.t), py = y(p.equity);
+      crosshair.setAttribute('x1', px); crosshair.setAttribute('x2', px);
+      dot.setAttribute('cx', px); dot.setAttribute('cy', py);
+      dot.setAttribute('fill', p.equity >= series[0].equity ? 'var(--up)' : 'var(--down)');
+      hoverLayer.setAttribute('opacity', '1');
+      tipDate.textContent = new Date(p.t).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+      tipValue.textContent = fmtMoney(p.equity);
+      tip.style.left = ((px / CHART_W) * rect.width) + 'px';
+      tip.style.top = ((py / CHART_H) * rect.height - 8) + 'px';
+      tip.style.opacity = '1';
+    }
+    function hide() { hoverLayer.setAttribute('opacity', '0'); tip.style.opacity = '0'; }
+
+    hitArea.addEventListener('mousemove', function (e) { move(e.clientX, e.clientY); });
+    hitArea.addEventListener('mouseleave', hide);
+    hitArea.addEventListener('touchstart', function (e) { if (e.touches[0]) move(e.touches[0].clientX, e.touches[0].clientY); }, { passive: true });
+    hitArea.addEventListener('touchmove', function (e) { if (e.touches[0]) move(e.touches[0].clientX, e.touches[0].clientY); }, { passive: true });
+    hitArea.addEventListener('touchend', hide);
+  }
+
+  /* ---------------- alerts: notify when the bot takes a new entry ----------------
+     Diffs each poll's positions against the previous one — a symbol that has
+     no position now but does after this fetch, or whose position's openedAt
+     changed (the old one fully closed and a fresh one opened within one poll
+     gap), just had a new entry taken. The very first successful fetch only
+     primes this baseline — it never fires for positions that were already
+     open before the page loaded. */
+  var WATCH_KEY = 'tradebot-watch-v1';
+  var watch = { on: false, sys: false };
+  var lastPositions = null;
+
+  function watchLoad() {
+    try {
+      var j = JSON.parse(localStorage.getItem(WATCH_KEY) || '{}');
+      if (typeof j.on === 'boolean') watch.on = j.on;
+    } catch (e) {}
+    watch.sys = typeof Notification !== 'undefined' && Notification.permission === 'granted';
+  }
+  function watchSave() {
+    try { localStorage.setItem(WATCH_KEY, JSON.stringify({ on: watch.on })); } catch (e) {}
+  }
+  function paintWatchUi() {
+    els.alertsToggle.classList.toggle('on', watch.on);
+    els.alertsToggle.textContent = watch.on ? 'Alerts on' : 'Alerts off';
+    if (!watch.on) { els.alertsHint.textContent = ''; return; }
+    var iOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    var standalone = window.navigator.standalone === true ||
+      (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+    if (!watch.sys) {
+      els.alertsHint.textContent = iOS && !standalone
+        ? 'No system notifications in a plain Safari tab — add this to the Home Screen and open it from there to get real alerts.'
+        : 'System notifications are blocked or not permitted in this browser.';
+    } else {
+      els.alertsHint.textContent = 'Watching for new entries — a notification fires the moment the bot opens one, checked every 60s.';
+    }
+  }
+  async function toggleWatch() {
+    if (watch.on) { watch.on = false; watchSave(); paintWatchUi(); return; }
+    watch.on = true;
+    if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+      try { await Notification.requestPermission(); } catch (e) {}
+    }
+    watch.sys = typeof Notification !== 'undefined' && Notification.permission === 'granted';
+    watchSave();
+    paintWatchUi();
+  }
+  function fireEntryNotification(symbol, pos) {
+    if (!watch.sys) return;
+    var label = (SYMBOLS.find(function (s) { return s.id === symbol; }) || { label: symbol }).label;
+    var dir = pos.bias === 1 ? 'LONG' : 'SHORT';
+    var title = 'TradeBot — ' + label;
+    var body = dir + ' @ ' + fmtPrice(pos.entry) + ' · SL ' + fmtPrice(pos.stop) + ' · risk ' + fmtMoney(pos.riskAmt);
+    try {
+      var n = new Notification(title, { body: body, tag: 'tradebot-entry-' + symbol, renotify: false });
+      n.onclick = function () { try { window.focus(); } catch (e) {} n.close(); };
+    } catch (e) {}
+  }
+  function checkNewEntries(positions) {
+    if (lastPositions) {
+      SYMBOLS.forEach(function (s) {
+        var pos = positions[s.id];
+        if (!pos) return;
+        var prev = lastPositions[s.id];
+        if (!prev || prev.openedAt !== pos.openedAt) fireEntryNotification(s.id, pos);
+      });
+    }
+    lastPositions = positions;
+  }
+
+  async function refresh() {
+    els.refreshBtn.textContent = 'Loading…';
+    try {
+      var results = await Promise.all([
+        fetchJson('account'), fetchJson('positions'), fetchJson('trades'),
+        fetchJson('scores').catch(function () { return {}; }),
+      ]);
+      var account = results[0], positions = results[1], trades = results[2], scores = results[3];
+
+      var openSymbols = Object.keys(positions);
+      var markPrices = openSymbols.length ? await fetchMarkPrices(openSymbols) : {};
+      lastMarkPrices = markPrices;
+
+      var balance = account.balance, started = account.startingBalance;
+      var marginUsed = openSymbols.reduce(function (sum, symbol) {
+        var p = positions[symbol];
+        return sum + p.margin * (p.qtyTotal ? p.qtyRemaining / p.qtyTotal : 1);
+      }, 0);
+
+      var unrealized = 0, unrealizedKnown = 0;
+      openSymbols.forEach(function (symbol) {
+        var pos = positions[symbol], mark = markPrices[symbol];
+        if (mark == null) return;
+        unrealized += (mark - pos.entry) * pos.bias * pos.qtyRemaining;
+        unrealizedKnown++;
+      });
+
+      var total = balance + unrealized;
+      var pnl = total - started;
+
+      els.totalValue.textContent = fmtMoney(total);
+      els.totalPnl.textContent = fmtSigned(pnl) + ' (' + (pnl >= 0 ? '+' : '') + (started ? (pnl / started * 100).toFixed(2) : '0.00') + '%)';
+      els.totalPnl.className = 'pnl ' + pnlClass(pnl);
+      els.totalBreakdown.textContent =
+        'balance ' + fmtMoney(balance) +
+        (openSymbols.length ? ' · unrealized ' + fmtSigned(unrealized) + (unrealizedKnown < openSymbols.length ? ' (' + (openSymbols.length - unrealizedKnown) + ' mark price unavailable)' : '') : '') +
+        ' · margin used ' + fmtMoney(marginUsed) + ' · free ' + fmtMoney(Math.max(0, balance - marginUsed)) +
+        ' · ' + openSymbols.length + '/' + (account.maxOpenPositions || 4) + ' slots';
+      els.startedValue.textContent = fmtMoney(started);
+
+      renderRules(account, openSymbols.length);
+      renderCoins(positions, scores, markPrices);
+      renderOpenPositions(positions, markPrices);
+      renderPerformance(trades, started);
+      renderTrades(trades);
+      if (watch.on) checkNewEntries(positions);
+      else lastPositions = positions;
+
+      els.lastUpdated.textContent = 'updated ' + new Date().toLocaleTimeString();
+    } catch (e) {
+      els.lastUpdated.textContent = 'fetch failed: ' + e.message;
+    } finally {
+      els.refreshBtn.textContent = 'Refresh';
+    }
+  }
+
+  els.refreshBtn.addEventListener('click', refresh);
+  els.alertsToggle.addEventListener('click', toggleWatch);
+  watchLoad();
+  paintWatchUi();
+  refresh();
+  setInterval(refresh, 60000);
+})();
+</script>
+</body>
+</html>

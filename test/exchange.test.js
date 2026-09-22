@@ -240,5 +240,28 @@ test('request signing matches Bybit v5: HMAC-SHA256(ts + key + recvWindow + payl
   assert.deepEqual([body.side, body.orderType, body.qty, body.stopLoss, body.category], ['Buy', 'Market', '10', '2.4', 'linear']);
   const h = seen.opts.headers;
   assert.equal(h['X-BAPI-SIGN'], sign('sec', h['X-BAPI-TIMESTAMP'], 'key', seen.opts.body));
-  assert.throws(() => createClient({ apiKey: 'k', apiSecret: 's', base: 'https://api.bybit.com' }), /testnet/);
+  assert.throws(() => createClient({ apiKey: 'k', apiSecret: 's', env: 'live' }), /only supports testnet and demo/);
+});
+
+test('demo client: signed calls go to api-demo, market data to public mainnet without the key', async () => {
+  const seen = [];
+  const fetchImpl = async (url, opts) => {
+    seen.push({ url, headers: opts.headers || {} });
+    const result = url.includes('instruments-info')
+      ? { list: [{ lotSizeFilter: { qtyStep: '1', minOrderQty: '1', minNotionalValue: '5' }, priceFilter: { tickSize: '0.0001' } }] }
+      : url.includes('tickers') ? { list: [{ markPrice: '2.5' }] }
+        : { list: [{ totalEquity: '50000', totalAvailableBalance: '49000', coin: [{ coin: 'USDT', equity: '50000' }] }] };
+    return { status: 200, text: async () => JSON.stringify({ retCode: 0, result }) };
+  };
+  const c = createClient({ env: 'demo', apiKey: 'key', apiSecret: 'sec', fetchImpl });
+  assert.deepEqual(await c.getWallet(), { equity: 50000, available: 49000 });
+  assert.deepEqual(await c.getInstrument('XRPUSDT'), { qtyStep: 1, minOrderQty: 1, minNotional: 5, tickSize: 0.0001 });
+  assert.equal(await c.getMarkPrice('XRPUSDT'), 2.5);
+
+  assert.ok(seen[0].url.startsWith('https://api-demo.bybit.com/v5/account/wallet-balance?'));
+  assert.equal(seen[0].headers['X-BAPI-API-KEY'], 'key');
+  for (const r of seen.slice(1)) {
+    assert.ok(r.url.startsWith('https://api.bybit.com/v5/market/'), r.url);
+    assert.equal(r.headers['X-BAPI-API-KEY'], undefined, 'public calls must not carry the key');
+  }
 });

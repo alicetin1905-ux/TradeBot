@@ -178,8 +178,8 @@
     background:var(--panel2); border:1px solid var(--border); color:var(--text-secondary);
   }
   .modeTabs a.on{ color:var(--bot); border-color:rgba(185,139,255,0.45); }
-  .banner.testnet{ background:rgba(255,200,87,0.08); border-color:rgba(255,200,87,0.3); }
-  .banner.testnet b{ color:var(--warn); }
+  .banner.exchange{ background:rgba(255,200,87,0.08); border-color:rgba(255,200,87,0.3); }
+  .banner.exchange b{ color:var(--warn); }
 </style>
 </head>
 <body>
@@ -188,7 +188,7 @@
   <h1>TradeBot · 1000 USDT</h1>
   <div class="sub" id="modeSub">Paper trading · ATLAS + GoldenRatio + CRUCIBLE</div>
 </div>
-<div class="modeTabs"><a href="./" id="tabPaper">Paper</a><a href="./?mode=testnet" id="tabTestnet">Bybit testnet</a></div>
+<div class="modeTabs"><a href="./" id="tab-paper">Paper</a><a href="./?mode=demo" id="tab-demo">Bybit demo</a><a href="./?mode=testnet" id="tab-testnet">Bybit testnet</a></div>
 
 <div class="banner" id="banner">
   <b>Paper trading only</b> — one shared balance for all six coins,
@@ -250,19 +250,22 @@
   ];
   var SCORE_THRESHOLD = 25; // matches config.js SCORE_THRESHOLD — the |score| that triggers an entry
   var ENTRY_TF = '60';      // matches config.js ENTRY_TF — how flipEntries.json keys are built ("SYMBOL:60")
-  // ?mode=testnet shows the Bybit testnet account (state/testnet/, pushed by
-  // scripts/testnet-run.sh from the machine that runs it); default is paper.
-  var MODE = /(?:^|[?&])mode=testnet(?:&|$)/.test(location.search) ? 'testnet' : 'paper';
-  var RAW_BASE = 'https://raw.githubusercontent.com/alicetin1905-ux/TradeBot/main/state/' + (MODE === 'testnet' ? 'testnet/' : '');
-  document.getElementById(MODE === 'testnet' ? 'tabTestnet' : 'tabPaper').classList.add('on');
-  if (MODE === 'testnet') {
-    document.title = 'TradeBot · Testnet';
-    document.getElementById('modeSub').textContent = 'Bybit TESTNET · ATLAS + GoldenRatio + CRUCIBLE';
+  // ?mode=demo / ?mode=testnet show the Bybit accounts (state/<mode>/, pushed
+  // by scripts/exchange-run.sh from the machine that runs them); default paper.
+  var modeMatch = location.search.match(/(?:^|[?&])mode=(demo|testnet)(?:&|$)/);
+  var MODE = modeMatch ? modeMatch[1] : 'paper';
+  var EXCHANGE = { demo: 'Bybit demo', testnet: 'Bybit testnet' }[MODE];
+  var RAW_BASE = 'https://raw.githubusercontent.com/alicetin1905-ux/TradeBot/main/state/' + (EXCHANGE ? MODE + '/' : '');
+  document.getElementById('tab-' + MODE).classList.add('on');
+  if (EXCHANGE) {
+    document.title = 'TradeBot · ' + EXCHANGE;
+    document.getElementById('modeSub').textContent = EXCHANGE.toUpperCase() + ' · ATLAS + GoldenRatio + CRUCIBLE';
     var banner = document.getElementById('banner');
-    banner.classList.add('testnet');
-    banner.innerHTML = '<b>Bybit testnet</b> — real orders on Bybit\'s test exchange with test funds, not real money. ' +
-      'Stops and targets sit on the exchange. Balance is the bot\'s 1000 USDT allocation plus its realized P&amp;L (net of fees); ' +
-      'open P&amp;L below uses OKX mark prices, so it can differ a little from Bybit testnet.';
+    banner.classList.add('exchange');
+    banner.innerHTML = '<b>' + EXCHANGE + '</b> — real orders on ' +
+      (MODE === 'demo' ? 'Bybit Demo Trading (mainnet prices, demo funds)' : 'Bybit\'s test exchange with test funds') +
+      ', not real money. Stops and targets sit on the exchange. Balance is the bot\'s 1000 USDT allocation plus its realized P&amp;L (net of fees); ' +
+      'open P&amp;L below uses OKX mark prices, so it can differ a little from Bybit.';
     document.getElementById('resetBtn').style.display = 'none';
   }
 
@@ -660,7 +663,7 @@
     if (!watch.sys) return;
     var label = (SYMBOLS.find(function (s) { return s.id === symbol; }) || { label: symbol }).label;
     var dir = pos.bias === 1 ? 'LONG' : 'SHORT';
-    var title = 'TradeBot' + (MODE === 'testnet' ? ' testnet' : '') + ' — ' + label;
+    var title = 'TradeBot' + (EXCHANGE ? ' ' + EXCHANGE : '') + ' — ' + label;
     var body = dir + ' @ ' + fmtPrice(pos.entry) + ' · SL ' + fmtPrice(pos.stop) + ' · risk ' + fmtMoney(pos.riskAmt);
     try {
       var n = new Notification(title, { body: body, tag: 'tradebot-entry-' + symbol, renotify: false });
@@ -729,8 +732,8 @@
 
       els.lastUpdated.textContent = 'updated ' + new Date().toLocaleTimeString();
     } catch (e) {
-      els.lastUpdated.textContent = MODE === 'testnet' && /HTTP 404/.test(e.message)
-        ? 'no testnet data yet — it appears after the first testnet run pushes state/testnet/ (see README)'
+      els.lastUpdated.textContent = EXCHANGE && /HTTP 404/.test(e.message)
+        ? 'no ' + EXCHANGE + ' data yet — it appears after the first run pushes state/' + MODE + '/ (see README)'
         : 'fetch failed: ' + e.message;
     } finally {
       els.refreshBtn.textContent = 'Refresh';

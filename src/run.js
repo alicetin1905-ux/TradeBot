@@ -10,17 +10,19 @@
 //     coins qualify than there are free slots, the strongest |score| wins
 //   - never more margin than is still free
 //
-// Two modes, picked by TRADEBOT_MODE (env or .env):
+// Three modes, picked by TRADEBOT_MODE (env or .env):
 //   paper   (default) simulated fills, state in state/*.json — what the
 //           hourly GitHub Actions workflow runs
-//   testnet real orders on a Bybit TESTNET account via src/exchange.js,
-//           state in state/testnet/*.json — must run on a machine Bybit
-//           doesn't geo-block (see README)
+//   demo    real orders on Bybit DEMO TRADING (api-demo.bybit.com: mainnet
+//           prices, demo funds) via src/exchange.js, state in state/demo/
+//   testnet real orders on Bybit TESTNET (api-testnet.bybit.com), state in
+//           state/testnet/
+// demo and testnet must run on a machine Bybit doesn't geo-block (README).
 //
 //   node src/run.js              run once
 //   node src/run.js --reset      back to the starting balance (paper: all flat;
-//                                testnet: resets tracking only, not the exchange)
-//   node src/run.js --close-all  testnet only: cancel orders + close everything
+//                                demo/testnet: resets tracking only, not Bybit)
+//   node src/run.js --close-all  demo/testnet: cancel orders + close everything
 'use strict';
 
 const fs = require('fs');
@@ -34,13 +36,15 @@ const { loadEnv } = require('./env');
 
 loadEnv();
 const MODE = (process.env.TRADEBOT_MODE || 'paper').toLowerCase();
-if (!['paper', 'testnet'].includes(MODE)) {
-  console.error(`Unknown TRADEBOT_MODE "${MODE}" — use paper or testnet.`);
+const EXCHANGE_MODES = ['demo', 'testnet'];
+const ON_EXCHANGE = EXCHANGE_MODES.includes(MODE);
+if (MODE !== 'paper' && !ON_EXCHANGE) {
+  console.error(`Unknown TRADEBOT_MODE "${MODE}" — use paper, demo or testnet.`);
   process.exit(1);
 }
 
 const P = config.PORTFOLIO;
-const DIR = path.join(__dirname, '..', 'state', ...(MODE === 'testnet' ? ['testnet'] : []));
+const DIR = path.join(__dirname, '..', 'state', ...(ON_EXCHANGE ? [MODE] : []));
 
 /* ---------------- persistence ---------------- */
 
@@ -61,8 +65,8 @@ function loadState() {
     trades: readJson('trades', []),
     flipEntries: readJson('flipEntries', {}),
     scores: readJson('scores', {}),
-    closing: readJson('closing', {}),         // testnet: closed positions awaiting their final P&L record
-    seenOrderIds: readJson('seenOrderIds', []), // testnet: closed-pnl records already booked
+    closing: readJson('closing', {}),         // demo/testnet: closed positions awaiting their final P&L record
+    seenOrderIds: readJson('seenOrderIds', []), // demo/testnet: closed-pnl records already booked
   };
 }
 function saveState(st) {
@@ -74,7 +78,7 @@ function saveState(st) {
   st.account.mode = MODE;
   st.account.updatedAt = Date.now();
   const keys = ['account', 'positions', 'trades', 'flipEntries', 'scores'];
-  if (MODE === 'testnet') keys.push('closing', 'seenOrderIds');
+  if (ON_EXCHANGE) keys.push('closing', 'seenOrderIds');
   for (const k of keys) writeJson(k, st[k]);
 }
 
@@ -180,13 +184,13 @@ async function runPaper(st, signals, events) {
   }
 }
 
-function testnetClient() {
+function exchangeClient() {
   const { createClient } = require('./bybit');
-  return createClient({ apiKey: process.env.BYBIT_API_KEY, apiSecret: process.env.BYBIT_API_SECRET });
+  return createClient({ env: MODE, apiKey: process.env.BYBIT_API_KEY, apiSecret: process.env.BYBIT_API_SECRET });
 }
 
 async function run() {
-  const client = MODE === 'testnet' ? testnetClient() : null; // fail fast on missing keys
+  const client = ON_EXCHANGE ? exchangeClient() : null; // fail fast on missing keys
   const st = loadState();
   const events = [];
   const signals = await scoreAll(st, events);
@@ -207,11 +211,11 @@ async function run() {
   printSummary(events, st);
 }
 
-async function closeAllTestnet() {
-  if (MODE !== 'testnet') { console.error('--close-all only applies to TRADEBOT_MODE=testnet'); process.exit(1); }
+async function closeAllOnExchange() {
+  if (!ON_EXCHANGE) { console.error('--close-all only applies to TRADEBOT_MODE=demo or testnet'); process.exit(1); }
   const st = loadState();
   const events = [];
-  await require('./exchange').closeAll({ client: testnetClient(), st, events });
+  await require('./exchange').closeAll({ client: exchangeClient(), st, events });
   saveState(st);
   printSummary(events, st);
 }
@@ -224,8 +228,8 @@ function reset() {
   st.scores = {};
   st.closing = {};
   saveState(st); // trade history is kept
-  console.log(MODE === 'testnet'
-    ? `Testnet tracking reset to ${P.STARTING_BALANCE} USDT. Nothing was closed on Bybit — use --close-all for that.`
+  console.log(ON_EXCHANGE
+    ? `${MODE} tracking reset to ${P.STARTING_BALANCE} USDT. Nothing was closed on Bybit — use --close-all for that.`
     : `TradeBot reset to ${P.STARTING_BALANCE} USDT — all positions closed, no trades recorded.`);
 }
 
@@ -252,7 +256,7 @@ function money(x) { return `${x < 0 ? '-' : '+'}$${fmt(Math.abs(x))}`; }
 if (process.argv.includes('--reset')) {
   reset();
 } else if (process.argv.includes('--close-all')) {
-  closeAllTestnet().catch((err) => { console.error(err); process.exit(1); });
+  closeAllOnExchange().catch((err) => { console.error(err); process.exit(1); });
 } else {
   run().catch((err) => { console.error(err); process.exit(1); });
 }

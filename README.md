@@ -38,10 +38,13 @@ a research read on the strategy, not investment advice.
 | `TRADEBOT_MODE` | What it does | State |
 |---|---|---|
 | `paper` (default) | Simulated fills. This is what the hourly GitHub Actions workflow runs. | `state/*.json` |
-| `testnet` | **Real orders on Bybit's testnet** (test funds, not real money). | `state/testnet/*.json` |
+| `demo` | **Real orders on Bybit Demo Trading** (`api-demo.bybit.com`): mainnet prices, demo funds. | `state/demo/*.json` |
+| `testnet` | **Real orders on Bybit's testnet** (`api-testnet.bybit.com`): separate test exchange, test funds. | `state/testnet/*.json` |
 
-There is no live/real-money mode in this build: the Bybit client only talks to
-`api-testnet.bybit.com` and refuses any other host.
+There is no live/real-money mode in this build: the Bybit client only knows
+the demo and testnet environments and refuses anything else. Demo is the
+closer rehearsal for real trading — same prices and order book behaviour as
+the main exchange.
 
 ## Running it
 
@@ -63,21 +66,24 @@ the bot remembers balances and open positions between runs. The
 `main` branch, so it works from GitHub Pages (Settings → Pages → deploy
 from branch `main`, root).
 
-## Bybit testnet mode
+## Bybit demo / testnet mode
 
-Same signals and rules as paper, but executed on a Bybit testnet account:
+Same signals and rules as paper, but executed on a Bybit Demo Trading or
+testnet account (everything below applies to both):
 
 - **Entry:** market order with the **stop attached to the position** in the
   same request, then three reduce-only limit orders for T1/T2/T3
   (40/35/25%). Stops and targets live on Bybit, so they keep working if the
   machine running the bot is off.
 - **Levels:** the strategy reads OKX mainnet candles; its stop/targets are
-  carried over as % distances from Bybit's actual fill price, because
-  testnet prices can drift from mainnet.
+  carried over as % distances from Bybit's actual fill price (Bybit and OKX
+  prices differ slightly, and testnet prices can drift far from mainnet).
+  In demo mode, instrument rules and mark prices come from Bybit's public
+  mainnet API (`api.bybit.com`, no key sent); orders go to `api-demo`.
 - **Sizing:** 25% of the bot's **allocation** as margin at 10x. The allocation
   starts at 1000 USDT and moves with realized P&L (from Bybit's closed-P&L
   records, net of fees), so a testnet wallet with 50,000 test USDT still
-  trades like a 1000 USDT account. Never more margin than Bybit says is free.
+  trades like a 1000 USDT account. Same for a demo wallet. Never more margin than Bybit says is free.
 - **Each hourly run:** books fills, moves the stop to breakeven on Bybit once
   T1 fills, closes at market on a firm score flip, cancels leftover target
   orders after a close, then fills free slots (max 4). Any open USDT-perp
@@ -94,38 +100,44 @@ Same signals and rules as paper, but executed on a Bybit testnet account:
 
 ### Where it can run
 
-Bybit geo-blocks GitHub Actions (and many cloud regions) — testnet mode has
-to run on your own computer or a small VPS in a region Bybit serves. The
+Bybit geo-blocks GitHub Actions (and many cloud regions) — demo and testnet
+modes have to run on your own computer or a small VPS in a region Bybit
+serves (it needs both `api-demo.bybit.com` and `api.bybit.com` for demo). The
 paper workflow on GitHub Actions is unaffected.
 
 ### Setup
 
-1. Create a testnet account at <https://testnet.bybit.com>, use a
-   **Unified Trading Account** in **one-way** position mode, and request test
-   USDT from the testnet faucet/assets page.
-2. Create an API key there: *System-generated*, **Read-Write**, permissions
-   **Contract → Orders + Positions** only. **No withdrawal/transfer
-   permissions.** Restrict it to your machine's IP.
-3. On that machine (Node 18+, git):
+1. **Get a key.**
+   - *Demo (recommended):* log in at <https://www.bybit.com>, switch to
+     **Demo Trading** (top-right account menu), top up demo USDT there, then
+     *API Management → Create New Key* while still in Demo Trading. A key
+     made in Demo Trading only works on `api-demo.bybit.com`.
+   - *Testnet:* create an account at <https://testnet.bybit.com>, request
+     test USDT, and create the key there.
+
+   Either way: **Unified Trading Account**, **one-way** position mode,
+   *System-generated* key, **Read-Write**, permissions **Contract → Orders +
+   Positions** only, **no withdrawal/transfer**, restricted to your machine's IP.
+2. On that machine (Node 18+, git):
    ```
    git clone https://github.com/alicetin1905-ux/TradeBot.git && cd TradeBot
-   cp .env.example .env      # then fill in BYBIT_API_KEY / BYBIT_API_SECRET
+   cp .env.example .env      # set TRADEBOT_MODE=demo (or testnet) + the key
    npm test                  # offline tests of the order logic
-   TRADEBOT_MODE=testnet node src/run.js   # one run — check the output
+   node src/run.js           # one run in the .env mode — check the output
    ```
    `.env` is git-ignored. Never commit it or paste the key anywhere else.
-4. Run it hourly with cron, a few minutes after the candle close:
+3. Run it hourly with cron, a few minutes after the candle close:
    ```
-   6 * * * * /path/to/TradeBot/scripts/testnet-run.sh
+   6 * * * * /path/to/TradeBot/scripts/exchange-run.sh demo
    ```
-   Output goes to `logs/testnet.log`.
-5. Optional — dashboard: run with `PUSH_STATE=1` (e.g.
-   `6 * * * * PUSH_STATE=1 /path/to/TradeBot/scripts/testnet-run.sh`) so it
-   commits `state/testnet/` back to GitHub; that machine then needs push
+   (`testnet` instead of `demo` for testnet.) Output goes to `logs/demo.log`.
+4. Optional — dashboard: prefix with `PUSH_STATE=1` (e.g.
+   `6 * * * * PUSH_STATE=1 /path/to/TradeBot/scripts/exchange-run.sh demo`)
+   so it commits `state/demo/` back to GitHub; that machine then needs push
    access to this repo (a fine-grained token or deploy key limited to
-   TradeBot). The dashboard's **Bybit testnet** tab
-   (`index.html?mode=testnet`) shows it.
+   TradeBot). The dashboard's **Bybit demo** tab (`index.html?mode=demo`)
+   shows it; **Bybit testnet** (`?mode=testnet`) likewise.
 
-`node src/run.js --reset` in testnet mode only resets the bot's own tracking
+`node src/run.js --reset` in demo/testnet mode only resets the bot's own tracking
 (allocation back to 1000 USDT); it doesn't touch anything on Bybit.
 

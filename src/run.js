@@ -144,18 +144,23 @@ async function scoreAll(st, events) {
 }
 
 // Coins with no open position whose signal passes the entry gates,
-// strongest |score| first.
-function entryCandidates(signals, positions, events) {
+// strongest |score| first. A coin held back by a gate gets the gate's code
+// in scores.json (wait: 'fib' | 'chase') so the dashboard can say why.
+function entryCandidates(signals, st, events) {
   const out = [];
   for (const sig of Object.values(signals)) {
     const { symbol, data, analysis } = sig;
-    if (positions[symbol]) continue;
+    if (st.positions[symbol]) continue;
     if (analysis.bias === 0 || !analysis.plan) {
       events.push({ symbol, type: 'flat', reason: analysis.bias === 0 ? 'score inside the stand-aside band' : 'no plan', score: analysis.score });
       continue;
     }
     const check = strategy.entryFilters({ symbol, data, analysis });
-    if (!check.ok) { events.push({ symbol, type: 'hold', reason: check.reason, score: analysis.score }); continue; }
+    if (!check.ok) {
+      if (st.scores[symbol]) st.scores[symbol].wait = check.code;
+      events.push({ symbol, type: 'hold', reason: check.reason, score: analysis.score });
+      continue;
+    }
     out.push({ symbol, data, analysis, fibCheck: check.fibCheck });
   }
   return out.sort((a, b) => Math.abs(b.analysis.score) - Math.abs(a.analysis.score));
@@ -167,7 +172,7 @@ async function runPaper(st, signals, events) {
   }
 
   // Fill free slots, sized off the balance as it stands after this run's exits.
-  for (const c of entryCandidates(signals, st.positions, events)) {
+  for (const c of entryCandidates(signals, st, events)) {
     const open = Object.keys(st.positions).length;
     if (open >= P.MAX_OPEN_POSITIONS) {
       events.push({ symbol: c.symbol, type: 'hold', reason: `all ${P.MAX_OPEN_POSITIONS} position slots in use`, score: c.analysis.score });
@@ -206,7 +211,7 @@ async function run() {
     // A coin whose position closes during this run's reconcile becomes a
     // candidate again next run; coins with an untracked exchange position
     // are skipped inside runExchange.
-    const candidates = entryCandidates(signals, st.positions, events);
+    const candidates = entryCandidates(signals, st, events);
     await exchange.runExchange({ client, st, signals, candidates, events, halt });
   }
 

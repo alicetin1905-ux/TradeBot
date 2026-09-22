@@ -342,7 +342,9 @@
           '<div class="pnl flat">no position</div>' +
           '<div class="proximity">' +
             '<div class="proximityTrack"><div class="proximityFill" style="width:' + pct + '%"></div></div>' +
-            '<div class="proximityLabel">' + pct + '% to entry · ' + dirWord + '</div>' +
+            '<div class="proximityLabel">' + (sc.wait === 'fib' ? 'score ready · waiting on Fibonacci check'
+              : sc.wait === 'chase' ? 'score ready · price ran too far from the entry'
+              : pct + '% to entry') + ' · ' + dirWord + '</div>' +
           '</div>';
       } else {
         extraHtml = '<div class="noPos">no score yet — waits for the next hourly run</div>';

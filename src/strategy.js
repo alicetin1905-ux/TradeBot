@@ -25,12 +25,12 @@ function entryFilters({ symbol, data, analysis }) {
     bias: analysis.bias,
   });
   if (!fibCheck.agrees) {
-    return { ok: false, reason: `ATLAS wants ${dirName(analysis.bias)} but GoldenRatio's last impulse still points the other way` };
+    return { ok: false, code: 'fib', reason: `ATLAS wants ${dirName(analysis.bias)} but GoldenRatio's last impulse still points the other way` };
   }
 
   const chaseDist = Math.abs(analysis.price - analysis.plan.entry);
   if (chaseDist > config.MAX_CHASE_ATR * analysis.atr) {
-    return { ok: false, reason: 'price has drifted too far from the flip entry to still take it' };
+    return { ok: false, code: 'chase', reason: 'price has drifted too far from the flip entry to still take it' };
   }
   return { ok: true, fibCheck };
 }

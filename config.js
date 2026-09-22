@@ -42,7 +42,7 @@ module.exports = {
     MAX_OPEN_POSITIONS: 4,   // 4 x 25% = the whole balance
   },
 
-  // Exchange execution (TRADEBOT_MODE=demo). Paper mode ignores this.
+  // Bybit execution safety limits.
   EXECUTION: {
     // No new entries for the rest of the UTC day once today's realized loss
     // reaches this % of the day's starting balance. Open positions keep

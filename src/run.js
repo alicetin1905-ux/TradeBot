@@ -1,7 +1,9 @@
 #!/usr/bin/env node
-// TradeBot — pooled-balance paper-trading bot. Signals (ATLAS score,
-// GoldenRatio confluence, CRUCIBLE liquidity refinement, scaled T1/T2/T3
-// exit) are the same as UltimateTradingBot's; the money rules differ:
+// TradeBot — pooled-balance bot trading on Bybit Demo Trading
+// (api-demo.bybit.com: mainnet prices, demo funds) via src/exchange.js.
+// Signals (ATLAS score, GoldenRatio confluence, CRUCIBLE liquidity
+// refinement, scaled T1/T2/T3 exit) are the same as UltimateTradingBot's;
+// the money rules differ:
 //   - ONE shared balance (config.PORTFOLIO.STARTING_BALANCE) for all coins
 //   - each trade puts up config.PORTFOLIO.MARGIN_PCT of the current balance
 //     as margin; position value = margin x LEVERAGE (the strategy's own stop
@@ -10,20 +12,16 @@
 //     coins qualify than there are free slots, the strongest |score| wins
 //   - never more margin than is still free
 //
-// Two modes, picked by TRADEBOT_MODE (env or .env):
-//   paper   (default) simulated fills, state in state/*.json — what the
-//           hourly GitHub Actions workflow runs
-//   demo    real orders on Bybit DEMO TRADING (api-demo.bybit.com: mainnet
-//           prices, demo funds) via src/exchange.js, state in state/demo/
-// demo must run on a machine Bybit doesn't geo-block (README).
+// State lives in state/demo/*.json. Must run on a machine Bybit doesn't
+// geo-block (README); keys come from .env.
 //
 //   node src/run.js              run once
-//   node src/run.js --reset      back to the starting balance (paper: all flat;
-//                                demo: resets tracking only, not Bybit)
-//   node src/run.js --close-all  demo: cancel orders + close everything
-//   node src/run.js --sync       demo: sync positions/fills from Bybit
-//                                only — no market data, no new entries; state
-//                                is written only if something changed
+//   node src/run.js --reset      back to the starting balance (tracking only,
+//                                doesn't touch Bybit; scripts/reset.sh does both)
+//   node src/run.js --close-all  cancel orders + close everything on Bybit
+//   node src/run.js --sync       sync positions/fills from Bybit only — no
+//                                market data, no new entries; state is written
+//                                only if something changed
 'use strict';
 
 const fs = require('fs');
@@ -32,20 +30,19 @@ const config = require('../config');
 const marketData = require('./okx');
 const atlasScore = require('./atlasScore');
 const strategy = require('./strategy');
-const { sizeFor } = require('./risk');
+const exchange = require('./exchange');
 const { loadEnv } = require('./env');
 
 loadEnv();
-const MODE = (process.env.TRADEBOT_MODE || 'paper').toLowerCase();
-const EXCHANGE_MODES = ['demo'];
-const ON_EXCHANGE = EXCHANGE_MODES.includes(MODE);
-if (MODE !== 'paper' && !ON_EXCHANGE) {
-  console.error(`Unknown TRADEBOT_MODE "${MODE}" — use paper or demo.`);
+// TRADEBOT_MODE is optional; 'demo' is the only mode (older .env files set it).
+const MODE = (process.env.TRADEBOT_MODE || 'demo').toLowerCase();
+if (MODE !== 'demo') {
+  console.error(`Unknown TRADEBOT_MODE "${MODE}" — TradeBot only trades Bybit demo now (TRADEBOT_MODE=demo).`);
   process.exit(1);
 }
 
 const P = config.PORTFOLIO;
-const DIR = path.join(__dirname, '..', 'state', ...(ON_EXCHANGE ? [MODE] : []));
+const DIR = path.join(__dirname, '..', 'state', 'demo');
 
 /* ---------------- persistence ---------------- */
 
@@ -66,8 +63,8 @@ function loadState() {
     trades: readJson('trades', []),
     flipEntries: readJson('flipEntries', {}),
     scores: readJson('scores', {}),
-    closing: readJson('closing', {}),         // demo: closed positions awaiting their final P&L record
-    seenOrderIds: readJson('seenOrderIds', []), // demo: closed-pnl records already booked
+    closing: readJson('closing', {}),         // closed positions awaiting their final P&L record
+    seenOrderIds: readJson('seenOrderIds', []), // closed-pnl records already booked
   };
 }
 function saveState(st) {
@@ -78,45 +75,10 @@ function saveState(st) {
   st.account.maxOpenPositions = P.MAX_OPEN_POSITIONS;
   st.account.mode = MODE;
   st.account.updatedAt = Date.now();
-  const keys = ['account', 'positions', 'trades', 'flipEntries', 'scores'];
-  if (ON_EXCHANGE) keys.push('closing', 'seenOrderIds');
-  for (const k of keys) writeJson(k, st[k]);
+  for (const k of ['account', 'positions', 'trades', 'flipEntries', 'scores', 'closing', 'seenOrderIds']) writeJson(k, st[k]);
 }
 
 /* ---------------- one run ---------------- */
-
-// Margin still tied up by open positions (scaled down as targets fill).
-function usedMargin(positions) {
-  return Object.values(positions).reduce((sum, p) => sum + p.margin * (p.qtyRemaining / p.qtyTotal), 0);
-}
-
-// Replays candles closed since the position opened against its stop/targets,
-// then applies the signal-flip exit if the score has flipped against it.
-function manageOpenPosition(symbol, data, analysis, st, events) {
-  const openPos = st.positions[symbol];
-  const closedSince = data.candles[config.ENTRY_TF].slice(0, -1).filter(c => c.t > openPos.openedAt);
-  const outcome = strategy.simulatePositionOutcome(openPos, closedSince);
-  const closedAt = closedSince.length ? closedSince[closedSince.length - 1].t : openPos.openedAt;
-  for (const ev of outcome.events) {
-    events.push(ev);
-    st.trades.push({
-      symbol, bias: openPos.bias, entry: openPos.entry, exit: ev.price, pnl: ev.pnl,
-      reason: ev.reason, openedAt: openPos.openedAt, closedAt, score: openPos.score,
-    });
-  }
-  st.account.balance += outcome.realizedDelta;
-  if (outcome.closed) delete st.positions[symbol];
-  else st.positions[symbol] = outcome.position;
-
-  const pos = st.positions[symbol];
-  if (pos && analysis.bias !== 0 && analysis.bias !== pos.bias) {
-    const pnl = (analysis.price - pos.entry) * pos.bias * pos.qtyRemaining;
-    st.account.balance += pnl;
-    st.trades.push(strategy.closeTradeRecord(pos, analysis.price, pos.qtyRemaining, pnl, 'signal-flip', analysis.closedAt));
-    events.push({ symbol, type: 'exit', reason: 'score flipped against open position', pnl, price: analysis.price });
-    delete st.positions[symbol];
-  }
-}
 
 // Scores every coin (records it for the dashboard) and returns
 // { symbol: { symbol, data, analysis } } for the ones with enough history.
@@ -164,54 +126,23 @@ function entryCandidates(signals, st, events) {
   return out.sort((a, b) => Math.abs(b.analysis.score) - Math.abs(a.analysis.score));
 }
 
-async function runPaper(st, signals, events) {
-  for (const symbol of Object.keys(st.positions)) {
-    if (signals[symbol]) manageOpenPosition(symbol, signals[symbol].data, signals[symbol].analysis, st, events);
-  }
-
-  // Fill free slots, sized off the balance as it stands after this run's exits.
-  for (const c of entryCandidates(signals, st, events)) {
-    const open = Object.keys(st.positions).length;
-    if (open >= P.MAX_OPEN_POSITIONS) {
-      events.push({ symbol: c.symbol, type: 'hold', reason: `all ${P.MAX_OPEN_POSITIONS} position slots in use`, score: c.analysis.score });
-      continue;
-    }
-    const balance = st.account.balance;
-    const freeMargin = balance - usedMargin(st.positions);
-    const plan = sizeFor({
-      symbol: c.symbol, equity: balance, bias: c.analysis.bias, entry: c.analysis.plan.entry, stop: c.analysis.plan.stop,
-      leverage: P.LEVERAGE, marginPct: P.MARGIN_PCT,
-      maxMargin: Math.max(0, freeMargin),
-    });
-    const opened = strategy.openEntry({ symbol: c.symbol, data: c.data, analysis: c.analysis, plan, fibCheck: c.fibCheck });
-    if (!opened.position) { events.push({ symbol: c.symbol, type: 'hold', reason: opened.reason, score: c.analysis.score }); continue; }
-    st.positions[c.symbol] = opened.position;
-    events.push(opened.event);
-  }
-}
-
 function exchangeClient() {
   const { createClient } = require('./bybit');
   return createClient({ env: MODE, apiKey: process.env.BYBIT_API_KEY, apiSecret: process.env.BYBIT_API_SECRET });
 }
 
 async function run() {
-  const client = ON_EXCHANGE ? exchangeClient() : null; // fail fast on missing keys
+  const client = exchangeClient(); // fail fast on missing keys
   const st = loadState();
   const events = [];
   const signals = await scoreAll(st, events);
 
-  if (MODE === 'paper') {
-    await runPaper(st, signals, events);
-  } else {
-    const exchange = require('./exchange');
-    const halt = /^(1|true|yes)$/i.test(process.env.TRADEBOT_HALT || '');
-    // A coin whose position closes during this run's reconcile becomes a
-    // candidate again next run; coins with an untracked exchange position
-    // are skipped inside runExchange.
-    const candidates = entryCandidates(signals, st, events);
-    await exchange.runExchange({ client, st, signals, candidates, events, halt });
-  }
+  const halt = /^(1|true|yes)$/i.test(process.env.TRADEBOT_HALT || '');
+  // A coin whose position closes during this run's reconcile becomes a
+  // candidate again next run; coins with an untracked exchange position
+  // are skipped inside runExchange.
+  const candidates = entryCandidates(signals, st, events);
+  await exchange.runExchange({ client, st, signals, candidates, events, halt });
 
   saveState(st);
   printSummary(events, st);
@@ -221,23 +152,21 @@ async function run() {
 // the stop to breakeven after T1, forgets closed positions. No signals are
 // passed, so it never opens or signal-closes anything.
 async function syncOnExchange() {
-  if (!ON_EXCHANGE) { console.error('--sync only applies to TRADEBOT_MODE=demo'); process.exit(1); }
   const client = exchangeClient();
   const st = loadState();
   const snapshot = () => JSON.stringify([st.positions, st.trades, st.closing, st.account.balance]);
   const before = snapshot();
   const events = [];
-  await require('./exchange').runExchange({ client, st, signals: {}, candidates: [], events });
+  await exchange.runExchange({ client, st, signals: {}, candidates: [], events });
   if (snapshot() === before) { console.log(`[${MODE}] sync: no changes`); return; }
   saveState(st);
   printSummary(events, st);
 }
 
 async function closeAllOnExchange() {
-  if (!ON_EXCHANGE) { console.error('--close-all only applies to TRADEBOT_MODE=demo'); process.exit(1); }
   const st = loadState();
   const events = [];
-  await require('./exchange').closeAll({ client: exchangeClient(), st, events });
+  await exchange.closeAll({ client: exchangeClient(), st, events });
   saveState(st);
   printSummary(events, st);
   // Non-zero exit if anything failed to close, so scripts/reset.sh stops
@@ -253,9 +182,7 @@ function reset() {
   st.scores = {};
   st.closing = {};
   saveState(st); // trade history is kept
-  console.log(ON_EXCHANGE
-    ? `${MODE} tracking reset to ${P.STARTING_BALANCE} USDT (this step alone doesn't touch Bybit; scripts/reset.sh also closes everything there).`
-    : `TradeBot reset to ${P.STARTING_BALANCE} USDT — all positions closed, no trades recorded.`);
+  console.log(`Tracking reset to ${P.STARTING_BALANCE} USDT (this step alone doesn't touch Bybit; scripts/reset.sh also closes everything there).`);
 }
 
 /* ---------------- output ---------------- */
@@ -272,7 +199,7 @@ function printSummary(events, st) {
     }
   }
   const open = Object.values(st.positions);
-  console.log(`\nbalance $${fmt(st.account.balance)} (started $${fmt(st.account.startingBalance)}) · ${open.length}/${P.MAX_OPEN_POSITIONS} open · margin used $${fmt(usedMargin(st.positions))}`);
+  console.log(`\nbalance $${fmt(st.account.balance)} (started $${fmt(st.account.startingBalance)}) · ${open.length}/${P.MAX_OPEN_POSITIONS} open · margin used $${fmt(exchange.usedMargin(st.positions))}`);
   for (const p of open) console.log(`  ${p.symbol.padEnd(9)} ${p.bias === 1 ? 'long ' : 'short'} @ ${px(p.entry)}  SL ${px(p.stop)}  margin $${fmt(p.margin)}`);
 }
 function fmt(x) { return (Math.round(x * 100) / 100).toLocaleString('en-US'); }

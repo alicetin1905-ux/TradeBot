@@ -1,7 +1,7 @@
 # TradeBot
 
-Auto trading bot — a pooled-balance paper-trading bot for BTC, ETH, SOL, XRP,
-BNB and DOGE perps. It uses the same signal stack as
+Auto trading bot — a pooled-balance bot trading BTC, ETH, SOL, XRP, BNB and
+DOGE perps on **Bybit Demo Trading** (mainnet prices, demo funds). It uses the same signal stack as
 [UltimateTradingBot](https://github.com/alicetin1905-ux/UltimateTradingBot):
 
 - **ATLAS** — primary signal: ~25-indicator weighted score, Chandelier Exit
@@ -11,12 +11,13 @@ BNB and DOGE perps. It uses the same signal stack as
 - **CRUCIBLE** — liquidation-cluster model that nudges stops off dense
   clusters and pulls T2 in short of them (`src/liquidity.js`).
 
-## This is paper trading only
+## Demo funds only
 
-**No API keys, no exchange account, no real orders.** The bot reads OKX's
-public market-data endpoints, decides what it *would* do, and tracks the
-result in `state/*.json` against a simulated balance. Treat every number as
-a research read on the strategy, not investment advice.
+The bot reads signals from OKX's public market data and places real orders
+on a **Bybit Demo Trading** account (`api-demo.bybit.com`) — demo funds, not
+real money. There is no real-money mode in this build: the Bybit client only
+knows the Demo Trading environment and refuses anything else. Treat every
+number as a rehearsal of the strategy, not investment advice.
 
 ## Rules (`config.js` → `PORTFOLIO`)
 
@@ -33,47 +34,35 @@ a research read on the strategy, not investment advice.
   stop moved to breakeven the moment T1 fills. A firm score flip against an
   open position closes it.
 
-## Modes
-
-| `TRADEBOT_MODE` | What it does | State |
-|---|---|---|
-| `paper` (default) | Simulated fills. | `state/*.json` |
-| `demo` | **Real orders on Bybit Demo Trading** (`api-demo.bybit.com`): mainnet prices, demo funds. | `state/demo/*.json` |
-
-There is no live/real-money mode in this build: the Bybit client only knows
-the Demo Trading environment and refuses anything else.
-
 ## Running it
 
 ```
-node src/run.js           # one run in the .env mode (paper if unset)
-node src/run.js --reset   # back to 1000 USDT, all positions closed
+node src/run.js              # one run: sync with Bybit, score, open/close trades
+node src/run.js --sync       # sync positions/fills only — no new entries
+node src/run.js --close-all  # cancel all orders + close every position on Bybit
+bash scripts/reset.sh demo   # close everything and start over from 1000 USDT
+npm test                     # offline tests of the order logic
 ```
 
-Requires Node 18+ (native `fetch`), no dependencies.
+Requires Node 18+ (native `fetch`), no dependencies. Keys come from `.env`
+(see `.env.example`).
 
 ## Automation
 
-Both accounts run from a Mac via cron, set up once with
-`bash scripts/setup-mac.sh` (see *Setup* below):
+The bot runs from a Mac via cron, set up once with `bash scripts/setup-mac.sh`
+(see *Setup* below):
 
-- `:06` every hour — Bybit demo run (`scripts/exchange-run.sh demo`)
-- every 5 minutes — Bybit demo sync (`scripts/exchange-run.sh demo sync`)
-- `:08` every hour — paper run (`scripts/exchange-run.sh paper`)
+- `:06` every hour — full run (`scripts/exchange-run.sh demo`)
+- every 5 minutes — sync (`scripts/exchange-run.sh demo sync`)
 
-Each run commits its state back to this repo — that commit is how the bot
-remembers balances and open positions, and what the dashboard reads.
-GitHub's own scheduler skipped most hourly runs on this repo, so
-`.github/workflows/bot.yml` is only a manual *Run workflow* button for the
-paper account now; `reset.yml` resets the paper account.
+Each run commits `state/demo/*.json` back to this repo — that is how the bot
+remembers its balance and positions, and what the dashboard reads.
+(GitHub Actions can't run it: Bybit geo-blocks GitHub's runners.)
 
-`index.html` is the dashboard (GitHub Pages, branch `main`, root): the
-**Paper** tab reads `state/*.json`, **Bybit demo** (`?mode=demo`) reads
+`index.html` is the dashboard (GitHub Pages, branch `main`, root); it reads
 `state/demo/*.json`.
 
-## Bybit demo mode
-
-Same signals and rules as paper, but executed on a Bybit Demo Trading account:
+## How it trades on Bybit
 
 - **Entry:** market order with the **stop attached to the position** in the
   same request, then three reduce-only limit orders for T1/T2/T3
@@ -127,15 +116,15 @@ needs both `api-demo.bybit.com` and `api.bybit.com`).
    `.env` is git-ignored. Never commit it or paste the key anywhere else.
 3. `bash scripts/setup-mac.sh` — asks once for a GitHub fine-grained token
    (TradeBot only, *Contents: Read and write*) so runs can upload their
-   state, uploads the current state, and installs the three cron lines
+   state, uploads the current state, and installs the two cron lines
    above. Safe to run again; it keeps any other cron jobs. Logs go to
-   `logs/demo.log` and `logs/paper.log`.
+   `logs/demo.log`.
 
-To start an account over: `scripts/reset.sh demo` (or `paper`) closes every
+To start over: `scripts/reset.sh demo` closes every
 position and order on Bybit, resets the bot to 1000 USDT and uploads the
 result; add `--clear-history` to also wipe the trade list. It holds the same
 lock as the scheduled runs and stops without resetting if anything fails to
 close.
 
-`node src/run.js --reset` on its own in demo mode only resets the bot's own
+`node src/run.js --reset` on its own only resets the bot's own
 tracking (allocation back to 1000 USDT); it doesn't touch anything on Bybit.

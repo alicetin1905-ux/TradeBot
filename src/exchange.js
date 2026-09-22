@@ -1,5 +1,5 @@
-// Exchange executor — runs the same decisions the paper account makes, but
-// as real orders on a Bybit Demo Trading account (see bybit.js).
+// Exchange executor — turns the strategy's decisions into real orders on a
+// Bybit Demo Trading account (see bybit.js).
 //
 // Per run:
 //   1. Reconcile every tracked position with the exchange: record realized
@@ -112,8 +112,8 @@ async function reconcile({ client, st, exPos, signals, events, now }) {
           pos.breakeven = true;
           events.push({ symbol: sym, type: 'info', reason: 'T1 filled, exchange stop moved to breakeven' });
         } catch (err) {
-          // Price already back through entry: the paper rules would have
-          // stopped out at breakeven, so close what's left now.
+          // Price already back through entry: a breakeven stop would have
+          // triggered, so close what's left now.
           const id = await client.closeMarket({ symbol: sym, bias: pos.bias, qty: live.size });
           pos.orders = { ...pos.orders, close: id };
           pos.breakeven = true;
@@ -188,11 +188,11 @@ async function openEntries({ client, st, exPos, wallet, candidates, events, halt
       if (margin <= 0) { hold('no free margin'); continue; }
 
       // Strategy levels (with GoldenRatio/CRUCIBLE refinement) as % of entry.
-      const paperPlan = sizeFor({
+      const basePlan = sizeFor({
         symbol: sym, equity: base, bias: c.analysis.bias, entry: c.analysis.plan.entry, stop: c.analysis.plan.stop,
         leverage: P.LEVERAGE, marginPct: P.MARGIN_PCT,
       });
-      const opened = strategy.openEntry({ symbol: sym, data: c.data, analysis: c.analysis, plan: paperPlan, fibCheck: c.fibCheck });
+      const opened = strategy.openEntry({ symbol: sym, data: c.data, analysis: c.analysis, plan: basePlan, fibCheck: c.fibCheck });
       if (!opened.position) { hold(opened.reason); continue; }
       const lv = opened.position;
       const ratio = (x) => x / lv.entry;

@@ -2,11 +2,11 @@
   "name": "tradebot",
   "version": "1.0.0",
   "private": true,
-  "description": "Pooled-balance paper-trading bot: one 1000 USDT balance, 25% margin per trade at 10x, max 4 open positions, on ATLAS + GoldenRatio + CRUCIBLE signals.",
+  "description": "Pooled-balance bot on Bybit Demo Trading: one 1000 USDT balance, 25% margin per trade at 10x, max 4 open positions, on ATLAS + GoldenRatio + CRUCIBLE signals.",
   "main": "src/run.js",
   "scripts": {
     "start": "node src/run.js",
-    "reset": "node src/run.js --reset",
+    "reset": "bash scripts/reset.sh demo",
     "test": "node --test test/exchange.test.js"
   },
   "engines": {

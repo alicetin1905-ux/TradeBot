@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>TradeBot</title>
+<title>TradeBot · Bybit demo</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -52,12 +52,6 @@
   .totalCard .breakdown:empty{ display:none; }
   .up{ color:var(--up); } .down{ color:var(--down); } .flat{ color:var(--text-tertiary); }
 
-  .resetAccountBtn{
-    display:inline-block; margin-top:7px; padding:5px 10px; border-radius:7px;
-    background:var(--panel2); border:1px solid var(--border); color:var(--text-secondary);
-    font-family:var(--mono); font-size:10px; text-decoration:none; letter-spacing:0.03em;
-  }
-  .resetAccountBtn:active{ opacity:0.7; }
 
   .grid{ display:grid; grid-template-columns:repeat(2, 1fr); gap:10px; margin-bottom:16px; }
   @media (min-width:560px){ .grid{ grid-template-columns:repeat(3, 1fr); } }
@@ -172,12 +166,6 @@
   .slotBar span.on{ background:var(--bot); border-color:var(--bot); }
   .coin.inPos{ border-color:rgba(185,139,255,0.45); }
 
-  .modeTabs{ display:flex; gap:6px; margin:10px 0 0; }
-  .modeTabs a{
-    font-family:var(--mono); font-size:10.5px; padding:5px 11px; border-radius:7px; text-decoration:none;
-    background:var(--panel2); border:1px solid var(--border); color:var(--text-secondary);
-  }
-  .modeTabs a.on{ color:var(--bot); border-color:rgba(185,139,255,0.45); }
   .banner.exchange{ background:rgba(255,200,87,0.08); border-color:rgba(255,200,87,0.3); }
   .banner.exchange b{ color:var(--warn); }
 </style>
@@ -186,14 +174,14 @@
 
 <div class="head">
   <h1>TradeBot · 1000 USDT</h1>
-  <div class="sub" id="modeSub">Paper trading · ATLAS + GoldenRatio + CRUCIBLE</div>
+  <div class="sub">Bybit demo · ATLAS + GoldenRatio + CRUCIBLE</div>
 </div>
-<div class="modeTabs"><a href="./" id="tab-paper">Paper</a><a href="./?mode=demo" id="tab-demo">Bybit demo</a></div>
 
-<div class="banner" id="banner">
-  <b>Paper trading only</b> — one shared balance for all six coins,
-  same ATLAS + GoldenRatio + CRUCIBLE signals. When more coins qualify than there are free slots, the strongest score wins.
-  No API keys, no exchange account, no real orders.
+<div class="banner exchange">
+  <b>Bybit demo</b> — real orders on Bybit Demo Trading (mainnet prices, demo funds), not real money.
+  One shared balance for all six coins; when more coins qualify than there are free slots, the strongest score wins.
+  Stops and targets sit on the exchange. Balance is the bot's 1000 USDT allocation plus its realized P&amp;L (net of fees);
+  open P&amp;L below uses OKX mark prices, so it can differ a little from Bybit.
 </div>
 
 <div style="display:flex; align-items:center; gap:8px; margin:-6px 0 6px;">
@@ -215,7 +203,6 @@
   <div style="text-align:right">
     <div class="label">Started</div>
     <div class="value" id="startedValue" style="font-size:15px; color:var(--text-secondary)">—</div>
-    <a class="resetAccountBtn" id="resetBtn" href="https://github.com/alicetin1905-ux/TradeBot/actions/workflows/reset.yml" target="_blank" rel="noopener" title="Opens GitHub — click &quot;Run workflow&quot; there to confirm">Reset account</a>
   </div>
 </div>
 
@@ -250,24 +237,10 @@
   ];
   var SCORE_THRESHOLD = 25; // matches config.js SCORE_THRESHOLD — the |score| that triggers an entry
   var ENTRY_TF = '60';      // matches config.js ENTRY_TF — how flipEntries.json keys are built ("SYMBOL:60")
-  // ?mode=demo shows the Bybit demo account (state/demo/, pushed
-  // by scripts/exchange-run.sh from the machine that runs them); default paper.
-  var modeMatch = location.search.match(/(?:^|[?&])mode=(demo)(?:&|$)/);
-  var MODE = modeMatch ? modeMatch[1] : 'paper';
-  var EXCHANGE = { demo: 'Bybit demo' }[MODE];
-  var RAW_BASE = 'https://raw.githubusercontent.com/alicetin1905-ux/TradeBot/main/state/' + (EXCHANGE ? MODE + '/' : '');
-  document.getElementById('tab-' + MODE).classList.add('on');
-  if (EXCHANGE) {
-    document.title = 'TradeBot · ' + EXCHANGE;
-    document.getElementById('modeSub').textContent = EXCHANGE.toUpperCase() + ' · ATLAS + GoldenRatio + CRUCIBLE';
-    var banner = document.getElementById('banner');
-    banner.classList.add('exchange');
-    banner.innerHTML = '<b>' + EXCHANGE + '</b> — real orders on ' +
-      (MODE === 'demo' ? 'Bybit Demo Trading (mainnet prices, demo funds)' : 'Bybit\'s test exchange with test funds') +
-      ', not real money. Stops and targets sit on the exchange. Balance is the bot\'s 1000 USDT allocation plus its realized P&amp;L (net of fees); ' +
-      'open P&amp;L below uses OKX mark prices, so it can differ a little from Bybit.';
-    document.getElementById('resetBtn').style.display = 'none';
-  }
+  // Bybit demo account state, pushed to GitHub by scripts/exchange-run.sh
+  // from the Mac that runs the bot.
+  var EXCHANGE = 'Bybit demo';
+  var RAW_BASE = 'https://raw.githubusercontent.com/alicetin1905-ux/TradeBot/main/state/demo/';
 
   var els = {
     totalValue: document.getElementById('totalValue'),
@@ -622,7 +595,7 @@
      gap), just had a new entry taken. The very first successful fetch only
      primes this baseline — it never fires for positions that were already
      open before the page loaded. */
-  var WATCH_KEY = 'tradebot-watch-v1-' + MODE;
+  var WATCH_KEY = 'tradebot-watch-v1-demo';
   var watch = { on: false, sys: false };
   var lastPositions = null;
 
@@ -665,7 +638,7 @@
     if (!watch.sys) return;
     var label = (SYMBOLS.find(function (s) { return s.id === symbol; }) || { label: symbol }).label;
     var dir = pos.bias === 1 ? 'LONG' : 'SHORT';
-    var title = 'TradeBot' + (EXCHANGE ? ' ' + EXCHANGE : '') + ' — ' + label;
+    var title = 'TradeBot ' + EXCHANGE + ' — ' + label;
     var body = dir + ' @ ' + fmtPrice(pos.entry) + ' · SL ' + fmtPrice(pos.stop) + ' · risk ' + fmtMoney(pos.riskAmt);
     try {
       var n = new Notification(title, { body: body, tag: 'tradebot-entry-' + symbol, renotify: false });
@@ -735,8 +708,8 @@
       els.lastUpdated.textContent = 'updated ' + new Date().toLocaleTimeString() +
         (account.updatedAt ? ' · bot data from ' + timeAgo(account.updatedAt) : '');
     } catch (e) {
-      els.lastUpdated.textContent = EXCHANGE && /HTTP 404/.test(e.message)
-        ? 'no ' + EXCHANGE + ' data yet — it appears after the first run pushes state/' + MODE + '/ (see README)'
+      els.lastUpdated.textContent = /HTTP 404/.test(e.message)
+        ? 'no Bybit demo data yet — it appears after the first run pushes state/demo/ (see README)'
         : 'fetch failed: ' + e.message;
     } finally {
       els.refreshBtn.textContent = 'Refresh';

@@ -82,4 +82,23 @@ function openPositionFromPlan(symbol, plan, analysis, fibCheck) {
   };
 }
 
-module.exports = { entryFilters, openEntry };
+// One trade per signal: once a coin has been traded in a direction, it can't
+// be entered in that direction again until its signal has reset — the score
+// went neutral or flipped at least once since. memory[symbol] = { bias, reset }.
+function rememberSignals(memory, signals, positions) {
+  for (const [symbol, pos] of Object.entries(positions)) {
+    const m = memory[symbol];
+    if (!m || m.bias !== pos.bias) memory[symbol] = { bias: pos.bias, reset: false };
+  }
+  for (const [symbol, m] of Object.entries(memory)) {
+    const sig = signals[symbol];
+    if (sig && sig.analysis.bias !== m.bias) m.reset = true;
+    if (m.reset && !positions[symbol]) delete memory[symbol]; // re-armed
+  }
+}
+function signalUsed(memory, symbol, bias) {
+  const m = memory[symbol];
+  return !!m && !m.reset && m.bias === bias;
+}
+
+module.exports = { entryFilters, openEntry, rememberSignals, signalUsed };

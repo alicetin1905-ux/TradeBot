@@ -66,6 +66,7 @@ function loadState() {
     scores: readJson('scores', {}),
     closing: readJson('closing', {}),         // closed positions awaiting their final P&L record
     seenOrderIds: readJson('seenOrderIds', []), // closed-pnl records already booked
+    usedSignals: readJson('usedSignals', {}),   // one trade per signal (strategy.rememberSignals)
   };
 }
 function saveState(st) {
@@ -76,7 +77,7 @@ function saveState(st) {
   st.account.maxOpenPositions = P.MAX_OPEN_POSITIONS;
   st.account.mode = MODE;
   st.account.updatedAt = Date.now();
-  for (const k of ['account', 'positions', 'trades', 'flipEntries', 'scores', 'closing', 'seenOrderIds']) writeJson(k, st[k]);
+  for (const k of ['account', 'positions', 'trades', 'flipEntries', 'scores', 'closing', 'seenOrderIds', 'usedSignals']) writeJson(k, st[k]);
 }
 
 /* ---------------- one run ---------------- */
@@ -105,8 +106,8 @@ async function scoreAll(st, events) {
 }
 
 // Coins with no open position whose signal passes the entry gates,
-// strongest |score| first. A coin held back by a gate gets the gate's code
-// in scores.json (wait: 'fib' | 'chase') so the dashboard can say why.
+// strongest |score| first. A coin held back gets a code in scores.json
+// (wait: 'used' | 'fib' | 'chase') so the dashboard can say why.
 function entryCandidates(signals, st, events) {
   const out = [];
   for (const sig of Object.values(signals)) {
@@ -114,6 +115,11 @@ function entryCandidates(signals, st, events) {
     if (st.positions[symbol]) continue;
     if (analysis.bias === 0 || !analysis.plan) {
       events.push({ symbol, type: 'flat', reason: analysis.bias === 0 ? 'score inside the stand-aside band' : 'no plan', score: analysis.score });
+      continue;
+    }
+    if (strategy.signalUsed(st.usedSignals, symbol, analysis.bias)) {
+      if (st.scores[symbol]) st.scores[symbol].wait = 'used';
+      events.push({ symbol, type: 'hold', reason: 'already traded this signal — waits for the score to go neutral or flip first', score: analysis.score });
       continue;
     }
     const check = strategy.entryFilters({ symbol, data, analysis });
@@ -142,8 +148,13 @@ async function run() {
   // A coin whose position closes during this run's reconcile becomes a
   // candidate again next run; coins with an untracked exchange position
   // are skipped inside runExchange.
+  // One trade per signal: note which signals reset since last run (a coin
+  // whose position Bybit closed since then re-arms one run later, once the
+  // reconcile inside runExchange has dropped it).
+  strategy.rememberSignals(st.usedSignals, signals, st.positions);
   const candidates = entryCandidates(signals, st, events);
   await exchange.runExchange({ client, st, signals, candidates, events, halt });
+  strategy.rememberSignals(st.usedSignals, {}, st.positions); // mark what just opened
 
   saveState(st);
   printSummary(events, st);
@@ -184,6 +195,7 @@ function reset() {
   st.flipEntries = {};
   st.scores = {};
   st.closing = {};
+  st.usedSignals = {};
   saveState(st); // trade history is kept
   console.log(`Tracking reset to ${P.STARTING_BALANCE} USDT (this step alone doesn't touch Bybit; scripts/reset.sh also closes everything there).`);
 }

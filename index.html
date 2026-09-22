@@ -321,7 +321,8 @@
           '<div class="pnl flat">no position</div>' +
           '<div class="proximity">' +
             '<div class="proximityTrack"><div class="proximityFill" style="width:' + pct + '%"></div></div>' +
-            '<div class="proximityLabel">' + (sc.wait === 'fib' ? 'score ready · waiting on Fibonacci check'
+            '<div class="proximityLabel">' + (sc.wait === 'used' ? 'already traded this signal · waits for a reset'
+              : sc.wait === 'fib' ? 'score ready · waiting on Fibonacci check'
               : sc.wait === 'chase' ? 'score ready · price ran too far from the entry'
               : pct + '% to entry') + ' · ' + dirWord + '</div>' +
           '</div>';

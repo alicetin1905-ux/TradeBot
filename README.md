@@ -30,6 +30,10 @@ number as a rehearsal of the strategy, not investment advice.
   qualify than there are free slots, the strongest |score| gets the slot. A
   trade never uses more margin than is still free.
 - Entries decided on closed 1H candles only — nothing repaints intrabar.
+- **One trade per signal:** once a coin has been traded long (or short), it
+  isn't entered in that direction again until its score has gone neutral or
+  flipped at least once since — closing a trade never triggers an instant
+  re-entry on the same signal (`state/demo/usedSignals.json`).
 - Scaled exit: 40% off at T1 (1R), 35% at T2 (2R), 25% at T3 (3R), with the
   stop moved to breakeven the moment T1 fills. A firm score flip against an
   open position closes it.

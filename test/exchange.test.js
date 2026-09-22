@@ -301,3 +301,32 @@ test('ntfy alerts: one message per entry / fill / exit, none for noise', async (
   assert.equal(logs.length, 3);
   delete process.env.NTFY_TOPIC;
 });
+
+test('one trade per signal: no re-entry in the same direction until the signal resets', () => {
+  const { rememberSignals, signalUsed } = require('../src/strategy');
+  const sig = (bias) => ({ XRPUSDT: { analysis: { bias } } });
+  const mem = {};
+
+  // Position opens long -> that long signal is used.
+  rememberSignals(mem, sig(1), { XRPUSDT: { bias: 1 } });
+  assert.equal(signalUsed(mem, 'XRPUSDT', 1), true);
+
+  // Position closes, score still long -> still blocked.
+  rememberSignals(mem, sig(1), {});
+  assert.equal(signalUsed(mem, 'XRPUSDT', 1), true);
+  // ...but the opposite direction is a different signal.
+  assert.equal(signalUsed(mem, 'XRPUSDT', -1), false);
+
+  // Score goes neutral -> re-armed; a new long later is allowed.
+  rememberSignals(mem, sig(0), {});
+  assert.equal(signalUsed(mem, 'XRPUSDT', 1), false);
+  rememberSignals(mem, sig(1), {});
+  assert.equal(signalUsed(mem, 'XRPUSDT', 1), false);
+
+  // A reset seen while the position is still open counts too.
+  rememberSignals(mem, sig(1), { XRPUSDT: { bias: 1 } });
+  rememberSignals(mem, sig(0), { XRPUSDT: { bias: 1 } });
+  rememberSignals(mem, sig(1), { XRPUSDT: { bias: 1 } });
+  rememberSignals(mem, sig(1), {});
+  assert.equal(signalUsed(mem, 'XRPUSDT', 1), false);
+});

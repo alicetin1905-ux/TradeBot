@@ -266,3 +266,38 @@ test('demo client: signed calls go to api-demo, market data to public mainnet wi
     assert.equal(r.headers['X-BAPI-API-KEY'], undefined, 'public calls must not carry the key');
   }
 });
+
+test('ntfy alerts: one message per entry / fill / exit, none for noise', async () => {
+  const notify = require('../src/notify');
+  const st = { account: { balance: 1037.1 }, positions: { XRPUSDT: {} } };
+  const events = [
+    { symbol: 'XRPUSDT', type: 'enter', bias: 1, score: 82, entry: 1.593, stop: 1.5404, t1: 1.6457, t2: 1.6983, t3: 1.751, margin: 249.97, riskAmt: 82.54 },
+    { symbol: 'XRPUSDT', type: 'partial', reason: 'T1 hit, stop moved to breakeven', pnl: 37.1, price: 1.65 },
+    { symbol: 'DOGEUSDT', type: 'exit', reason: 'stop hit', pnl: -71.08, price: 0.09737 },
+    { symbol: 'DOGEUSDT', type: 'exit', reason: 'closed on exchange (P&L record pending)', pnl: 0 },
+    { symbol: 'BTCUSDT', type: 'hold', reason: 'waiting', score: 60 },
+    { symbol: 'XRPUSDT', type: 'info', reason: 'T1 filled, exchange stop moved to breakeven' },
+  ];
+  const msgs = notify.messagesFor(events, st);
+  assert.deepEqual(msgs.map(m => m.title), ['XRP LONG opened', 'XRP T1 hit +$37.10', 'DOGE closed -$71.08']);
+  assert.match(msgs[0].message, /Entry 1\.5930 · SL 1\.5404/);
+  assert.match(msgs[2].message, /Balance \$1037\.10 · 1\/4 open/);
+
+  const posted = [];
+  const fetchImpl = async (url, opts) => { posted.push({ url, body: JSON.parse(opts.body) }); return { ok: true, status: 200 }; };
+  process.env.NTFY_TOPIC = 'test-topic';
+  assert.equal(await notify.send(events, st, { fetchImpl }), 3);
+  assert.equal(posted[0].url, 'https://ntfy.sh/');
+  assert.equal(posted[0].body.topic, 'test-topic');
+
+  process.env.NTFY_TOPIC = 'off';
+  assert.equal(await notify.send(events, st, { fetchImpl }), 0);
+
+  // A failing push is logged, never thrown.
+  process.env.NTFY_TOPIC = 'test-topic';
+  const logs = [];
+  const bad = async () => { throw new Error('offline'); };
+  assert.equal(await notify.send(events, st, { fetchImpl: bad, log: (l) => logs.push(l) }), 0);
+  assert.equal(logs.length, 3);
+  delete process.env.NTFY_TOPIC;
+});

@@ -91,6 +91,13 @@ remembers its balance and positions, and what the dashboard reads.
   - `node src/run.js --close-all` cancels all orders and market-closes every
     position on the six coins.
 
+### Phone alerts
+
+Every entry, T1/T2 fill and exit is pushed to the **ntfy** app
+(`src/notify.js`): install ntfy, subscribe to the topic in `config.js` →
+`NOTIFY.NTFY_TOPIC`, and alerts arrive even with the phone locked. Set
+`NTFY_TOPIC` in `.env` to use another topic, or `NTFY_TOPIC=off` to stop them.
+
 ### Where it can run
 
 Bybit geo-blocks GitHub Actions (and many cloud regions), so demo mode has

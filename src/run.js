@@ -31,6 +31,7 @@ const marketData = require('./okx');
 const atlasScore = require('./atlasScore');
 const strategy = require('./strategy');
 const exchange = require('./exchange');
+const notify = require('./notify');
 const { loadEnv } = require('./env');
 
 loadEnv();
@@ -146,6 +147,7 @@ async function run() {
 
   saveState(st);
   printSummary(events, st);
+  await notify.send(events, st);
 }
 
 // Quick reconcile for the dashboard between hourly runs: books fills, moves
@@ -161,6 +163,7 @@ async function syncOnExchange() {
   if (snapshot() === before) { console.log(`[${MODE}] sync: no changes`); return; }
   saveState(st);
   printSummary(events, st);
+  await notify.send(events, st);
 }
 
 async function closeAllOnExchange() {

@@ -49,4 +49,12 @@ module.exports = {
     // their exchange-side stops/targets either way.
     DAILY_LOSS_LIMIT_PCT: 20,
   },
+
+  // Phone alerts through the ntfy app (src/notify.js). Subscribe to this
+  // topic in ntfy; NTFY_TOPIC in .env overrides it, NTFY_TOPIC=off disables.
+  NOTIFY: {
+    SERVER: 'https://ntfy.sh/',
+    NTFY_TOPIC: 'tradebot-i50rjyd7igft',
+    CLICK_URL: 'https://alicetin1905-ux.github.io/TradeBot/',
+  },
 };

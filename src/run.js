@@ -239,18 +239,24 @@ function printSummary(events, st) {
   console.log(`\n=== TradeBot [${MODE}] (${P.STARTING_BALANCE} USDT pool, ${P.LEVERAGE}x, ${P.MARGIN_PCT}% margin/trade, max ${P.MAX_OPEN_POSITIONS}) @ ${new Date().toISOString()} ===\n`);
   for (const ev of events) {
     if (ev.type === 'enter') {
-      console.log(`[${ev.symbol}] ENTER ${ev.bias === 1 ? 'LONG' : 'SHORT'} @ ${fmt(ev.entry)} | score ${ev.score} | SL ${fmt(ev.stop)} T1 ${fmt(ev.t1)} T2 ${fmt(ev.t2)} T3 ${fmt(ev.t3)} | qty ${ev.qty} margin $${fmt(ev.margin)} risk $${fmt(ev.riskAmt)}`);
+      console.log(`[${ev.symbol}] ENTER ${ev.bias === 1 ? 'LONG' : 'SHORT'} @ ${px(ev.entry)} | score ${ev.score} | SL ${px(ev.stop)} T1 ${px(ev.t1)} T2 ${px(ev.t2)} T3 ${px(ev.t3)} | qty ${ev.qty} margin $${fmt(ev.margin)} risk $${fmt(ev.riskAmt)}`);
     } else if (ev.type === 'partial' || ev.type === 'exit') {
-      console.log(`[${ev.symbol}] ${ev.type === 'exit' ? 'EXIT — ' : ''}${ev.reason} | pnl ${money(ev.pnl)}${ev.price ? ' @ ' + fmt(ev.price) : ''}`);
+      console.log(`[${ev.symbol}] ${ev.type === 'exit' ? 'EXIT — ' : ''}${ev.reason} | pnl ${money(ev.pnl)}${ev.price ? ' @ ' + px(ev.price) : ''}`);
     } else {
       console.log(`[${ev.symbol}] ${ev.type} — ${ev.reason}${ev.score != null ? ` (score ${ev.score})` : ''}`);
     }
   }
   const open = Object.values(st.positions);
   console.log(`\nbalance $${fmt(st.account.balance)} (started $${fmt(st.account.startingBalance)}) · ${open.length}/${P.MAX_OPEN_POSITIONS} open · margin used $${fmt(usedMargin(st.positions))}`);
-  for (const p of open) console.log(`  ${p.symbol.padEnd(9)} ${p.bias === 1 ? 'long ' : 'short'} @ ${fmt(p.entry)}  SL ${fmt(p.stop)}  margin $${fmt(p.margin)}`);
+  for (const p of open) console.log(`  ${p.symbol.padEnd(9)} ${p.bias === 1 ? 'long ' : 'short'} @ ${px(p.entry)}  SL ${px(p.stop)}  margin $${fmt(p.margin)}`);
 }
 function fmt(x) { return (Math.round(x * 100) / 100).toLocaleString('en-US'); }
+// Prices keep enough decimals to tell levels apart on cheap coins (DOGE, XRP).
+function px(x) {
+  const a = Math.abs(x);
+  const dp = a >= 1000 ? 1 : a >= 100 ? 2 : a >= 1 ? 4 : 5;
+  return (+x).toLocaleString('en-US', { minimumFractionDigits: dp, maximumFractionDigits: dp });
+}
 function money(x) { return `${x < 0 ? '-' : '+'}$${fmt(Math.abs(x))}`; }
 
 if (process.argv.includes('--reset')) {

@@ -37,19 +37,16 @@ a research read on the strategy, not investment advice.
 
 | `TRADEBOT_MODE` | What it does | State |
 |---|---|---|
-| `paper` (default) | Simulated fills. This is what the hourly GitHub Actions workflow runs. | `state/*.json` |
+| `paper` (default) | Simulated fills. | `state/*.json` |
 | `demo` | **Real orders on Bybit Demo Trading** (`api-demo.bybit.com`): mainnet prices, demo funds. | `state/demo/*.json` |
-| `testnet` | **Real orders on Bybit's testnet** (`api-testnet.bybit.com`): separate test exchange, test funds. | `state/testnet/*.json` |
 
 There is no live/real-money mode in this build: the Bybit client only knows
-the demo and testnet environments and refuses anything else. Demo is the
-closer rehearsal for real trading — same prices and order book behaviour as
-the main exchange.
+the Demo Trading environment and refuses anything else.
 
 ## Running it
 
 ```
-node src/run.js           # one run
+node src/run.js           # one run in the .env mode (paper if unset)
 node src/run.js --reset   # back to 1000 USDT, all positions closed
 ```
 
@@ -57,19 +54,26 @@ Requires Node 18+ (native `fetch`), no dependencies.
 
 ## Automation
 
-`.github/workflows/bot.yml` runs `node src/run.js` every hour at :05 and
-commits the changed `state/*.json` back to this repo — that commit is how
-the bot remembers balances and open positions between runs. The
-"Reset account" workflow (`reset.yml`) resets it. No secrets are needed.
+Both accounts run from a Mac via cron, set up once with
+`bash scripts/setup-mac.sh` (see *Setup* below):
 
-`index.html` is the dashboard; it reads `state/*.json` from this repo's
-`main` branch, so it works from GitHub Pages (Settings → Pages → deploy
-from branch `main`, root).
+- `:06` every hour — Bybit demo run (`scripts/exchange-run.sh demo`)
+- every 5 minutes — Bybit demo sync (`scripts/exchange-run.sh demo sync`)
+- `:08` every hour — paper run (`scripts/exchange-run.sh paper`)
 
-## Bybit demo / testnet mode
+Each run commits its state back to this repo — that commit is how the bot
+remembers balances and open positions, and what the dashboard reads.
+GitHub's own scheduler skipped most hourly runs on this repo, so
+`.github/workflows/bot.yml` is only a manual *Run workflow* button for the
+paper account now; `reset.yml` resets the paper account.
 
-Same signals and rules as paper, but executed on a Bybit Demo Trading or
-testnet account (everything below applies to both):
+`index.html` is the dashboard (GitHub Pages, branch `main`, root): the
+**Paper** tab reads `state/*.json`, **Bybit demo** (`?mode=demo`) reads
+`state/demo/*.json`.
+
+## Bybit demo mode
+
+Same signals and rules as paper, but executed on a Bybit Demo Trading account:
 
 - **Entry:** market order with the **stop attached to the position** in the
   same request, then three reduce-only limit orders for T1/T2/T3
@@ -77,13 +81,13 @@ testnet account (everything below applies to both):
   machine running the bot is off.
 - **Levels:** the strategy reads OKX mainnet candles; its stop/targets are
   carried over as % distances from Bybit's actual fill price (Bybit and OKX
-  prices differ slightly, and testnet prices can drift far from mainnet).
-  In demo mode, instrument rules and mark prices come from Bybit's public
-  mainnet API (`api.bybit.com`, no key sent); orders go to `api-demo`.
+  prices differ slightly). Instrument rules and mark prices come from
+  Bybit's public mainnet API (`api.bybit.com`, no key sent); orders go to
+  `api-demo`.
 - **Sizing:** 25% of the bot's **allocation** as margin at 10x. The allocation
   starts at 1000 USDT and moves with realized P&L (from Bybit's closed-P&L
-  records, net of fees), so a testnet wallet with 50,000 test USDT still
-  trades like a 1000 USDT account. Same for a demo wallet. Never more margin than Bybit says is free.
+  records, net of fees), so a demo wallet with more USDT still trades like
+  a 1000 USDT account. Never more margin than Bybit says is free.
 - **Each hourly run:** books fills, moves the stop to breakeven on Bybit once
   T1 fills, closes at market on a firm score flip, cancels leftover target
   orders after a close, then fills free slots (max 4). Any open USDT-perp
@@ -100,58 +104,38 @@ testnet account (everything below applies to both):
 
 ### Where it can run
 
-Bybit geo-blocks GitHub Actions (and many cloud regions) — demo and testnet
-modes have to run on your own computer or a small VPS in a region Bybit
-serves (it needs both `api-demo.bybit.com` and `api.bybit.com` for demo). The
-paper workflow on GitHub Actions is unaffected.
+Bybit geo-blocks GitHub Actions (and many cloud regions), so demo mode has
+to run on your own computer or a small VPS in a region Bybit serves (it
+needs both `api-demo.bybit.com` and `api.bybit.com`).
 
 ### Setup
 
-1. **Get a key.**
-   - *Demo (recommended):* log in at <https://www.bybit.com>, switch to
-     **Demo Trading** (top-right account menu), top up demo USDT there, then
-     *API Management → Create New Key* while still in Demo Trading. A key
-     made in Demo Trading only works on `api-demo.bybit.com`.
-   - *Testnet:* create an account at <https://testnet.bybit.com>, request
-     test USDT, and create the key there.
-
-   Either way: **Unified Trading Account**, **one-way** position mode,
-   *System-generated* key, **Read-Write**, permissions **Contract → Orders +
-   Positions** only, **no withdrawal/transfer**, restricted to your machine's IP.
+1. **Get a key:** log in at <https://www.bybit.com>, switch to **Demo
+   Trading** (top-right account menu), top up demo USDT there, then *API
+   Management → Create New Key* while still in Demo Trading (a key made there
+   only works on `api-demo.bybit.com`). **Unified Trading Account**,
+   **one-way** position mode, *System-generated* key, **Read-Write**,
+   permissions **Contract → Orders + Positions** only, **no
+   withdrawal/transfer**, restricted to your machine's IP.
 2. On that machine (Node 18+, git):
    ```
    git clone https://github.com/alicetin1905-ux/TradeBot.git && cd TradeBot
-   cp .env.example .env      # set TRADEBOT_MODE=demo (or testnet) + the key
+   cp .env.example .env      # set TRADEBOT_MODE=demo + the key
    npm test                  # offline tests of the order logic
-   node src/run.js           # one run in the .env mode — check the output
+   node src/run.js           # one demo run — check the output
    ```
    `.env` is git-ignored. Never commit it or paste the key anywhere else.
-3. Run it hourly with cron, a few minutes after the candle close:
-   ```
-   6 * * * * /path/to/TradeBot/scripts/exchange-run.sh demo
-   ```
-   (`testnet` instead of `demo` for testnet.) Output goes to `logs/demo.log`.
-4. Optional — dashboard: prefix with `PUSH_STATE=1` so runs commit
-   `state/demo/` back to GitHub, and add a 5-minute sync so fills and closes
-   show up between hourly runs:
-   ```
-   6 * * * *   PUSH_STATE=1 /path/to/TradeBot/scripts/exchange-run.sh demo
-   */5 * * * * PUSH_STATE=1 /path/to/TradeBot/scripts/exchange-run.sh demo sync
-   ```
-   `sync` (`node src/run.js --sync`) only reads positions/fills from Bybit —
-   no new entries — and only commits when something changed. The machine
-   needs push access to this repo, e.g. a fine-grained token limited to
-   TradeBot with *Contents: Read and write*, saved once with
-   `git config credential.helper store` + a manual `git push`. The dashboard's
-   **Bybit demo** tab (`index.html?mode=demo`) shows it; open P&L there
-   updates every minute from live prices.
+3. `bash scripts/setup-mac.sh` — asks once for a GitHub fine-grained token
+   (TradeBot only, *Contents: Read and write*) so runs can upload their
+   state, uploads the current state, and installs the three cron lines
+   above. Safe to run again; it keeps any other cron jobs. Logs go to
+   `logs/demo.log` and `logs/paper.log`.
 
-To start an account over: `scripts/reset.sh demo` (or `paper` / `testnet`)
-closes every position and order on Bybit, resets the bot to 1000 USDT and
-uploads the result; add `--clear-history` to also wipe the trade list. It
-holds the same lock as the scheduled runs and stops without resetting if
-anything fails to close.
+To start an account over: `scripts/reset.sh demo` (or `paper`) closes every
+position and order on Bybit, resets the bot to 1000 USDT and uploads the
+result; add `--clear-history` to also wipe the trade list. It holds the same
+lock as the scheduled runs and stops without resetting if anything fails to
+close.
 
-`node src/run.js --reset` on its own in demo/testnet mode only resets the bot's own tracking
-(allocation back to 1000 USDT); it doesn't touch anything on Bybit.
-
+`node src/run.js --reset` on its own in demo mode only resets the bot's own
+tracking (allocation back to 1000 USDT); it doesn't touch anything on Bybit.

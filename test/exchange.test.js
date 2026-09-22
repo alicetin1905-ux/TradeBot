@@ -133,7 +133,7 @@ test('opens up to 4 positions, 25% margin at 10x, stop attached, 3 reduce-only t
   assert.ok(ex.calls.some(c => c[0] === 'setLeverage' && c[2] === 10));
 });
 
-test('sizes off the 1000 USDT allocation, not a larger testnet wallet', async () => {
+test('sizes off the 1000 USDT allocation, not a larger demo wallet', async () => {
   const { client } = fakeBybit({ equity: 50000, marks });
   const st = freshState();
   await exchange.runExchange({ client, st, signals: {}, candidates: [candidate('BTCUSDT', 1, 70, 100000, 0.01)], events: [] });
@@ -233,14 +233,15 @@ test('request signing matches Bybit v5: HMAC-SHA256(ts + key + recvWindow + payl
 
   let seen;
   const fetchImpl = async (url, opts) => { seen = { url, opts }; return { status: 200, text: async () => JSON.stringify({ retCode: 0, result: { orderId: 'x1' } }) }; };
-  const c = createClient({ apiKey: 'key', apiSecret: 'sec', fetchImpl });
+  const c = createClient({ env: 'demo', apiKey: 'key', apiSecret: 'sec', fetchImpl });
   await c.openMarket({ symbol: 'XRPUSDT', bias: 1, qty: 10, stopLoss: 2.4 });
-  assert.equal(seen.url, 'https://api-testnet.bybit.com/v5/order/create');
+  assert.equal(seen.url, 'https://api-demo.bybit.com/v5/order/create');
   const body = JSON.parse(seen.opts.body);
   assert.deepEqual([body.side, body.orderType, body.qty, body.stopLoss, body.category], ['Buy', 'Market', '10', '2.4', 'linear']);
   const h = seen.opts.headers;
   assert.equal(h['X-BAPI-SIGN'], sign('sec', h['X-BAPI-TIMESTAMP'], 'key', seen.opts.body));
-  assert.throws(() => createClient({ apiKey: 'k', apiSecret: 's', env: 'live' }), /only supports testnet and demo/);
+  assert.throws(() => createClient({ apiKey: 'k', apiSecret: 's', env: 'live' }), /only supports demo/);
+  assert.throws(() => createClient({ apiKey: 'k', apiSecret: 's', env: 'testnet' }), /only supports demo/);
 });
 
 test('demo client: signed calls go to api-demo, market data to public mainnet without the key', async () => {

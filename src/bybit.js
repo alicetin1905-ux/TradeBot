@@ -1,10 +1,8 @@
-// Bybit v5 REST client — TESTNET and DEMO TRADING only. Signed private calls
-// (wallet, positions, orders) plus the public instrument/ticker reads the
-// executor needs. Only the two practice environments below exist on purpose:
-// pointing this bot at real money is a separate, deliberate change, not a
-// setting.
+// Bybit v5 REST client — DEMO TRADING only. Signed private calls (wallet,
+// positions, orders) plus the public instrument/ticker reads the executor
+// needs. Only the practice environment below exists on purpose: pointing
+// this bot at real money is a separate, deliberate change, not a setting.
 //
-//   testnet  api-testnet.bybit.com — separate test exchange, its own prices
 //   demo     api-demo.bybit.com    — Demo Trading on the main exchange: real
 //            mainnet prices, demo funds. Its keys are created on a normal
 //            bybit.com account after switching to Demo Trading. Market data
@@ -16,9 +14,7 @@
 
 const crypto = require('crypto');
 
-const TESTNET_BASE = 'https://api-testnet.bybit.com';
 const ENVIRONMENTS = {
-  testnet: { base: TESTNET_BASE, publicBase: TESTNET_BASE },
   demo: { base: 'https://api-demo.bybit.com', publicBase: 'https://api.bybit.com' },
 };
 const RECV_WINDOW = '10000';
@@ -37,9 +33,9 @@ function sign(secret, timestamp, apiKey, payload) {
   return crypto.createHmac('sha256', secret).update(timestamp + apiKey + RECV_WINDOW + payload).digest('hex');
 }
 
-function createClient({ apiKey, apiSecret, env = 'testnet', fetchImpl = fetch }) {
+function createClient({ apiKey, apiSecret, env = 'demo', fetchImpl = fetch }) {
   const endpoints = ENVIRONMENTS[env];
-  if (!endpoints) throw new Error(`Unknown Bybit environment "${env}" — this build only supports testnet and demo`);
+  if (!endpoints) throw new Error(`Unknown Bybit environment "${env}" — this build only supports demo`);
   if (!apiKey || !apiSecret) throw new Error('BYBIT_API_KEY / BYBIT_API_SECRET are not set (see .env.example)');
   const base = endpoints.base;
 

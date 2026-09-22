@@ -2,7 +2,6 @@
 # Bot runs for cron on the Mac (see README / scripts/setup-mac.sh).
 #   scripts/exchange-run.sh demo            full hourly run on Bybit Demo Trading
 #   scripts/exchange-run.sh demo sync       quick sync of positions/fills only
-#   scripts/exchange-run.sh testnet [sync]  same on Bybit testnet
 #   scripts/exchange-run.sh paper           the paper account (state/*.json)
 # Pulls the latest code, runs the bot, and — if PUSH_STATE=1 — commits that
 # mode's state back to GitHub for the dashboard. Logs: logs/<mode>.log.
@@ -11,10 +10,10 @@ set -euo pipefail
 # installer, Homebrew on Apple Silicon and Intel, nvm-less Linux).
 export PATH="/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:$PATH"
 MODE="${1:-demo}"
-case "$MODE" in demo|testnet|paper) ;; *) echo "usage: $0 [demo|testnet|paper] [sync]" >&2; exit 1 ;; esac
+case "$MODE" in demo|paper) ;; *) echo "usage: $0 [demo|paper] [sync]" >&2; exit 1 ;; esac
 ARGS=()
 if [ "${2:-}" = "sync" ]; then
-  [ "$MODE" = "paper" ] && { echo "sync is for demo/testnet only" >&2; exit 1; }
+  [ "$MODE" = "paper" ] && { echo "sync is for demo only" >&2; exit 1; }
   ARGS=(--sync)
 fi
 cd "$(dirname "$0")/.."

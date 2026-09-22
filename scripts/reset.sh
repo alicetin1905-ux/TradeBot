@@ -3,12 +3,11 @@
 #   scripts/reset.sh demo              close everything on Bybit Demo + reset the bot
 #   scripts/reset.sh demo --clear-history   ...and also wipe the trade history
 #   scripts/reset.sh paper [--clear-history]   the paper account
-#   scripts/reset.sh testnet [--clear-history]
 # Holds the same lock as the scheduled runs, so none of them can run mid-reset.
 set -euo pipefail
 export PATH="/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:$PATH"
 MODE="${1:-}"
-case "$MODE" in demo|testnet|paper) ;; *) echo "usage: $0 demo|paper|testnet [--clear-history]" >&2; exit 1 ;; esac
+case "$MODE" in demo|paper) ;; *) echo "usage: $0 demo|paper [--clear-history]" >&2; exit 1 ;; esac
 CLEAR="${2:-}"
 cd "$(dirname "$0")/.."
 mkdir -p logs

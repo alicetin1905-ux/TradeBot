@@ -1,5 +1,5 @@
 // Exchange executor — runs the same decisions the paper account makes, but
-// as real orders on a Bybit account (Demo Trading or testnet; see bybit.js).
+// as real orders on a Bybit Demo Trading account (see bybit.js).
 //
 // Per run:
 //   1. Reconcile every tracked position with the exchange: record realized
@@ -13,8 +13,7 @@
 // The stop and targets live ON the exchange, so they still work if this
 // machine goes down between runs. The strategy's levels come from OKX
 // mainnet candles; they're carried over to the exchange as % distances from
-// its own fill price (OKX and Bybit prices differ slightly, and testnet
-// prices can drift far from mainnet).
+// its own fill price (OKX and Bybit prices differ slightly).
 'use strict';
 
 const config = require('../config');
@@ -36,7 +35,7 @@ function fixStep(x, step) {
 
 // Allocation = the capital this bot may use on the account: the configured
 // starting balance plus everything it has realized since. Sizing uses the
-// smaller of this and the exchange's own equity, so a big demo/testnet wallet
+// smaller of this and the exchange's own equity, so a big demo wallet
 // still trades like the configured 1000 USDT account.
 function sizingBase(st, wallet) { return Math.max(0, Math.min(st.account.balance, wallet.equity)); }
 

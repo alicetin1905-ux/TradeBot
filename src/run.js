@@ -10,20 +10,18 @@
 //     coins qualify than there are free slots, the strongest |score| wins
 //   - never more margin than is still free
 //
-// Three modes, picked by TRADEBOT_MODE (env or .env):
+// Two modes, picked by TRADEBOT_MODE (env or .env):
 //   paper   (default) simulated fills, state in state/*.json — what the
 //           hourly GitHub Actions workflow runs
 //   demo    real orders on Bybit DEMO TRADING (api-demo.bybit.com: mainnet
 //           prices, demo funds) via src/exchange.js, state in state/demo/
-//   testnet real orders on Bybit TESTNET (api-testnet.bybit.com), state in
-//           state/testnet/
-// demo and testnet must run on a machine Bybit doesn't geo-block (README).
+// demo must run on a machine Bybit doesn't geo-block (README).
 //
 //   node src/run.js              run once
 //   node src/run.js --reset      back to the starting balance (paper: all flat;
-//                                demo/testnet: resets tracking only, not Bybit)
-//   node src/run.js --close-all  demo/testnet: cancel orders + close everything
-//   node src/run.js --sync       demo/testnet: sync positions/fills from Bybit
+//                                demo: resets tracking only, not Bybit)
+//   node src/run.js --close-all  demo: cancel orders + close everything
+//   node src/run.js --sync       demo: sync positions/fills from Bybit
 //                                only — no market data, no new entries; state
 //                                is written only if something changed
 'use strict';
@@ -39,10 +37,10 @@ const { loadEnv } = require('./env');
 
 loadEnv();
 const MODE = (process.env.TRADEBOT_MODE || 'paper').toLowerCase();
-const EXCHANGE_MODES = ['demo', 'testnet'];
+const EXCHANGE_MODES = ['demo'];
 const ON_EXCHANGE = EXCHANGE_MODES.includes(MODE);
 if (MODE !== 'paper' && !ON_EXCHANGE) {
-  console.error(`Unknown TRADEBOT_MODE "${MODE}" — use paper, demo or testnet.`);
+  console.error(`Unknown TRADEBOT_MODE "${MODE}" — use paper or demo.`);
   process.exit(1);
 }
 
@@ -68,8 +66,8 @@ function loadState() {
     trades: readJson('trades', []),
     flipEntries: readJson('flipEntries', {}),
     scores: readJson('scores', {}),
-    closing: readJson('closing', {}),         // demo/testnet: closed positions awaiting their final P&L record
-    seenOrderIds: readJson('seenOrderIds', []), // demo/testnet: closed-pnl records already booked
+    closing: readJson('closing', {}),         // demo: closed positions awaiting their final P&L record
+    seenOrderIds: readJson('seenOrderIds', []), // demo: closed-pnl records already booked
   };
 }
 function saveState(st) {
@@ -223,7 +221,7 @@ async function run() {
 // the stop to breakeven after T1, forgets closed positions. No signals are
 // passed, so it never opens or signal-closes anything.
 async function syncOnExchange() {
-  if (!ON_EXCHANGE) { console.error('--sync only applies to TRADEBOT_MODE=demo or testnet'); process.exit(1); }
+  if (!ON_EXCHANGE) { console.error('--sync only applies to TRADEBOT_MODE=demo'); process.exit(1); }
   const client = exchangeClient();
   const st = loadState();
   const snapshot = () => JSON.stringify([st.positions, st.trades, st.closing, st.account.balance]);
@@ -236,7 +234,7 @@ async function syncOnExchange() {
 }
 
 async function closeAllOnExchange() {
-  if (!ON_EXCHANGE) { console.error('--close-all only applies to TRADEBOT_MODE=demo or testnet'); process.exit(1); }
+  if (!ON_EXCHANGE) { console.error('--close-all only applies to TRADEBOT_MODE=demo'); process.exit(1); }
   const st = loadState();
   const events = [];
   await require('./exchange').closeAll({ client: exchangeClient(), st, events });

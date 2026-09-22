@@ -184,10 +184,8 @@
 </div>
 
 <div class="banner exchange">
-  <b>Bybit demo</b> — real orders on Bybit Demo Trading (mainnet prices, demo funds), not real money.
-  One shared balance for all six coins; when more coins qualify than there are free slots, the strongest score wins.
-  Stops and targets sit on the exchange. Balance is the bot's 1000 USDT allocation plus its realized P&amp;L (net of fees);
-  open P&amp;L below uses OKX mark prices, so it can differ a little from Bybit.
+  <b>Bybit demo</b> — demo funds, not real money. One 1000 USDT balance for all six coins;
+  stops and targets sit on Bybit. Open P&amp;L uses live Bybit prices<span id="priceSourceNote"></span>.
 </div>
 
 <div style="display:flex; align-items:center; gap:8px; margin:-6px 0 6px;">
@@ -356,18 +354,34 @@
   var OKX_BASE = 'https://www.okx.com';
   function okxInstId(symbol) { return symbol.replace('USDT', '') + '-USDT-SWAP'; }
 
-  // Live mark price per open symbol, straight from OKX (client-side — same
-  // public endpoint the bot itself reads server-side). Failures per symbol
-  // just leave that card showing entry-only; never blocks the rest of the page.
+  var BYBIT_BASE = 'https://api.bybit.com';
+
+  // Live mark price per open symbol: Bybit's own public mark price first (the
+  // same price the demo account's P&L uses), OKX's as a fallback if Bybit
+  // can't be reached from this browser. A symbol with neither just shows
+  // entry-only; never blocks the rest of the page.
+  async function bybitMark(symbol) {
+    var res = await fetch(BYBIT_BASE + '/v5/market/tickers?category=linear&symbol=' + symbol, { cache: 'no-store' });
+    var d = await res.json();
+    var t = d.retCode === 0 && d.result && d.result.list && d.result.list[0];
+    if (!t || !(+t.markPrice > 0)) throw new Error('no Bybit price');
+    return +t.markPrice;
+  }
+  async function okxMark(symbol) {
+    var res = await fetch(OKX_BASE + '/api/v5/public/mark-price?instType=SWAP&instId=' + okxInstId(symbol), { cache: 'no-store' });
+    var d = await res.json();
+    if (!(d.code === '0' && d.data && d.data[0])) throw new Error('no OKX price');
+    return +d.data[0].markPx;
+  }
   async function fetchMarkPrices(symbols) {
     var out = {};
+    var usedOkx = false;
     await Promise.all(symbols.map(async function (symbol) {
-      try {
-        var res = await fetch(OKX_BASE + '/api/v5/public/mark-price?instType=SWAP&instId=' + okxInstId(symbol), { cache: 'no-store' });
-        var d = await res.json();
-        if (d.code === '0' && d.data && d.data[0]) out[symbol] = +d.data[0].markPx;
-      } catch (e) { /* leave this symbol out — card falls back to entry-only */ }
+      try { out[symbol] = await bybitMark(symbol); return; } catch (e) { /* try OKX */ }
+      try { out[symbol] = await okxMark(symbol); usedOkx = true; } catch (e) { /* entry-only */ }
     }));
+    var note = document.getElementById('priceSourceNote');
+    if (note) note.textContent = usedOkx ? ' (Bybit unreachable from this browser right now — using OKX prices)' : '';
     return out;
   }
 

@@ -19,9 +19,15 @@ function entryFilters({ symbol, data, analysis }) {
     thresholdPct: config.FIB_THRESHOLD[symbol] ?? 2,
     windowN: config.FIB_WINDOW,
     bias: analysis.bias,
+    maxAgeH: config.FIB_MAX_AGE_H,
+    recovery: config.FIB_RECOVERY,
   });
   if (!fibCheck.agrees) {
-    return { ok: false, code: 'fib', reason: `ATLAS wants ${dirName(analysis.bias)} but GoldenRatio's last impulse still points the other way` };
+    const imp = fibCheck.impulse;
+    return {
+      ok: false, code: 'fib', fibCheck,
+      reason: `ATLAS wants ${dirName(analysis.bias)} but a fresh ${imp.movePct.toFixed(1)}% ${imp.dir} move (${fibCheck.ageH}h ago, ${Math.round(fibCheck.recovered * 100)}% recovered) still points the other way`,
+    };
   }
 
   const chaseDist = Math.abs(analysis.price - analysis.plan.entry);

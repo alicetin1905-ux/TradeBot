@@ -32,6 +32,7 @@ const atlasScore = require('./atlasScore');
 const strategy = require('./strategy');
 const exchange = require('./exchange');
 const notify = require('./notify');
+const shadow = require('./shadow');
 const { loadEnv } = require('./env');
 
 loadEnv();
@@ -67,6 +68,7 @@ function loadState() {
     closing: readJson('closing', {}),         // closed positions awaiting their final P&L record
     seenOrderIds: readJson('seenOrderIds', []), // closed-pnl records already booked
     usedSignals: readJson('usedSignals', {}),   // one trade per signal (strategy.rememberSignals)
+    shadow: readJson('shadow', null) || shadow.empty(), // what Fibonacci-blocked trades would have done
   };
 }
 function saveState(st) {
@@ -77,7 +79,7 @@ function saveState(st) {
   st.account.maxOpenPositions = P.MAX_OPEN_POSITIONS;
   st.account.mode = MODE;
   st.account.updatedAt = Date.now();
-  for (const k of ['account', 'positions', 'trades', 'flipEntries', 'scores', 'closing', 'seenOrderIds', 'usedSignals']) writeJson(k, st[k]);
+  for (const k of ['account', 'positions', 'trades', 'flipEntries', 'scores', 'closing', 'seenOrderIds', 'usedSignals', 'shadow']) writeJson(k, st[k]);
 }
 
 /* ---------------- one run ---------------- */
@@ -108,7 +110,7 @@ async function scoreAll(st, events) {
 // Coins with no open position whose signal passes the entry gates,
 // strongest |score| first. A coin held back gets a code in scores.json
 // (wait: 'used' | 'fib' | 'chase') so the dashboard can say why.
-function entryCandidates(signals, st, events) {
+function entryCandidates(signals, st, events, blocked = []) {
   const out = [];
   for (const sig of Object.values(signals)) {
     const { symbol, data, analysis } = sig;
@@ -125,6 +127,7 @@ function entryCandidates(signals, st, events) {
     const check = strategy.entryFilters({ symbol, data, analysis });
     if (!check.ok) {
       if (st.scores[symbol]) st.scores[symbol].wait = check.code;
+      if (check.code === 'fib') blocked.push({ symbol, data, analysis, fibCheck: check.fibCheck });
       events.push({ symbol, type: 'hold', reason: check.reason, score: analysis.score });
       continue;
     }
@@ -152,8 +155,10 @@ async function run() {
   // whose position Bybit closed since then re-arms one run later, once the
   // reconcile inside runExchange has dropped it).
   strategy.rememberSignals(st.usedSignals, signals, st.positions);
-  const candidates = entryCandidates(signals, st, events);
+  const blocked = [];
+  const candidates = entryCandidates(signals, st, events, blocked);
   await exchange.runExchange({ client, st, signals, candidates, events, halt });
+  shadow.update({ shadow: st.shadow, signals, blocked, balance: st.account.balance });
   strategy.rememberSignals(st.usedSignals, {}, st.positions); // mark what just opened
 
   saveState(st);

@@ -216,6 +216,9 @@
 <h2>Performance</h2>
 <div class="statCard" id="perfCard"><div class="empty">Loading…</div></div>
 
+<h2>Fibonacci check — blocked trades</h2>
+<div class="statCard" id="shadowCard"><div class="empty">Loading…</div></div>
+
 <h2>Open positions</h2>
 <div id="openPositions"><div class="tradesCard"><div class="empty">Loading…</div></div></div>
 
@@ -259,6 +262,7 @@
     openPositions: document.getElementById('openPositions'),
     tradeLog: document.getElementById('tradeLog'),
     perfCard: document.getElementById('perfCard'),
+    shadowCard: document.getElementById('shadowCard'),
     lastUpdated: document.getElementById('lastUpdated'),
     refreshBtn: document.getElementById('refreshBtn'),
     alertsToggle: document.getElementById('alertsToggle'),
@@ -495,6 +499,33 @@
     return points;
   }
 
+  // What the trades the Fibonacci check blocked would have done (state/demo/
+  // shadow.json, simulated by src/shadow.js with the real exit rules). A
+  // positive total means the check cost money by blocking them.
+  function renderShadow(sh) {
+    if (!sh) { els.shadowCard.innerHTML = '<div class="empty">No data yet — starts with the next hourly run.</div>'; return; }
+    var closed = sh.closed || [], open = Object.values(sh.open || {});
+    var wins = closed.filter(function (t) { return t.pnl > 0.005; });
+    var losses = closed.filter(function (t) { return t.pnl < -0.005; });
+    var total = closed.reduce(function (a, t) { return a + t.pnl; }, 0);
+    var verdict = !closed.length ? 'Nothing blocked has finished yet.'
+      : total > 0 ? 'So far the check <b class="down">cost</b> ' + fmtMoney(total) + ' by blocking these.'
+        : total < 0 ? 'So far the check <b class="up">saved</b> ' + fmtMoney(-total) + ' by blocking these.'
+          : 'So far the blocked trades came out even.';
+    var recent = closed.slice(-5).reverse().map(function (t) {
+      var label = (SYMBOLS.find(function (x) { return x.id === t.symbol; }) || { label: t.symbol }).label;
+      return '<div class="trade"><span class="sym">' + label + '</span><span class="reason">' + (t.bias === 1 ? 'long' : 'short') +
+        ' · blocked by ' + (t.blockedBy || 'fib') + ' move · ' + t.exitReason + '</span><span class="pnl ' + pnlClass(t.pnl) + '">' + fmtSigned(t.pnl) + '</span></div>';
+    }).join('');
+    els.shadowCard.innerHTML =
+      '<div class="statGrid">' +
+        '<div class="stat"><div class="k">Would-be P&amp;L</div><div class="v ' + pnlClass(total) + '">' + (closed.length ? fmtSigned(total) : '—') + '</div></div>' +
+        '<div class="stat"><div class="k">Blocked trades</div><div class="v">' + closed.length + '</div><div class="v2">' + wins.length + 'W / ' + losses.length + 'L</div></div>' +
+        '<div class="stat"><div class="k">Still running</div><div class="v">' + open.length + '</div><div class="v2">' + (open.map(function (p) { return p.symbol.replace('USDT', ''); }).join(', ') || '—') + '</div></div>' +
+      '</div>' +
+      '<div class="chartWrap"><div class="chartLabel">' + verdict + '</div>' + (recent ? '<div class="tradesCard">' + recent + '</div>' : '') + '</div>';
+  }
+
   function renderPerformance(trades, started) {
     var stats = computePositionStats(trades);
     var statHtml =
@@ -686,8 +717,9 @@
       var results = await Promise.all([
         fetchJson('account'), fetchJson('positions'), fetchJson('trades'),
         fetchJson('scores').catch(function () { return {}; }),
+        fetchJson('shadow').catch(function () { return null; }),
       ]);
-      var account = results[0], positions = results[1], trades = results[2], scores = results[3];
+      var account = results[0], positions = results[1], trades = results[2], scores = results[3], shadowState = results[4];
 
       var openSymbols = Object.keys(positions);
       var markPrices = openSymbols.length ? await fetchMarkPrices(openSymbols) : {};
@@ -724,6 +756,7 @@
       renderCoins(positions, scores, markPrices);
       renderOpenPositions(positions, markPrices);
       renderPerformance(trades, started);
+      renderShadow(shadowState);
       renderTrades(trades);
       if (watch.on) checkNewEntries(positions);
       else lastPositions = positions;

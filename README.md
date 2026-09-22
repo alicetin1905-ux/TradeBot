@@ -6,8 +6,13 @@ DOGE, HYPE and SUI perps on **Bybit Demo Trading** (mainnet prices, demo funds).
 
 - **ATLAS** — primary signal: ~25-indicator weighted score, Chandelier Exit
   stop, flip-triggered entry (`src/indicators.js`, `src/atlasScore.js`).
-- **GoldenRatio** — confluence filter: a contradicting Fibonacci impulse
-  holds the trade back (`src/fib.js`).
+- **GoldenRatio** — confluence filter: a *fresh* contradicting Fibonacci
+  impulse holds the trade back (`src/fib.js`) — only while it ended within
+  the last 6 closed 1H candles and price hasn't won back 61.8% of it
+  (`config.js` → `FIB_MAX_AGE_H`, `FIB_RECOVERY`). Every trade it still
+  blocks is followed as a **shadow trade** (`src/shadow.js`, same levels,
+  size and exit rules, never sent to Bybit) so the dashboard can show
+  whether the check is saving or costing money.
 - **CRUCIBLE** — liquidation-cluster model that nudges stops off dense
   clusters and pulls T2 in short of them (`src/liquidity.js`).
 

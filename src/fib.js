@@ -44,23 +44,30 @@ function fibLevels(imp) {
 }
 
 // candles here are {t,o,h,l,c,v}; detectImpulse wants {h,l}.
-function confluence({ candles1h, thresholdPct, windowN, bias, maxScan }) {
+// A contradicting impulse only blocks while it's fresh (ended at most
+// maxAgeH closed candles ago) and price hasn't recovered `recovery` of it
+// (0.618 = back above the 61.8% retracement of a dump, or below it for a pump).
+function confluence({ candles1h, thresholdPct, windowN, bias, maxScan, maxAgeH = Infinity, recovery = Infinity }) {
   const closed = candles1h.slice(0, -1).map(x => ({ h: x.h, l: x.l }));
   const imp = detectImpulse(closed, thresholdPct, windowN, maxScan || 300);
   if (!imp) return { impulse: null, agrees: true, inPocket: false }; // no impulse = neutral, doesn't block
 
   const impDir = imp.dir === 'up' ? 1 : -1;
-  const agrees = bias === 0 || impDir === bias;
+  const lastClose = candles1h[candles1h.length - 2].c; // last closed candle
+  const ageH = closed.length - 1 - imp.endIdx;
+  // Share of the impulse price has since won back (0 = still at its extreme).
+  const recovered = (lastClose - imp.p0) / (imp.p1 - imp.p0);
+  const stale = ageH > maxAgeH || recovered >= recovery;
+  const agrees = bias === 0 || impDir === bias || stale;
 
   // "golden pocket" — retracement between the 0.5 and 0.618 ratios back
   // from the impulse's terminal extreme (p0) toward its origin (p1).
   const levels = fibLevels(imp);
   const p50 = levels.find(l => l.ratio === 0.5).price;
   const p618 = levels.find(l => l.ratio === 0.618).price;
-  const lastClose = candles1h[candles1h.length - 2].c; // last closed candle
   const inPocket = lastClose >= Math.min(p50, p618) && lastClose <= Math.max(p50, p618);
 
-  return { impulse: imp, impDir, agrees, inPocket, levels };
+  return { impulse: imp, impDir, agrees, inPocket, levels, ageH, recovered };
 }
 
 module.exports = { RATIOS, detectImpulse, fibLevels, confluence };

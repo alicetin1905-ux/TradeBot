@@ -330,3 +330,54 @@ test('one trade per signal: no re-entry in the same direction until the signal r
   rememberSignals(mem, sig(1), {});
   assert.equal(signalUsed(mem, 'XRPUSDT', 1), false);
 });
+
+test('Fibonacci check only blocks on a fresh, unrecovered contradicting move', () => {
+  const fib = require('../src/fib');
+  // 20 flat candles at 100, then a 5% dump over 3 candles to 95, then `after` candles.
+  const mk = (after) => {
+    const c = [];
+    for (let i = 0; i < 20; i++) c.push({ t: i, o: 100, h: 100.2, l: 99.8, c: 100 });
+    [98.5, 96.5, 95].forEach((p, i) => c.push({ t: 20 + i, o: p + 1, h: p + 1.2, l: p, c: p + 0.2 }));
+    after.forEach((p, i) => c.push({ t: 23 + i, o: p, h: p + 0.1, l: p - 0.1, c: p }));
+    c.push({ t: 999, o: 0, h: 0, l: 0, c: 0 }); // the still-open candle (ignored)
+    return c;
+  };
+  const check = (after) => fib.confluence({ candles1h: mk(after), thresholdPct: 3, windowN: 12, bias: 1, maxAgeH: 6, recovery: 0.618 });
+
+  const fresh = check([95.3, 95.5]);             // 2h after the dump, barely bounced
+  assert.equal(fresh.agrees, false);
+  assert.equal(fresh.impulse.dir, 'down');
+
+  assert.equal(check([95.5, 96, 96.5, 97, 97.5, 98, 97.2, 97.3]).agrees, true);   // > 6h old
+  assert.equal(check([96, 97.5, 98.5]).agrees, true);                            // won back > 61.8%
+  // Old behaviour (no age/recovery limits) would still block the stale case.
+  assert.equal(fib.confluence({ candles1h: mk([95.5, 96, 96.5, 97, 97.5, 98, 97.2, 97.3]), thresholdPct: 3, windowN: 12, bias: 1 }).agrees, false);
+});
+
+test('shadow trades follow blocked entries with the real exit rules', () => {
+  const shadow = require('../src/shadow');
+  const sh = shadow.empty();
+  const plan = { entry: 100, stop: 98 };
+  const blocked = [{ symbol: 'SOLUSDT', analysis: { bias: 1, score: 50, price: 100, closedAt: 10, plan }, fibCheck: { impulse: { dir: 'down', movePct: 4 } } }];
+  const sig = (bias, price, candles) => ({ SOLUSDT: { analysis: { bias, price, closedAt: candles.length ? candles[candles.length - 1].t : 10 }, data: { candles: { [config.ENTRY_TF]: [...candles, { t: 999, h: 0, l: 0, c: 0 }] } } } });
+
+  shadow.update({ shadow: sh, signals: sig(1, 100, []), blocked, balance: 1000 });
+  const pos = sh.open.SOLUSDT;
+  assert.equal(pos.qty, 25);                       // $250 margin x10 / $100
+  assert.deepEqual([pos.t1, pos.t2, pos.t3], [102, 104, 106]);
+
+  // Blocked again next hour on the same signal -> no second shadow.
+  shadow.update({ shadow: sh, signals: sig(1, 101, [{ t: 11, h: 101, l: 99.5, c: 101 }]), blocked, balance: 1000 });
+  assert.equal(Object.keys(sh.open).length, 1);
+
+  // T1 fills (stop -> breakeven), then price falls back to entry.
+  shadow.update({ shadow: sh, signals: sig(1, 100, [{ t: 12, h: 102.5, l: 100.5, c: 102 }, { t: 13, h: 101, l: 99.9, c: 100 }]), blocked: [], balance: 1000 });
+  assert.equal(sh.open.SOLUSDT, undefined);
+  const done = sh.closed[0];
+  assert.equal(done.exitReason, 'breakeven stop hit');
+  assert.ok(Math.abs(done.pnl - 25 * 0.4 * 2) < 1e-9); // 40% booked at +2, rest at breakeven
+
+  // Same long signal still blocked -> still no new shadow until it resets.
+  shadow.update({ shadow: sh, signals: sig(1, 100, []), blocked, balance: 1000 });
+  assert.equal(Object.keys(sh.open).length, 0);
+});

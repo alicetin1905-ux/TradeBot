@@ -20,6 +20,11 @@ module.exports = {
   // (HYPE moves like SOL/XRP, SUI a bit more — median 12h move ~1.7% / ~1.9%).
   FIB_THRESHOLD: { BTCUSDT: 2, ETHUSDT: 1, SOLUSDT: 3, XRPUSDT: 3, BNBUSDT: 2, DOGEUSDT: 2, HYPEUSDT: 3, SUIUSDT: 4 },
   FIB_WINDOW: 12,
+  // A contradicting impulse only blocks while it's fresh (ended within this
+  // many closed 1H candles) AND price hasn't won back this share of it yet —
+  // i.e. "don't buy right into a fresh dump", not "never buy after a dump".
+  FIB_MAX_AGE_H: 6,
+  FIB_RECOVERY: 0.618,
 
   // CRUCIBLE's own leverage-tier mix, used to estimate where clustered
   // liquidations sit above/below price.

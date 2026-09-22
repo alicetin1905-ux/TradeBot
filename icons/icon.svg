@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- TradeBot app icon: three rising candles over a faint grid, with the
+       dashboard's purple trend line. Full-bleed square — iOS rounds it. -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#121a17"/>
+      <stop offset="1" stop-color="#070a09"/>
+    </linearGradient>
+    <linearGradient id="glow" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#b98bff" stop-opacity="0"/>
+      <stop offset="1" stop-color="#b98bff" stop-opacity="0.22"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <rect width="512" height="512" fill="url(#glow)"/>
+  <g stroke="#1b2320" stroke-width="4">
+    <line x1="64" y1="152" x2="448" y2="152"/>
+    <line x1="64" y1="256" x2="448" y2="256"/>
+    <line x1="64" y1="360" x2="448" y2="360"/>
+  </g>
+  <!-- candles: red dip, then two green climbs -->
+  <g stroke-linecap="round">
+    <line x1="150" y1="250" x2="150" y2="410" stroke="#ff4d6a" stroke-width="12"/>
+    <rect x="118" y="282" width="64" height="98" rx="10" fill="#ff4d6a"/>
+    <line x1="256" y1="170" x2="256" y2="380" stroke="#35ffb0" stroke-width="12"/>
+    <rect x="224" y="206" width="64" height="140" rx="10" fill="#35ffb0"/>
+    <line x1="362" y1="92" x2="362" y2="310" stroke="#35ffb0" stroke-width="12"/>
+    <rect x="330" y="120" width="64" height="160" rx="10" fill="#35ffb0"/>
+  </g>
+  <!-- trend line + arrowhead -->
+  <polyline points="84,392 170,330 262,262 350,176 420,112" fill="none" stroke="#b98bff" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
+  <polygon points="446,86 452,152 386,114" fill="#b98bff"/>
+</svg>

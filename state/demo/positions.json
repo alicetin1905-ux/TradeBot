@@ -1,0 +1,68 @@
+{
+  "XRPUSDT": {
+    "symbol": "XRPUSDT",
+    "bias": 1,
+    "entry": 1.593,
+    "stop": 1.5404,
+    "initialStop": 1.5404,
+    "t1": 1.6457,
+    "t2": 1.6983,
+    "t3": 1.751,
+    "qtyTotal": 1569.2,
+    "qtyRemaining": 1569.2,
+    "qtyT1": 627.6,
+    "qtyT2": 549.2,
+    "qtyT3": 392.4,
+    "margin": 249.97356,
+    "notional": 2499.7356,
+    "riskAmt": 82.53991999999997,
+    "filled": {
+      "t1": false,
+      "t2": false,
+      "t3": false
+    },
+    "breakeven": false,
+    "openedAt": 1790104054029,
+    "score": 82,
+    "orders": {
+      "entry": "e1cba364-1f82-4ddf-a473-7b7b17d3b9d6",
+      "t1": "f385d4ea-f95f-48c4-8c71-5a2ee451ca25",
+      "t2": "91b17ac6-c2dd-4d44-b0d9-974ac0292561",
+      "t3": "58495e1d-f735-46a5-a6f0-23414199d4f2"
+    },
+    "tickSize": 0.0001
+  },
+  "DOGEUSDT": {
+    "symbol": "DOGEUSDT",
+    "bias": 1,
+    "entry": 0.10022,
+    "stop": 0.09737,
+    "initialStop": 0.09737,
+    "t1": 0.10308,
+    "t2": 0.10595,
+    "t3": 0.10881,
+    "qtyTotal": 24942,
+    "qtyRemaining": 24942,
+    "qtyT1": 9976,
+    "qtyT2": 8729,
+    "qtyT3": 6237,
+    "margin": 249.968724,
+    "notional": 2499.68724,
+    "riskAmt": 71.08470000000013,
+    "filled": {
+      "t1": false,
+      "t2": false,
+      "t3": false
+    },
+    "breakeven": false,
+    "openedAt": 1790104054029,
+    "score": 32,
+    "orders": {
+      "entry": "0d494099-88ff-4154-9800-f3493da78070",
+      "t1": "1732bc2c-3752-4932-9b27-bb2c9a0d0940",
+      "t2": "02e33c80-9cce-42e0-bca7-146fcd066bd7",
+      "t3": "b19f870d-02b6-4616-aa22-d257b6285895"
+    },
+    "tickSize": 0.00001
+  }
+}

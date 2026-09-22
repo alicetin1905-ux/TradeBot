@@ -64,5 +64,71 @@
       "t3": "3b0aa7bc-af92-4d96-9293-d32bf51b2348"
     },
     "tickSize": 0.00001
+  },
+  "HYPEUSDT": {
+    "symbol": "HYPEUSDT",
+    "bias": 1,
+    "entry": 97.62,
+    "stop": 95.29,
+    "initialStop": 95.29,
+    "t1": 99.95,
+    "t2": 100.06,
+    "t3": 104.61,
+    "qtyTotal": 25.6,
+    "qtyRemaining": 25.6,
+    "qtyT1": 10.24,
+    "qtyT2": 8.96,
+    "qtyT3": 6.4,
+    "margin": 249.90720000000002,
+    "notional": 2499.072,
+    "riskAmt": 59.64799999999996,
+    "filled": {
+      "t1": false,
+      "t2": false,
+      "t3": false
+    },
+    "breakeven": false,
+    "openedAt": 1790118366485,
+    "score": 82,
+    "orders": {
+      "entry": "4244eb79-28f6-4678-8bf9-18e3459187e6",
+      "t1": "4c546f7e-d380-4b94-b2ed-1db1c7703941",
+      "t2": "a67b78c8-d1d9-42d9-895b-b1dcb35cf77b",
+      "t3": "c4716f3c-818a-413a-b5a9-2c77018c0c4d"
+    },
+    "tickSize": 0.01
+  },
+  "SOLUSDT": {
+    "symbol": "SOLUSDT",
+    "bias": 1,
+    "entry": 118.91,
+    "stop": 117.21,
+    "initialStop": 117.21,
+    "t1": 120.61,
+    "t2": 122.32,
+    "t3": 124.02,
+    "qtyTotal": 21,
+    "qtyRemaining": 21,
+    "qtyT1": 8.4,
+    "qtyT2": 7.3,
+    "qtyT3": 5.3,
+    "margin": 249.711,
+    "notional": 2497.11,
+    "riskAmt": 35.70000000000006,
+    "filled": {
+      "t1": false,
+      "t2": false,
+      "t3": false
+    },
+    "breakeven": false,
+    "openedAt": 1790118366485,
+    "score": 49,
+    "orders": {
+      "entry": "89fb5077-76cf-4c3a-94f3-ecd218408091",
+      "t1": "b924dd6d-011a-4e0b-99e8-333f71b449d4",
+      "t2": "21afd42c-011b-47bc-892c-fd1d9356003a",
+      "t3": "ce9159c0-62d7-459a-87ee-0603cf3faf3f"
+    },
+    "tickSize": 0.01
   }
 }

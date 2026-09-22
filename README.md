@@ -27,11 +27,11 @@ number as a rehearsal of the strategy, not investment advice.
 ## Rules (`config.js` → `PORTFOLIO`)
 
 - **One shared 1000 USDT balance** for all eight coins.
-- **25% of the current balance as margin per trade**, at **10x leverage**:
-  on 1000 USDT each trade is 250 USDT margin = 2500 USDT position value.
+- **10% of the current balance as margin per trade**, at **10x leverage**:
+  on 1000 USDT each trade is 100 USDT margin = 1000 USDT position value.
   The strategy's own stop/targets decide the exit, so the loss at the stop
-  is 2500 x the stop distance (e.g. a 1.5% stop loses ~37.5 USDT).
-- **Max 4 open positions** (4 x 25% = the whole balance). If more coins
+  is 1000 x the stop distance (e.g. a 1.5% stop loses ~15 USDT).
+- **Max 8 open positions** (8 x 10% = at most 80% of the balance). If more coins
   qualify than there are free slots, the strongest |score| gets the slot. A
   trade never uses more margin than is still free.
 - Entries decided on closed 1H candles only — nothing repaints intrabar.
@@ -82,13 +82,13 @@ remembers its balance and positions, and what the dashboard reads.
   prices differ slightly). Instrument rules and mark prices come from
   Bybit's public mainnet API (`api.bybit.com`, no key sent); orders go to
   `api-demo`.
-- **Sizing:** 25% of the bot's **allocation** as margin at 10x. The allocation
+- **Sizing:** 10% of the bot's **allocation** as margin at 10x. The allocation
   starts at 1000 USDT and moves with realized P&L (from Bybit's closed-P&L
   records, net of fees), so a demo wallet with more USDT still trades like
   a 1000 USDT account. Never more margin than Bybit says is free.
 - **Each hourly run:** books fills, moves the stop to breakeven on Bybit once
   T1 fills, closes at market on a firm score flip, cancels leftover target
-  orders after a close, then fills free slots (max 4). Any open USDT-perp
+  orders after a close, then fills free slots (max 8). Any open USDT-perp
   position on the account, including ones the bot didn't open, counts as a
   used slot; the bot leaves positions it didn't open alone. Best to give the
   bot its own (sub-)account.

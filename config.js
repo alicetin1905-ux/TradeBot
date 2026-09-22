@@ -44,9 +44,9 @@ module.exports = {
   // Money rules: all coins trade out of ONE shared balance.
   PORTFOLIO: {
     STARTING_BALANCE: 1000,  // USDT
-    MARGIN_PCT: 25,          // % of the current shared balance put up as margin per trade
-    LEVERAGE: 10,            // position value = margin x leverage (250 USDT -> 2500 USDT)
-    MAX_OPEN_POSITIONS: 4,   // 4 x 25% = the whole balance
+    MARGIN_PCT: 10,          // % of the current shared balance put up as margin per trade
+    LEVERAGE: 10,            // position value = margin x leverage (100 USDT -> 1000 USDT)
+    MAX_OPEN_POSITIONS: 8,   // 8 x 10% = at most 80% of the balance in use
   },
 
   // Bybit execution safety limits.

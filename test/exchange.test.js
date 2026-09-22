@@ -9,6 +9,11 @@ const exchange = require('../src/exchange');
 const { sign, createClient } = require('../src/bybit');
 const config = require('../config');
 
+// These tests were written for 25% margin / max 4 positions; pin those so
+// changing the live settings in config.js doesn't change what's tested.
+config.PORTFOLIO.MARGIN_PCT = 25;
+config.PORTFOLIO.MAX_OPEN_POSITIONS = 4;
+
 const INST = {
   BTCUSDT: { qtyStep: 0.001, minOrderQty: 0.001, minNotional: 5, tickSize: 0.1 },
   ETHUSDT: { qtyStep: 0.01, minOrderQty: 0.01, minNotional: 5, tickSize: 0.01 },
@@ -443,4 +448,24 @@ test('hourly status: live P&L per trade, equity, slots, next-up coins; low prior
   assert.match(m.message, /Slots 2\/4/);
   assert.match(m.message, /Next up: BTC \+55, SOL \+49 \(fib\)/);
   assert.doesNotMatch(m.message, /BNB|Next up:.*XRP/);
+});
+
+test('only full-size trades: waits instead of opening an undersized one', async () => {
+  const { ex, client } = fakeBybit({ equity: 1200, marks }); // wallet has headroom; the 1000 allocation is the limit
+  const st = freshState();
+  // 3 trades already hold $250 margin each (as on the exchange) -> $250 free:
+  // one more full $250 trade fits, a second must wait rather than go undersized.
+  for (const s of ['ETHUSDT', 'SOLUSDT', 'BNBUSDT']) {
+    const size = 2500 / marks[s];
+    ex.positions[s] = { symbol: s, bias: 1, size, avgPrice: marks[s], stopLoss: 0 };
+    st.positions[s] = { symbol: s, bias: 1, entry: marks[s], margin: 250, qtyTotal: size, qtyRemaining: size, qtyT1: size * 0.4, qtyT2: size * 0.35, qtyT3: size * 0.25, filled: { t1: false, t2: false, t3: false }, openedAt: Date.now() - 1000 };
+  }
+  const events = [];
+  config.PORTFOLIO.MAX_OPEN_POSITIONS = 8;
+  try {
+    await exchange.runExchange({ client, st, signals: {}, candidates: [candidate('XRPUSDT', 1, 80, 2.5, 0.02), candidate('DOGEUSDT', 1, 70, 0.25, 0.02)], events });
+  } finally { config.PORTFOLIO.MAX_OPEN_POSITIONS = 4; }
+  assert.ok(st.positions.XRPUSDT && Math.abs(st.positions.XRPUSDT.margin - 250) < 1e-6);
+  assert.equal(st.positions.DOGEUSDT, undefined);
+  assert.ok(events.some(e => e.symbol === 'DOGEUSDT' && /not enough free margin for a full \$250 trade \(\$0 free\)/.test(e.reason)), JSON.stringify(events));
 });

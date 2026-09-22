@@ -186,8 +186,12 @@ async function openEntries({ client, st, exPos, wallet, candidates, events, halt
       if (Object.keys(exPos).length >= P.MAX_OPEN_POSITIONS) { hold(`all ${P.MAX_OPEN_POSITIONS} position slots in use`); continue; }
 
       const base = sizingBase(st, wallet);
-      const margin = Math.min(base * P.MARGIN_PCT / 100, base - usedMargin(st.positions), available * 0.95);
-      if (margin <= 0) { hold('no free margin'); continue; }
+      // Only full-size trades: if what's still free can't fund MARGIN_PCT of
+      // the balance (e.g. older, bigger positions still hold it), wait for a
+      // close instead of opening an odd, undersized position.
+      const margin = base * P.MARGIN_PCT / 100;
+      const free = Math.min(base - usedMargin(st.positions), available * 0.95);
+      if (free < margin * 0.99) { hold(`not enough free margin for a full $${margin.toFixed(0)} trade ($${Math.max(0, free).toFixed(0)} free)`); continue; }
 
       // Strategy levels (with GoldenRatio/CRUCIBLE refinement) as % of entry.
       const basePlan = sizeFor({

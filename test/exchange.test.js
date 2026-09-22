@@ -423,3 +423,24 @@ test('watchdog: alert when the bot stops, repeat every 6h, all-clear when back',
   assert.equal(r.message.title, 'TradeBot is running again');
   assert.deepEqual(r.wd, { down: false });
 });
+
+test('hourly status: live P&L per trade, equity, slots, next-up coins; low priority', () => {
+  const summary = require('../src/summary');
+  const st = {
+    account: { balance: 1037.1, startingBalance: 1000 },
+    trades: [],
+    positions: {
+      XRPUSDT: { symbol: 'XRPUSDT', bias: 1, margin: 250, unrealisedPnl: 12.3, filled: { t1: true, t2: false }, breakeven: true },
+      HYPEUSDT: { symbol: 'HYPEUSDT', bias: 1, margin: 250, unrealisedPnl: -8, filled: { t1: false, t2: false } },
+    },
+    scores: { BTCUSDT: { score: 55, bias: 1 }, SOLUSDT: { score: 49, bias: 1, wait: 'fib' }, BNBUSDT: { score: 5, bias: 0 }, XRPUSDT: { score: 60, bias: 1 } },
+  };
+  const m = summary.hourly(st);
+  assert.equal(m.priority, 2);
+  assert.equal(m.title, 'TradeBot $1041.40 (+4.1%)');
+  assert.match(m.message, /XRP long \+\$12\.30 \(\+4\.9%\) · T1✓ · SL at entry/);
+  assert.match(m.message, /HYPE long -\$8\.00 \(-3\.2%\)/);
+  assert.match(m.message, /Slots 2\/4/);
+  assert.match(m.message, /Next up: BTC \+55, SOL \+49 \(fib\)/);
+  assert.doesNotMatch(m.message, /BNB|Next up:.*XRP/);
+});

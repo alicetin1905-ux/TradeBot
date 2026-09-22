@@ -168,6 +168,7 @@ async function run() {
   printSummary(events, st);
   await notify.send(events, st);
   if (daily) await notify.push([daily]);
+  else if (config.NOTIFY.HOURLY_STATUS) await notify.push([summary.hourly(st)]);
 }
 
 // Quick reconcile for the dashboard between hourly runs: books fills, moves
@@ -176,7 +177,10 @@ async function run() {
 async function syncOnExchange() {
   const client = exchangeClient();
   const st = loadState();
-  const snapshot = () => JSON.stringify([st.positions, st.trades, st.closing, st.account.balance]);
+  // Live mark/P&L fields change constantly; only real changes (fills,
+  // closes, stop moves) should trigger a save and upload.
+  const snapshot = () => JSON.stringify([st.positions, st.trades, st.closing, st.account.balance],
+    (k, v) => (k === 'markPrice' || k === 'unrealisedPnl' ? undefined : v));
   const before = snapshot();
   const events = [];
   await exchange.runExchange({ client, st, signals: {}, candidates: [], events });

@@ -60,4 +60,33 @@ function due(st, now = Date.now()) {
   return msg;
 }
 
-module.exports = { due, build, positionsFrom };
+// Hourly status: equity (allocation + open P&L), each open trade's live
+// P&L from Bybit, targets hit, free slots, and the strongest waiting coins.
+function hourly(st, now = Date.now()) {
+  const a = st.account;
+  const open = Object.values(st.positions);
+  const upnl = open.reduce((s, p) => s + (p.unrealisedPnl || 0), 0);
+  const equity = a.balance + upnl;
+  const pct = ((equity / a.startingBalance - 1) * 100).toFixed(1);
+  const dayStart = new Date(now); dayStart.setHours(0, 0, 0, 0);
+  const today = st.trades.filter(t => t.closedAt >= dayStart.getTime()).reduce((s, t) => s + t.pnl, 0);
+
+  const lines = open.map((p) => {
+    const u = p.unrealisedPnl || 0;
+    const onMargin = p.margin ? ` (${u >= 0 ? '+' : ''}${((u / p.margin) * 100).toFixed(1)}%)` : '';
+    const hits = ['t1', 't2'].filter(k => p.filled && p.filled[k]).map(k => k.toUpperCase() + '✓');
+    return `${coin(p.symbol)} ${p.bias === 1 ? 'long' : 'short'} ${money(u)}${onMargin}${hits.length ? ' · ' + hits.join(' ') : ''}${p.breakeven ? ' · SL at entry' : ''}`;
+  });
+  if (!open.length) lines.push('No open trades');
+  lines.push(`Open P&L ${money(upnl)} · realized today ${money(today)}`);
+  lines.push(`Slots ${open.length}/${config.PORTFOLIO.MAX_OPEN_POSITIONS} · balance $${a.balance.toFixed(2)}`);
+  const waiting = Object.entries(st.scores || {})
+    .filter(([s, v]) => !st.positions[s] && v.bias !== 0)
+    .sort((x, y) => Math.abs(y[1].score) - Math.abs(x[1].score)).slice(0, 3)
+    .map(([s, v]) => `${coin(s)} ${v.score > 0 ? '+' : ''}${v.score}${v.wait ? ' (' + ({ fib: 'fib', chase: 'chase', used: 'used' }[v.wait] || v.wait) + ')' : ''}`);
+  if (waiting.length) lines.push(`Next up: ${waiting.join(', ')}`);
+
+  return { title: `TradeBot $${equity.toFixed(2)} (${pct >= 0 ? '+' : ''}${pct}%)`, message: lines.join('\n'), tags: ['clock3'], priority: 2 };
+}
+
+module.exports = { due, build, hourly, positionsFrom };

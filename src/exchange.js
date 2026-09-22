@@ -100,6 +100,8 @@ async function reconcile({ client, st, exPos, signals, events, now }) {
       }
 
       pos.qtyRemaining = live.size;
+      pos.markPrice = live.markPrice;         // Bybit's own live view, for the hourly status
+      pos.unrealisedPnl = live.unrealisedPnl;
       const eps = pos.qtyTotal * 1e-6;
       if (!pos.filled.t1 && live.size <= pos.qtyTotal - pos.qtyT1 + eps) pos.filled.t1 = true;
       if (!pos.filled.t2 && pos.qtyT2 > 0 && live.size <= pos.qtyT3 + eps) pos.filled.t2 = true;
@@ -234,6 +236,7 @@ async function openEntries({ client, st, exPos, wallet, candidates, events, halt
         margin: posMargin, notional: live.size * entry, riskAmt: live.size * Math.abs(entry - stopLoss),
         filled: { t1: q1 === 0, t2: q2 === 0, t3: false }, breakeven: false,
         openedAt: now, score: c.analysis.score, orders, tickSize: inst.tickSize,
+        markPrice: live.markPrice || entry, unrealisedPnl: live.unrealisedPnl || 0,
       };
       exPos[sym] = live;
       available -= posMargin;

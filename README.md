@@ -146,6 +146,12 @@ paper workflow on GitHub Actions is unaffected.
    **Bybit demo** tab (`index.html?mode=demo`) shows it; open P&L there
    updates every minute from live prices.
 
-`node src/run.js --reset` in demo/testnet mode only resets the bot's own tracking
+To start an account over: `scripts/reset.sh demo` (or `paper` / `testnet`)
+closes every position and order on Bybit, resets the bot to 1000 USDT and
+uploads the result; add `--clear-history` to also wipe the trade list. It
+holds the same lock as the scheduled runs and stops without resetting if
+anything fails to close.
+
+`node src/run.js --reset` on its own in demo/testnet mode only resets the bot's own tracking
 (allocation back to 1000 USDT); it doesn't touch anything on Bybit.
 

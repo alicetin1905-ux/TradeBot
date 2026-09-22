@@ -242,6 +242,9 @@ async function closeAllOnExchange() {
   await require('./exchange').closeAll({ client: exchangeClient(), st, events });
   saveState(st);
   printSummary(events, st);
+  // Non-zero exit if anything failed to close, so scripts/reset.sh stops
+  // before wiping the bot's tracking of a position that's still open.
+  if (events.some(e => e.type === 'error')) process.exitCode = 1;
 }
 
 function reset() {
@@ -253,7 +256,7 @@ function reset() {
   st.closing = {};
   saveState(st); // trade history is kept
   console.log(ON_EXCHANGE
-    ? `${MODE} tracking reset to ${P.STARTING_BALANCE} USDT. Nothing was closed on Bybit — use --close-all for that.`
+    ? `${MODE} tracking reset to ${P.STARTING_BALANCE} USDT (this step alone doesn't touch Bybit; scripts/reset.sh also closes everything there).`
     : `TradeBot reset to ${P.STARTING_BALANCE} USDT — all positions closed, no trades recorded.`);
 }
 

@@ -9,10 +9,18 @@
 //   - at most config.PORTFOLIO.MAX_OPEN_POSITIONS open at once; when more
 //     coins qualify than there are free slots, the strongest |score| wins
 //   - never more margin than is still free
-// State lives in state/*.json, committed back by the hourly workflow.
 //
-//   node src/run.js          run once (scheduled by .github/workflows/bot.yml)
-//   node src/run.js --reset  back to the starting balance, all flat
+// Two modes, picked by TRADEBOT_MODE (env or .env):
+//   paper   (default) simulated fills, state in state/*.json — what the
+//           hourly GitHub Actions workflow runs
+//   testnet real orders on a Bybit TESTNET account via src/exchange.js,
+//           state in state/testnet/*.json — must run on a machine Bybit
+//           doesn't geo-block (see README)
+//
+//   node src/run.js              run once
+//   node src/run.js --reset      back to the starting balance (paper: all flat;
+//                                testnet: resets tracking only, not the exchange)
+//   node src/run.js --close-all  testnet only: cancel orders + close everything
 'use strict';
 
 const fs = require('fs');
@@ -22,9 +30,17 @@ const marketData = require('./okx');
 const atlasScore = require('./atlasScore');
 const strategy = require('./strategy');
 const { sizeFor } = require('./risk');
+const { loadEnv } = require('./env');
+
+loadEnv();
+const MODE = (process.env.TRADEBOT_MODE || 'paper').toLowerCase();
+if (!['paper', 'testnet'].includes(MODE)) {
+  console.error(`Unknown TRADEBOT_MODE "${MODE}" — use paper or testnet.`);
+  process.exit(1);
+}
 
 const P = config.PORTFOLIO;
-const DIR = path.join(__dirname, '..', 'state');
+const DIR = path.join(__dirname, '..', 'state', ...(MODE === 'testnet' ? ['testnet'] : []));
 
 /* ---------------- persistence ---------------- */
 
@@ -36,7 +52,7 @@ function writeJson(name, data) {
   fs.writeFileSync(path.join(DIR, name + '.json'), JSON.stringify(data, null, 2) + '\n');
 }
 function freshAccount() {
-  return { balance: P.STARTING_BALANCE, startingBalance: P.STARTING_BALANCE, marginPct: P.MARGIN_PCT, leverage: P.LEVERAGE, maxOpenPositions: P.MAX_OPEN_POSITIONS };
+  return { balance: P.STARTING_BALANCE, startingBalance: P.STARTING_BALANCE, marginPct: P.MARGIN_PCT, leverage: P.LEVERAGE, maxOpenPositions: P.MAX_OPEN_POSITIONS, mode: MODE };
 }
 function loadState() {
   return {
@@ -45,6 +61,8 @@ function loadState() {
     trades: readJson('trades', []),
     flipEntries: readJson('flipEntries', {}),
     scores: readJson('scores', {}),
+    closing: readJson('closing', {}),         // testnet: closed positions awaiting their final P&L record
+    seenOrderIds: readJson('seenOrderIds', []), // testnet: closed-pnl records already booked
   };
 }
 function saveState(st) {
@@ -53,8 +71,11 @@ function saveState(st) {
   st.account.marginPct = P.MARGIN_PCT;
   st.account.leverage = P.LEVERAGE;
   st.account.maxOpenPositions = P.MAX_OPEN_POSITIONS;
+  st.account.mode = MODE;
   st.account.updatedAt = Date.now();
-  for (const k of ['account', 'positions', 'trades', 'flipEntries', 'scores']) writeJson(k, st[k]);
+  const keys = ['account', 'positions', 'trades', 'flipEntries', 'scores'];
+  if (MODE === 'testnet') keys.push('closing', 'seenOrderIds');
+  for (const k of keys) writeJson(k, st[k]);
 }
 
 /* ---------------- one run ---------------- */
@@ -92,12 +113,10 @@ function manageOpenPosition(symbol, data, analysis, st, events) {
   }
 }
 
-async function run() {
-  const st = loadState();
-  const events = [];
-  const candidates = [];
-
-  // Pass 1: every coin — score it, manage anything open, collect entry candidates.
+// Scores every coin (records it for the dashboard) and returns
+// { symbol: { symbol, data, analysis } } for the ones with enough history.
+async function scoreAll(st, events) {
+  const signals = {};
   for (const symbol of config.SYMBOLS) {
     try {
       const data = await marketData.loadSymbolData(symbol, config.MTF_TFS, config.ENTRY_TF);
@@ -109,26 +128,39 @@ async function run() {
       });
       if (!analysis) { events.push({ symbol, type: 'skip', reason: 'not enough candle history yet' }); continue; }
       st.scores[symbol] = { score: analysis.score, bias: analysis.bias, at: Date.now() };
-
-      if (st.positions[symbol]) manageOpenPosition(symbol, data, analysis, st, events);
-
-      if (st.positions[symbol]) continue;
-      if (analysis.bias === 0 || !analysis.plan) {
-        events.push({ symbol, type: 'flat', reason: analysis.bias === 0 ? 'score inside the stand-aside band' : 'no plan', score: analysis.score });
-        continue;
-      }
-      const check = strategy.entryFilters({ symbol, data, analysis });
-      if (!check.ok) { events.push({ symbol, type: 'hold', reason: check.reason, score: analysis.score }); continue; }
-      candidates.push({ symbol, data, analysis, fibCheck: check.fibCheck });
+      signals[symbol] = { symbol, data, analysis };
     } catch (err) {
       events.push({ symbol, type: 'error', reason: err.message });
     }
   }
+  return signals;
+}
 
-  // Pass 2: fill free slots, strongest conviction first, sized off the
-  // balance as it stands after this run's exits.
-  candidates.sort((a, b) => Math.abs(b.analysis.score) - Math.abs(a.analysis.score));
-  for (const c of candidates) {
+// Coins with no open position whose signal passes the entry gates,
+// strongest |score| first.
+function entryCandidates(signals, positions, events) {
+  const out = [];
+  for (const sig of Object.values(signals)) {
+    const { symbol, data, analysis } = sig;
+    if (positions[symbol]) continue;
+    if (analysis.bias === 0 || !analysis.plan) {
+      events.push({ symbol, type: 'flat', reason: analysis.bias === 0 ? 'score inside the stand-aside band' : 'no plan', score: analysis.score });
+      continue;
+    }
+    const check = strategy.entryFilters({ symbol, data, analysis });
+    if (!check.ok) { events.push({ symbol, type: 'hold', reason: check.reason, score: analysis.score }); continue; }
+    out.push({ symbol, data, analysis, fibCheck: check.fibCheck });
+  }
+  return out.sort((a, b) => Math.abs(b.analysis.score) - Math.abs(a.analysis.score));
+}
+
+async function runPaper(st, signals, events) {
+  for (const symbol of Object.keys(st.positions)) {
+    if (signals[symbol]) manageOpenPosition(symbol, signals[symbol].data, signals[symbol].analysis, st, events);
+  }
+
+  // Fill free slots, sized off the balance as it stands after this run's exits.
+  for (const c of entryCandidates(signals, st.positions, events)) {
     const open = Object.keys(st.positions).length;
     if (open >= P.MAX_OPEN_POSITIONS) {
       events.push({ symbol: c.symbol, type: 'hold', reason: `all ${P.MAX_OPEN_POSITIONS} position slots in use`, score: c.analysis.score });
@@ -146,7 +178,40 @@ async function run() {
     st.positions[c.symbol] = opened.position;
     events.push(opened.event);
   }
+}
 
+function testnetClient() {
+  const { createClient } = require('./bybit');
+  return createClient({ apiKey: process.env.BYBIT_API_KEY, apiSecret: process.env.BYBIT_API_SECRET });
+}
+
+async function run() {
+  const client = MODE === 'testnet' ? testnetClient() : null; // fail fast on missing keys
+  const st = loadState();
+  const events = [];
+  const signals = await scoreAll(st, events);
+
+  if (MODE === 'paper') {
+    await runPaper(st, signals, events);
+  } else {
+    const exchange = require('./exchange');
+    const halt = /^(1|true|yes)$/i.test(process.env.TRADEBOT_HALT || '');
+    // A coin whose position closes during this run's reconcile becomes a
+    // candidate again next run; coins with an untracked exchange position
+    // are skipped inside runExchange.
+    const candidates = entryCandidates(signals, st.positions, events);
+    await exchange.runExchange({ client, st, signals, candidates, events, halt });
+  }
+
+  saveState(st);
+  printSummary(events, st);
+}
+
+async function closeAllTestnet() {
+  if (MODE !== 'testnet') { console.error('--close-all only applies to TRADEBOT_MODE=testnet'); process.exit(1); }
+  const st = loadState();
+  const events = [];
+  await require('./exchange').closeAll({ client: testnetClient(), st, events });
   saveState(st);
   printSummary(events, st);
 }
@@ -157,14 +222,17 @@ function reset() {
   st.positions = {};
   st.flipEntries = {};
   st.scores = {};
-  saveState(st); // trade history is kept, same as src/reset.js
-  console.log(`TradeBot reset to ${P.STARTING_BALANCE} USDT — all positions closed, no trades recorded.`);
+  st.closing = {};
+  saveState(st); // trade history is kept
+  console.log(MODE === 'testnet'
+    ? `Testnet tracking reset to ${P.STARTING_BALANCE} USDT. Nothing was closed on Bybit — use --close-all for that.`
+    : `TradeBot reset to ${P.STARTING_BALANCE} USDT — all positions closed, no trades recorded.`);
 }
 
 /* ---------------- output ---------------- */
 
 function printSummary(events, st) {
-  console.log(`\n=== TradeBot (${P.STARTING_BALANCE} USDT pool, ${P.LEVERAGE}x, ${P.MARGIN_PCT}% margin/trade, max ${P.MAX_OPEN_POSITIONS}) @ ${new Date().toISOString()} ===\n`);
+  console.log(`\n=== TradeBot [${MODE}] (${P.STARTING_BALANCE} USDT pool, ${P.LEVERAGE}x, ${P.MARGIN_PCT}% margin/trade, max ${P.MAX_OPEN_POSITIONS}) @ ${new Date().toISOString()} ===\n`);
   for (const ev of events) {
     if (ev.type === 'enter') {
       console.log(`[${ev.symbol}] ENTER ${ev.bias === 1 ? 'LONG' : 'SHORT'} @ ${fmt(ev.entry)} | score ${ev.score} | SL ${fmt(ev.stop)} T1 ${fmt(ev.t1)} T2 ${fmt(ev.t2)} T3 ${fmt(ev.t3)} | qty ${ev.qty} margin $${fmt(ev.margin)} risk $${fmt(ev.riskAmt)}`);
@@ -183,6 +251,8 @@ function money(x) { return `${x < 0 ? '-' : '+'}$${fmt(Math.abs(x))}`; }
 
 if (process.argv.includes('--reset')) {
   reset();
+} else if (process.argv.includes('--close-all')) {
+  closeAllTestnet().catch((err) => { console.error(err); process.exit(1); });
 } else {
   run().catch((err) => { console.error(err); process.exit(1); });
 }

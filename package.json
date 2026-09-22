@@ -6,7 +6,8 @@
   "main": "src/run.js",
   "scripts": {
     "start": "node src/run.js",
-    "reset": "node src/run.js --reset"
+    "reset": "node src/run.js --reset",
+    "test": "node --test test/exchange.test.js"
   },
   "engines": {
     "node": ">=18"

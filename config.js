@@ -41,4 +41,12 @@ module.exports = {
     LEVERAGE: 10,            // position value = margin x leverage (250 USDT -> 2500 USDT)
     MAX_OPEN_POSITIONS: 4,   // 4 x 25% = the whole balance
   },
+
+  // Exchange execution (TRADEBOT_MODE=testnet). Paper mode ignores this.
+  EXECUTION: {
+    // No new entries for the rest of the UTC day once today's realized loss
+    // reaches this % of the day's starting balance. Open positions keep
+    // their exchange-side stops/targets either way.
+    DAILY_LOSS_LIMIT_PCT: 20,
+  },
 };

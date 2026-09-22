@@ -171,16 +171,26 @@
   .slotBar span{ width:26px; height:6px; border-radius:3px; background:var(--panel2); border:1px solid var(--border); }
   .slotBar span.on{ background:var(--bot); border-color:var(--bot); }
   .coin.inPos{ border-color:rgba(185,139,255,0.45); }
+
+  .modeTabs{ display:flex; gap:6px; margin:10px 0 0; }
+  .modeTabs a{
+    font-family:var(--mono); font-size:10.5px; padding:5px 11px; border-radius:7px; text-decoration:none;
+    background:var(--panel2); border:1px solid var(--border); color:var(--text-secondary);
+  }
+  .modeTabs a.on{ color:var(--bot); border-color:rgba(185,139,255,0.45); }
+  .banner.testnet{ background:rgba(255,200,87,0.08); border-color:rgba(255,200,87,0.3); }
+  .banner.testnet b{ color:var(--warn); }
 </style>
 </head>
 <body>
 
 <div class="head">
   <h1>TradeBot · 1000 USDT</h1>
-  <div class="sub">Paper trading · ATLAS + GoldenRatio + CRUCIBLE</div>
+  <div class="sub" id="modeSub">Paper trading · ATLAS + GoldenRatio + CRUCIBLE</div>
 </div>
+<div class="modeTabs"><a href="./" id="tabPaper">Paper</a><a href="./?mode=testnet" id="tabTestnet">Bybit testnet</a></div>
 
-<div class="banner">
+<div class="banner" id="banner">
   <b>Paper trading only</b> — one shared balance for all six coins,
   same ATLAS + GoldenRatio + CRUCIBLE signals. When more coins qualify than there are free slots, the strongest score wins.
   No API keys, no exchange account, no real orders.
@@ -205,7 +215,7 @@
   <div style="text-align:right">
     <div class="label">Started</div>
     <div class="value" id="startedValue" style="font-size:15px; color:var(--text-secondary)">—</div>
-    <a class="resetAccountBtn" href="https://github.com/alicetin1905-ux/TradeBot/actions/workflows/reset.yml" target="_blank" rel="noopener" title="Opens GitHub — click &quot;Run workflow&quot; there to confirm">Reset account</a>
+    <a class="resetAccountBtn" id="resetBtn" href="https://github.com/alicetin1905-ux/TradeBot/actions/workflows/reset.yml" target="_blank" rel="noopener" title="Opens GitHub — click &quot;Run workflow&quot; there to confirm">Reset account</a>
   </div>
 </div>
 
@@ -240,7 +250,21 @@
   ];
   var SCORE_THRESHOLD = 25; // matches config.js SCORE_THRESHOLD — the |score| that triggers an entry
   var ENTRY_TF = '60';      // matches config.js ENTRY_TF — how flipEntries.json keys are built ("SYMBOL:60")
-  var RAW_BASE = 'https://raw.githubusercontent.com/alicetin1905-ux/TradeBot/main/state/';
+  // ?mode=testnet shows the Bybit testnet account (state/testnet/, pushed by
+  // scripts/testnet-run.sh from the machine that runs it); default is paper.
+  var MODE = /(?:^|[?&])mode=testnet(?:&|$)/.test(location.search) ? 'testnet' : 'paper';
+  var RAW_BASE = 'https://raw.githubusercontent.com/alicetin1905-ux/TradeBot/main/state/' + (MODE === 'testnet' ? 'testnet/' : '');
+  document.getElementById(MODE === 'testnet' ? 'tabTestnet' : 'tabPaper').classList.add('on');
+  if (MODE === 'testnet') {
+    document.title = 'TradeBot · Testnet';
+    document.getElementById('modeSub').textContent = 'Bybit TESTNET · ATLAS + GoldenRatio + CRUCIBLE';
+    var banner = document.getElementById('banner');
+    banner.classList.add('testnet');
+    banner.innerHTML = '<b>Bybit testnet</b> — real orders on Bybit\'s test exchange with test funds, not real money. ' +
+      'Stops and targets sit on the exchange. Balance is the bot\'s 1000 USDT allocation plus its realized P&amp;L (net of fees); ' +
+      'open P&amp;L below uses OKX mark prices, so it can differ a little from Bybit testnet.';
+    document.getElementById('resetBtn').style.display = 'none';
+  }
 
   var els = {
     totalValue: document.getElementById('totalValue'),
@@ -593,7 +617,7 @@
      gap), just had a new entry taken. The very first successful fetch only
      primes this baseline — it never fires for positions that were already
      open before the page loaded. */
-  var WATCH_KEY = 'tradebot-watch-v1';
+  var WATCH_KEY = 'tradebot-watch-v1-' + MODE;
   var watch = { on: false, sys: false };
   var lastPositions = null;
 
@@ -636,7 +660,7 @@
     if (!watch.sys) return;
     var label = (SYMBOLS.find(function (s) { return s.id === symbol; }) || { label: symbol }).label;
     var dir = pos.bias === 1 ? 'LONG' : 'SHORT';
-    var title = 'TradeBot — ' + label;
+    var title = 'TradeBot' + (MODE === 'testnet' ? ' testnet' : '') + ' — ' + label;
     var body = dir + ' @ ' + fmtPrice(pos.entry) + ' · SL ' + fmtPrice(pos.stop) + ' · risk ' + fmtMoney(pos.riskAmt);
     try {
       var n = new Notification(title, { body: body, tag: 'tradebot-entry-' + symbol, renotify: false });
@@ -705,7 +729,9 @@
 
       els.lastUpdated.textContent = 'updated ' + new Date().toLocaleTimeString();
     } catch (e) {
-      els.lastUpdated.textContent = 'fetch failed: ' + e.message;
+      els.lastUpdated.textContent = MODE === 'testnet' && /HTTP 404/.test(e.message)
+        ? 'no testnet data yet — it appears after the first testnet run pushes state/testnet/ (see README)'
+        : 'fetch failed: ' + e.message;
     } finally {
       els.refreshBtn.textContent = 'Refresh';
     }

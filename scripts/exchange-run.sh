@@ -6,6 +6,9 @@
 # state/<mode>/ back to GitHub so the dashboard's tab for that mode shows it.
 # Logs append to logs/<mode>.log.
 set -euo pipefail
+# cron starts with a bare PATH; add where Node/git usually live (nodejs.org
+# installer, Homebrew on Apple Silicon and Intel, nvm-less Linux).
+export PATH="/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:$PATH"
 MODE="${1:-demo}"
 case "$MODE" in demo|testnet) ;; *) echo "usage: $0 [demo|testnet]" >&2; exit 1 ;; esac
 cd "$(dirname "$0")/.."

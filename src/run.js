@@ -23,6 +23,9 @@
 //   node src/run.js --reset      back to the starting balance (paper: all flat;
 //                                demo/testnet: resets tracking only, not Bybit)
 //   node src/run.js --close-all  demo/testnet: cancel orders + close everything
+//   node src/run.js --sync       demo/testnet: sync positions/fills from Bybit
+//                                only — no market data, no new entries; state
+//                                is written only if something changed
 'use strict';
 
 const fs = require('fs');
@@ -211,6 +214,22 @@ async function run() {
   printSummary(events, st);
 }
 
+// Quick reconcile for the dashboard between hourly runs: books fills, moves
+// the stop to breakeven after T1, forgets closed positions. No signals are
+// passed, so it never opens or signal-closes anything.
+async function syncOnExchange() {
+  if (!ON_EXCHANGE) { console.error('--sync only applies to TRADEBOT_MODE=demo or testnet'); process.exit(1); }
+  const client = exchangeClient();
+  const st = loadState();
+  const snapshot = () => JSON.stringify([st.positions, st.trades, st.closing, st.account.balance]);
+  const before = snapshot();
+  const events = [];
+  await require('./exchange').runExchange({ client, st, signals: {}, candidates: [], events });
+  if (snapshot() === before) { console.log(`[${MODE}] sync: no changes`); return; }
+  saveState(st);
+  printSummary(events, st);
+}
+
 async function closeAllOnExchange() {
   if (!ON_EXCHANGE) { console.error('--close-all only applies to TRADEBOT_MODE=demo or testnet'); process.exit(1); }
   const st = loadState();
@@ -261,6 +280,8 @@ function money(x) { return `${x < 0 ? '-' : '+'}$${fmt(Math.abs(x))}`; }
 
 if (process.argv.includes('--reset')) {
   reset();
+} else if (process.argv.includes('--sync')) {
+  syncOnExchange().catch((err) => { console.error(err); process.exit(1); });
 } else if (process.argv.includes('--close-all')) {
   closeAllOnExchange().catch((err) => { console.error(err); process.exit(1); });
 } else {

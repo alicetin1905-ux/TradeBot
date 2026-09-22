@@ -131,12 +131,20 @@ paper workflow on GitHub Actions is unaffected.
    6 * * * * /path/to/TradeBot/scripts/exchange-run.sh demo
    ```
    (`testnet` instead of `demo` for testnet.) Output goes to `logs/demo.log`.
-4. Optional — dashboard: prefix with `PUSH_STATE=1` (e.g.
-   `6 * * * * PUSH_STATE=1 /path/to/TradeBot/scripts/exchange-run.sh demo`)
-   so it commits `state/demo/` back to GitHub; that machine then needs push
-   access to this repo (a fine-grained token or deploy key limited to
-   TradeBot). The dashboard's **Bybit demo** tab (`index.html?mode=demo`)
-   shows it; **Bybit testnet** (`?mode=testnet`) likewise.
+4. Optional — dashboard: prefix with `PUSH_STATE=1` so runs commit
+   `state/demo/` back to GitHub, and add a 5-minute sync so fills and closes
+   show up between hourly runs:
+   ```
+   6 * * * *   PUSH_STATE=1 /path/to/TradeBot/scripts/exchange-run.sh demo
+   */5 * * * * PUSH_STATE=1 /path/to/TradeBot/scripts/exchange-run.sh demo sync
+   ```
+   `sync` (`node src/run.js --sync`) only reads positions/fills from Bybit —
+   no new entries — and only commits when something changed. The machine
+   needs push access to this repo, e.g. a fine-grained token limited to
+   TradeBot with *Contents: Read and write*, saved once with
+   `git config credential.helper store` + a manual `git push`. The dashboard's
+   **Bybit demo** tab (`index.html?mode=demo`) shows it; open P&L there
+   updates every minute from live prices.
 
 `node src/run.js --reset` in demo/testnet mode only resets the bot's own tracking
 (allocation back to 1000 USDT); it doesn't touch anything on Bybit.

@@ -730,7 +730,8 @@
       if (watch.on) checkNewEntries(positions);
       else lastPositions = positions;
 
-      els.lastUpdated.textContent = 'updated ' + new Date().toLocaleTimeString();
+      els.lastUpdated.textContent = 'updated ' + new Date().toLocaleTimeString() +
+        (account.updatedAt ? ' · bot data from ' + timeAgo(account.updatedAt) : '');
     } catch (e) {
       els.lastUpdated.textContent = EXCHANGE && /HTTP 404/.test(e.message)
         ? 'no ' + EXCHANGE + ' data yet — it appears after the first run pushes state/' + MODE + '/ (see README)'

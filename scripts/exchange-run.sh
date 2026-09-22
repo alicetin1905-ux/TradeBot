@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# One Bybit run, for cron on the machine that holds .env (see README).
-#   scripts/exchange-run.sh demo      Bybit Demo Trading (default)
-#   scripts/exchange-run.sh testnet   Bybit testnet
+# Bybit runs for cron on the machine that holds .env (see README).
+#   scripts/exchange-run.sh demo          full hourly run on Bybit Demo Trading
+#   scripts/exchange-run.sh demo sync     quick sync of positions/fills only
+#   scripts/exchange-run.sh testnet [sync]  same on Bybit testnet
 # Pulls the latest code, runs the bot, and — if PUSH_STATE=1 — commits
 # state/<mode>/ back to GitHub so the dashboard's tab for that mode shows it.
 # Logs append to logs/<mode>.log.
@@ -10,19 +11,29 @@ set -euo pipefail
 # installer, Homebrew on Apple Silicon and Intel, nvm-less Linux).
 export PATH="/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:$PATH"
 MODE="${1:-demo}"
-case "$MODE" in demo|testnet) ;; *) echo "usage: $0 [demo|testnet]" >&2; exit 1 ;; esac
+case "$MODE" in demo|testnet) ;; *) echo "usage: $0 [demo|testnet] [sync]" >&2; exit 1 ;; esac
+ARGS=()
+[ "${2:-}" = "sync" ] && ARGS=(--sync)
 cd "$(dirname "$0")/.."
 mkdir -p logs
 
+# One run at a time — a sync firing while the hourly run is still busy skips.
+LOCK="logs/.$MODE.lock"
+if ! mkdir "$LOCK" 2>/dev/null; then
+  # Stale lock from a crashed run (older than 15 min): take it over.
+  if [ -n "$(find "$LOCK" -maxdepth 0 -mmin +15 2>/dev/null)" ]; then rm -rf "$LOCK"; mkdir "$LOCK"; else exit 0; fi
+fi
+trap 'rm -rf "$LOCK"' EXIT
+
 {
-  echo "=== $(date -u +%Y-%m-%dT%H:%M:%SZ) ==="
+  if [ ${#ARGS[@]} -eq 0 ]; then echo "=== $(date -u +%Y-%m-%dT%H:%M:%SZ) ==="; fi
   git pull --rebase --autostash -q || echo "git pull failed — running current checkout"
-  TRADEBOT_MODE="$MODE" node src/run.js
+  TRADEBOT_MODE="$MODE" node src/run.js ${ARGS[@]+"${ARGS[@]}"}
 
   if [ "${PUSH_STATE:-0}" = "1" ]; then
     git add "state/$MODE/"
     if ! git diff --cached --quiet; then
-      git commit -q -m "Bybit $MODE run $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+      git commit -q -m "Bybit $MODE ${ARGS[*]:-run} $(date -u +%Y-%m-%dT%H:%M:%SZ)"
       git push -q || { git pull --rebase -q && git push -q; }
     fi
   fi

@@ -1,7 +1,7 @@
 // Central knobs for the whole bot. Everything else reads from here.
 module.exports = {
-  // Same six coins ATLAS / GoldenRatio / CRUCIBLE / BTCLiveBoard already track.
-  SYMBOLS: ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'XRPUSDT', 'BNBUSDT', 'DOGEUSDT'],
+  // The six coins ATLAS / GoldenRatio / CRUCIBLE / BTCLiveBoard track, plus HYPE and SUI.
+  SYMBOLS: ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'XRPUSDT', 'BNBUSDT', 'DOGEUSDT', 'HYPEUSDT', 'SUIUSDT'],
 
   // ATLAS's own default read timeframe for its trade plan / BTCLiveBoard's
   // "ATLAS 1H score" — entries are decided on closed 1H candles only.
@@ -16,7 +16,9 @@ module.exports = {
   // GoldenRatio's own per-coin impulse thresholds (%) — set earlier on the
   // FIBO page itself, reused here so the confluence check agrees with what
   // that page would actually flag as an impulse for each coin.
-  FIB_THRESHOLD: { BTCUSDT: 2, ETHUSDT: 1, SOLUSDT: 3, XRPUSDT: 3, BNBUSDT: 2, DOGEUSDT: 2 },
+  // HYPE / SUI weren't on the FIBO page: set from their own 1H volatility
+  // (HYPE moves like SOL/XRP, SUI a bit more — median 12h move ~1.7% / ~1.9%).
+  FIB_THRESHOLD: { BTCUSDT: 2, ETHUSDT: 1, SOLUSDT: 3, XRPUSDT: 3, BNBUSDT: 2, DOGEUSDT: 2, HYPEUSDT: 3, SUIUSDT: 4 },
   FIB_WINDOW: 12,
 
   // CRUCIBLE's own leverage-tier mix, used to estimate where clustered
@@ -34,7 +36,7 @@ module.exports = {
   // full round-trip back to entry can't turn a winner into a loser.
   TARGET_SPLIT: [0.40, 0.35, 0.25], // T1 / T2 / T3 shares, must sum to 1
 
-  // Money rules: all six coins trade out of ONE shared balance.
+  // Money rules: all coins trade out of ONE shared balance.
   PORTFOLIO: {
     STARTING_BALANCE: 1000,  // USDT
     MARGIN_PCT: 25,          // % of the current shared balance put up as margin per trade

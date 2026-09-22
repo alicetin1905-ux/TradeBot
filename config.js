@@ -63,5 +63,12 @@ module.exports = {
     SERVER: 'https://ntfy.sh/',
     NTFY_TOPIC: 'tradebot-i50rjyd7igft',
     CLICK_URL: 'https://alicetin1905-ux.github.io/TradeBot/',
+    // Daily summary: sent by the first hourly run at/after this hour, in the
+    // running Mac's local time.
+    DAILY_SUMMARY_HOUR: 8,
+    // Watchdog (GitHub Actions, scripts/watchdog.js): alert when the bot's
+    // last hourly run is older than this, repeat every REPEAT_H while it stays down.
+    WATCHDOG_MAX_AGE_MIN: 130,
+    WATCHDOG_REPEAT_H: 6,
   },
 };

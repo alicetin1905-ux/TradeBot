@@ -59,11 +59,16 @@ function topic() {
   return /^(off|none|false|0)?$/i.test(t) ? null : t;
 }
 
-async function send(events, st, { fetchImpl = fetch, log = console.log } = {}) {
+async function send(events, st, opts) {
+  return push(messagesFor(events, st), opts);
+}
+
+// Posts ready-made { title, message, tags } messages; returns how many went out.
+async function push(messages, { fetchImpl = fetch, log = console.log } = {}) {
   const t = topic();
   if (!t) return 0;
   let sent = 0;
-  for (const m of messagesFor(events, st)) {
+  for (const m of messages) {
     try {
       const res = await fetchImpl(config.NOTIFY.SERVER, {
         method: 'POST',
@@ -79,4 +84,4 @@ async function send(events, st, { fetchImpl = fetch, log = console.log } = {}) {
   return sent;
 }
 
-module.exports = { send, messagesFor, topic };
+module.exports = { send, push, messagesFor, topic };

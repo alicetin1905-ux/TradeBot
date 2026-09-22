@@ -170,6 +170,11 @@
   .slotBar{ display:flex; gap:5px; margin-top:8px; }
   .slotBar span{ width:26px; height:6px; border-radius:3px; background:var(--panel2); border:1px solid var(--border); }
   .slotBar span.on{ background:var(--bot); border-color:var(--bot); }
+  .coinStats{ width:100%; border-collapse:collapse; font-family:var(--mono); font-size:11px; }
+  .coinStats th{ font-weight:500; font-size:9.5px; letter-spacing:0.07em; text-transform:uppercase; color:var(--text-tertiary); text-align:right; padding:0 4px 7px; }
+  .coinStats th:first-child, .coinStats td:first-child{ text-align:left; }
+  .coinStats td{ text-align:right; padding:7px 4px; border-top:1px solid var(--border); }
+  .coinStats td:first-child{ font-family:var(--sans); font-weight:700; }
   .coin.inPos{ border-color:rgba(185,139,255,0.45); }
 
   .banner.exchange{ background:rgba(255,200,87,0.08); border-color:rgba(255,200,87,0.3); }
@@ -215,6 +220,9 @@
 
 <h2>Performance</h2>
 <div class="statCard" id="perfCard"><div class="empty">Loading…</div></div>
+
+<h2>Per coin</h2>
+<div class="statCard" id="coinStatsCard"><div class="empty">Loading…</div></div>
 
 <h2>Fibonacci check — blocked trades</h2>
 <div class="statCard" id="shadowCard"><div class="empty">Loading…</div></div>
@@ -263,6 +271,7 @@
     tradeLog: document.getElementById('tradeLog'),
     perfCard: document.getElementById('perfCard'),
     shadowCard: document.getElementById('shadowCard'),
+    coinStatsCard: document.getElementById('coinStatsCard'),
     lastUpdated: document.getElementById('lastUpdated'),
     refreshBtn: document.getElementById('refreshBtn'),
     alertsToggle: document.getElementById('alertsToggle'),
@@ -526,6 +535,36 @@
       '<div class="chartWrap"><div class="chartLabel">' + verdict + '</div>' + (recent ? '<div class="tradesCard">' + recent + '</div>' : '') + '</div>';
   }
 
+  // Closed trades per coin (T1/T2/T3 fills of one trade count once), best
+  // total first, so it's easy to see which coins earn their slot.
+  function renderCoinStats(trades) {
+    var groups = {};
+    trades.forEach(function (t) {
+      var k = t.symbol + ':' + t.openedAt;
+      if (!groups[k]) groups[k] = { symbol: t.symbol, pnl: 0 };
+      groups[k].pnl += t.pnl;
+    });
+    var by = {};
+    Object.keys(groups).forEach(function (k) {
+      var g = groups[k];
+      var c = by[g.symbol] || (by[g.symbol] = { n: 0, wins: 0, losses: 0, total: 0, winSum: 0, lossSum: 0 });
+      c.n++; c.total += g.pnl;
+      if (g.pnl > 0.005) { c.wins++; c.winSum += g.pnl; } else if (g.pnl < -0.005) { c.losses++; c.lossSum += g.pnl; }
+    });
+    var rows = SYMBOLS.map(function (s) { return { s: s, c: by[s.id] }; })
+      .sort(function (a, b) { return (b.c ? b.c.total : -1e9) - (a.c ? a.c.total : -1e9); });
+    if (!Object.keys(by).length) { els.coinStatsCard.innerHTML = '<div class="empty">No closed trades yet.</div>'; return; }
+    els.coinStatsCard.innerHTML =
+      '<table class="coinStats"><tr><th>Coin</th><th>Trades</th><th>Win</th><th>Avg win / loss</th><th>Total</th></tr>' +
+      rows.map(function (r) {
+        var c = r.c;
+        if (!c) return '<tr><td>' + r.s.label + '</td><td class="flat">0</td><td class="flat">—</td><td class="flat">—</td><td class="flat">—</td></tr>';
+        return '<tr><td>' + r.s.label + '</td><td>' + c.n + '</td><td>' + Math.round((c.wins / c.n) * 100) + '%</td>' +
+          '<td><span class="up">' + (c.wins ? fmtSigned(c.winSum / c.wins) : '—') + '</span> / <span class="down">' + (c.losses ? fmtSigned(c.lossSum / c.losses) : '—') + '</span></td>' +
+          '<td class="' + pnlClass(c.total) + '">' + fmtSigned(c.total) + '</td></tr>';
+      }).join('') + '</table>';
+  }
+
   function renderPerformance(trades, started) {
     var stats = computePositionStats(trades);
     var statHtml =
@@ -757,6 +796,7 @@
       renderOpenPositions(positions, markPrices);
       renderPerformance(trades, started);
       renderShadow(shadowState);
+      renderCoinStats(trades);
       renderTrades(trades);
       if (watch.on) checkNewEntries(positions);
       else lastPositions = positions;

@@ -102,6 +102,14 @@ remembers its balance and positions, and what the dashboard reads.
 
 ### Phone alerts
 
+Besides trade alerts, ntfy gets a **daily summary** (first hourly run
+after 08:00 Mac time: balance and change, last-24h P&L, win rate, open
+trades, Fibonacci-blocked results — `src/summary.js`) and a **bot-down
+alarm**: `.github/workflows/watchdog.yml` runs `scripts/watchdog.js` on
+GitHub every 30 minutes and alerts when the last hourly run is over ~2h old
+(repeats every 6h, all-clear when it's back). GitHub may start scheduled
+runs late, so the alarm can lag.
+
 Every entry, T1/T2 fill and exit is pushed to the **ntfy** app
 (`src/notify.js`): install ntfy, subscribe to the topic in `config.js` →
 `NOTIFY.NTFY_TOPIC`, and alerts arrive even with the phone locked. Set

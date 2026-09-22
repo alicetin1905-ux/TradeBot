@@ -381,3 +381,45 @@ test('shadow trades follow blocked entries with the real exit rules', () => {
   shadow.update({ shadow: sh, signals: sig(1, 100, []), blocked, balance: 1000 });
   assert.equal(Object.keys(sh.open).length, 0);
 });
+
+test('daily summary: once a day after the set hour, with balance change and stats', () => {
+  const summary = require('../src/summary');
+  const at = (h, day = 23) => new Date(2026, 8, day, h, 10).getTime(); // local time
+  const st = {
+    account: { balance: 1037.1, startingBalance: 1000 },
+    trades: [
+      { symbol: 'XRPUSDT', openedAt: 1, closedAt: at(3), pnl: 20 },   // T1 fill ...
+      { symbol: 'XRPUSDT', openedAt: 1, closedAt: at(4), pnl: 37.1 }, // ... and T3 of the same trade
+      { symbol: 'DOGEUSDT', openedAt: 2, closedAt: at(5), pnl: -20 },
+    ],
+    positions: { HYPEUSDT: { symbol: 'HYPEUSDT', bias: 1 } },
+    shadow: { closed: [{ pnl: -30 }] },
+    summary: null,
+  };
+  assert.equal(summary.due(st, at(7)), null);            // before 08:00
+  const m = summary.due(st, at(8));
+  assert.match(m.title, /\+\$37\.10/);
+  assert.match(m.message, /All trades: 1W \/ 1L \(50% win\)/);
+  assert.match(m.message, /Open 1\/4: HYPE long/);
+  assert.match(m.message, /Fib-blocked trades: 1, would have made -\$30\.00/);
+  assert.equal(summary.due(st, at(9)), null);            // already sent today
+  st.account.balance = 1000;
+  assert.match(summary.due(st, at(8, 24)).title, /-\$37\.10/); // next day: change since yesterday
+});
+
+test('watchdog: alert when the bot stops, repeat every 6h, all-clear when back', () => {
+  const { check } = require('../scripts/watchdog');
+  const H = 3600000, t0 = Date.UTC(2026, 8, 23, 0, 6);
+  let wd = { down: false };
+  let r = check({ lastRun: t0, wd, now: t0 + 1.5 * H });
+  assert.equal(r.message, null);                         // 90 min: fine
+  r = check({ lastRun: t0, wd, now: t0 + 2.5 * H });
+  assert.equal(r.message.title, 'TradeBot is not running'); wd = r.wd;
+  r = check({ lastRun: t0, wd, now: t0 + 4 * H });
+  assert.equal(r.message, null); wd = r.wd;              // no repeat within 6h
+  r = check({ lastRun: t0, wd, now: t0 + 8.6 * H });
+  assert.equal(r.message.title, 'TradeBot is not running'); wd = r.wd;
+  r = check({ lastRun: t0 + 9 * H, wd, now: t0 + 9.2 * H });
+  assert.equal(r.message.title, 'TradeBot is running again');
+  assert.deepEqual(r.wd, { down: false });
+});

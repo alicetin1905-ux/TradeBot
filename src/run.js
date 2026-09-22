@@ -33,6 +33,7 @@ const strategy = require('./strategy');
 const exchange = require('./exchange');
 const notify = require('./notify');
 const shadow = require('./shadow');
+const summary = require('./summary');
 const { loadEnv } = require('./env');
 
 loadEnv();
@@ -69,6 +70,7 @@ function loadState() {
     seenOrderIds: readJson('seenOrderIds', []), // closed-pnl records already booked
     usedSignals: readJson('usedSignals', {}),   // one trade per signal (strategy.rememberSignals)
     shadow: readJson('shadow', null) || shadow.empty(), // what Fibonacci-blocked trades would have done
+    summary: readJson('summary', null),         // last daily summary { date, balance }
   };
 }
 function saveState(st) {
@@ -79,7 +81,7 @@ function saveState(st) {
   st.account.maxOpenPositions = P.MAX_OPEN_POSITIONS;
   st.account.mode = MODE;
   st.account.updatedAt = Date.now();
-  for (const k of ['account', 'positions', 'trades', 'flipEntries', 'scores', 'closing', 'seenOrderIds', 'usedSignals', 'shadow']) writeJson(k, st[k]);
+  for (const k of ['account', 'positions', 'trades', 'flipEntries', 'scores', 'closing', 'seenOrderIds', 'usedSignals', 'shadow', 'summary']) writeJson(k, st[k]);
 }
 
 /* ---------------- one run ---------------- */
@@ -159,11 +161,13 @@ async function run() {
   const candidates = entryCandidates(signals, st, events, blocked);
   await exchange.runExchange({ client, st, signals, candidates, events, halt });
   shadow.update({ shadow: st.shadow, signals, blocked, balance: st.account.balance });
+  const daily = summary.due(st);
   strategy.rememberSignals(st.usedSignals, {}, st.positions); // mark what just opened
 
   saveState(st);
   printSummary(events, st);
   await notify.send(events, st);
+  if (daily) await notify.push([daily]);
 }
 
 // Quick reconcile for the dashboard between hourly runs: books fills, moves

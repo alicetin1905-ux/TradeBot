@@ -1,39 +1,4 @@
 {
-  "XRPUSDT": {
-    "symbol": "XRPUSDT",
-    "bias": 1,
-    "entry": 1.563,
-    "stop": 1.563,
-    "initialStop": 1.5244,
-    "t1": 1.6017,
-    "t2": 1.6404,
-    "t3": 1.679,
-    "qtyTotal": 1599.3,
-    "qtyRemaining": 399.9,
-    "qtyT1": 639.7,
-    "qtyT2": 559.7,
-    "qtyT3": 399.9,
-    "margin": 249.97059,
-    "notional": 2499.7059,
-    "riskAmt": 61.73297999999995,
-    "filled": {
-      "t1": true,
-      "t2": true,
-      "t3": false
-    },
-    "breakeven": true,
-    "openedAt": 1790114765745,
-    "score": 59,
-    "orders": {
-      "entry": "77026504-4cb4-4717-91b9-7a4dab7e17e3",
-      "t1": "40ef4bf2-3f70-4bc6-b02d-dec09164e590",
-      "t2": "34a46ca8-3abb-4fc1-b2b4-25065fd1754b",
-      "t3": "aefd8931-cb79-44d2-9d88-e0fd41715c5a"
-    },
-    "tickSize": 0.0001,
-    "markPrice": 1.5936,
-    "unrealisedPnl": 12.23694
-  },
   "SUIUSDT": {
     "symbol": "SUIUSDT",
     "bias": 1,
@@ -66,8 +31,8 @@
       "t3": "14f1e843-3eb2-481e-bec6-789d726e5c63"
     },
     "tickSize": 0.0001,
-    "markPrice": 1.01673,
-    "unrealisedPnl": -5.1039
+    "markPrice": 1.007,
+    "unrealisedPnl": -15.515
   },
   "ETHUSDT": {
     "symbol": "ETHUSDT",
@@ -101,8 +66,8 @@
       "t3": "9e396295-d2ab-49c5-9f0d-93c00776b251"
     },
     "tickSize": 0.01,
-    "markPrice": 2732.91,
-    "unrealisedPnl": 1.1795
+    "markPrice": 2719.86,
+    "unrealisedPnl": 5.747
   },
   "BNBUSDT": {
     "symbol": "BNBUSDT",
@@ -136,7 +101,7 @@
       "t3": "e63a3e56-a905-41b4-88fc-b653ed244c81"
     },
     "tickSize": 0.1,
-    "markPrice": 784.3,
-    "unrealisedPnl": -1.24
+    "markPrice": 776.4,
+    "unrealisedPnl": 8.556
   }
 }

@@ -31,8 +31,8 @@
       "t3": "aefd8931-cb79-44d2-9d88-e0fd41715c5a"
     },
     "tickSize": 0.0001,
-    "markPrice": 1.5968,
-    "unrealisedPnl": 54.05634
+    "markPrice": 1.5813,
+    "unrealisedPnl": 29.26719
   },
   "DOGEUSDT": {
     "symbol": "DOGEUSDT",
@@ -66,8 +66,8 @@
       "t3": "3b0aa7bc-af92-4d96-9293-d32bf51b2348"
     },
     "tickSize": 0.00001,
-    "markPrice": 0.10263,
-    "unrealisedPnl": 42.0728
+    "markPrice": 0.10081,
+    "unrealisedPnl": 14.72548
   },
   "HYPEUSDT": {
     "symbol": "HYPEUSDT",
@@ -101,8 +101,8 @@
       "t3": "c4716f3c-818a-413a-b5a9-2c77018c0c4d"
     },
     "tickSize": 0.01,
-    "markPrice": 97.17,
-    "unrealisedPnl": -11.52
+    "markPrice": 96.68,
+    "unrealisedPnl": -24.064
   },
   "SOLUSDT": {
     "symbol": "SOLUSDT",
@@ -136,7 +136,42 @@
       "t3": "ce9159c0-62d7-459a-87ee-0603cf3faf3f"
     },
     "tickSize": 0.01,
-    "markPrice": 118.991,
-    "unrealisedPnl": 1.701
+    "markPrice": 118.04,
+    "unrealisedPnl": -18.27
+  },
+  "BTCUSDT": {
+    "symbol": "BTCUSDT",
+    "bias": 1,
+    "entry": 86333,
+    "stop": 85570.4,
+    "initialStop": 85570.4,
+    "t1": 87099.4,
+    "t2": 87865.7,
+    "t3": 88632.1,
+    "qtyTotal": 0.011,
+    "qtyRemaining": 0.011,
+    "qtyT1": 0.004,
+    "qtyT2": 0.003,
+    "qtyT3": 0.004,
+    "margin": 94.96629999999999,
+    "notional": 949.6629999999999,
+    "riskAmt": 8.388600000000064,
+    "filled": {
+      "t1": false,
+      "t2": false,
+      "t3": false
+    },
+    "breakeven": false,
+    "openedAt": 1790129167243,
+    "score": 61,
+    "orders": {
+      "entry": "277240d9-d507-4674-8bd3-4e30eecba9b4",
+      "t1": "7623c055-ab7e-49ca-815b-8c4f4ebe8ae1",
+      "t2": "cbc0fc63-eeb3-4bee-ae5b-ad5dc14f09b8",
+      "t3": "c0347d66-64cc-4c94-a0da-297c801b675f"
+    },
+    "tickSize": 0.1,
+    "markPrice": 86336.9,
+    "unrealisedPnl": 0.0429
   }
 }

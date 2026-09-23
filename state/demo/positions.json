@@ -9,7 +9,7 @@
     "t2": 1.6404,
     "t3": 1.679,
     "qtyTotal": 1599.3,
-    "qtyRemaining": 959.6,
+    "qtyRemaining": 399.9,
     "qtyT1": 639.7,
     "qtyT2": 559.7,
     "qtyT3": 399.9,
@@ -18,7 +18,7 @@
     "riskAmt": 61.73297999999995,
     "filled": {
       "t1": true,
-      "t2": false,
+      "t2": true,
       "t3": false
     },
     "breakeven": true,
@@ -31,8 +31,8 @@
       "t3": "aefd8931-cb79-44d2-9d88-e0fd41715c5a"
     },
     "tickSize": 0.0001,
-    "markPrice": 1.6114,
-    "unrealisedPnl": 46.44464
+    "markPrice": 1.648,
+    "unrealisedPnl": 33.9915
   },
   "DOGEUSDT": {
     "symbol": "DOGEUSDT",
@@ -66,8 +66,8 @@
       "t3": "3b0aa7bc-af92-4d96-9293-d32bf51b2348"
     },
     "tickSize": 0.00001,
-    "markPrice": 0.10338,
-    "unrealisedPnl": 53.3423
+    "markPrice": 0.10352,
+    "unrealisedPnl": 55.44594
   },
   "HYPEUSDT": {
     "symbol": "HYPEUSDT",
@@ -101,8 +101,8 @@
       "t3": "c4716f3c-818a-413a-b5a9-2c77018c0c4d"
     },
     "tickSize": 0.01,
-    "markPrice": 96.84,
-    "unrealisedPnl": -19.968
+    "markPrice": 96.726,
+    "unrealisedPnl": -22.8864
   },
   "SOLUSDT": {
     "symbol": "SOLUSDT",
@@ -136,8 +136,8 @@
       "t3": "ce9159c0-62d7-459a-87ee-0603cf3faf3f"
     },
     "tickSize": 0.01,
-    "markPrice": 118.795,
-    "unrealisedPnl": -2.415
+    "markPrice": 119.082,
+    "unrealisedPnl": 3.612
   },
   "BTCUSDT": {
     "symbol": "BTCUSDT",
@@ -171,8 +171,8 @@
       "t3": "c0347d66-64cc-4c94-a0da-297c801b675f"
     },
     "tickSize": 0.1,
-    "markPrice": 86610.78,
-    "unrealisedPnl": 3.05558
+    "markPrice": 86810,
+    "unrealisedPnl": 5.247
   },
   "ETHUSDT": {
     "symbol": "ETHUSDT",
@@ -206,7 +206,7 @@
       "t3": "e18fae0c-4ecd-4f3c-91b9-8e94e84b6404"
     },
     "tickSize": 0.01,
-    "markPrice": 2766.56,
-    "unrealisedPnl": 0.1073
+    "markPrice": 2774.99,
+    "unrealisedPnl": 3.2264
   }
 }

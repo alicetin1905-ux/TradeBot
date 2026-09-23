@@ -31,8 +31,8 @@
       "t3": "aefd8931-cb79-44d2-9d88-e0fd41715c5a"
     },
     "tickSize": 0.0001,
-    "markPrice": 1.5899,
-    "unrealisedPnl": 10.75731
+    "markPrice": 1.5951,
+    "unrealisedPnl": 12.83679
   },
   "HYPEUSDT": {
     "symbol": "HYPEUSDT",
@@ -66,8 +66,8 @@
       "t3": "c4716f3c-818a-413a-b5a9-2c77018c0c4d"
     },
     "tickSize": 0.01,
-    "markPrice": 95.53,
-    "unrealisedPnl": -53.504
+    "markPrice": 95.75,
+    "unrealisedPnl": -47.872
   },
   "SUIUSDT": {
     "symbol": "SUIUSDT",
@@ -101,7 +101,42 @@
       "t3": "14f1e843-3eb2-481e-bec6-789d726e5c63"
     },
     "tickSize": 0.0001,
-    "markPrice": 1.0079,
-    "unrealisedPnl": -14.552
+    "markPrice": 1.01282,
+    "unrealisedPnl": -9.2876
+  },
+  "ETHUSDT": {
+    "symbol": "ETHUSDT",
+    "bias": -1,
+    "entry": 2736.28,
+    "stop": 2778.55,
+    "initialStop": 2778.55,
+    "t1": 2694.04,
+    "t2": 2651.81,
+    "t3": 2609.57,
+    "qtyTotal": 0.35,
+    "qtyRemaining": 0.35,
+    "qtyT1": 0.14,
+    "qtyT2": 0.12,
+    "qtyT3": 0.09,
+    "margin": 95.7698,
+    "notional": 957.698,
+    "riskAmt": 14.794499999999992,
+    "filled": {
+      "t1": false,
+      "t2": false,
+      "t3": false
+    },
+    "breakeven": false,
+    "openedAt": 1790154366946,
+    "score": -25,
+    "orders": {
+      "entry": "922867d7-0d72-40d8-9224-51cb988dd3e0",
+      "t1": "d47c4a84-63d9-4cda-8605-a4c626ce0fe6",
+      "t2": "ed9b69c8-5c15-4eda-8b13-afc9845b8adf",
+      "t3": "9e396295-d2ab-49c5-9f0d-93c00776b251"
+    },
+    "tickSize": 0.01,
+    "markPrice": 2736.29,
+    "unrealisedPnl": -0.0035
   }
 }

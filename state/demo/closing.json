@@ -1,1 +1,38 @@
-{}
+{
+  "BTCUSDT": {
+    "symbol": "BTCUSDT",
+    "bias": 1,
+    "entry": 86333,
+    "stop": 86333,
+    "initialStop": 85570.4,
+    "t1": 87099.4,
+    "t2": 87865.7,
+    "t3": 88632.1,
+    "qtyTotal": 0.011,
+    "qtyRemaining": 0.007,
+    "qtyT1": 0.004,
+    "qtyT2": 0.003,
+    "qtyT3": 0.004,
+    "margin": 94.96629999999999,
+    "notional": 949.6629999999999,
+    "riskAmt": 8.388600000000064,
+    "filled": {
+      "t1": true,
+      "t2": false,
+      "t3": false
+    },
+    "breakeven": true,
+    "openedAt": 1790129167243,
+    "score": 61,
+    "orders": {
+      "entry": "277240d9-d507-4674-8bd3-4e30eecba9b4",
+      "t1": "7623c055-ab7e-49ca-815b-8c4f4ebe8ae1",
+      "t2": "cbc0fc63-eeb3-4bee-ae5b-ad5dc14f09b8",
+      "t3": "c0347d66-64cc-4c94-a0da-297c801b675f"
+    },
+    "tickSize": 0.1,
+    "markPrice": 86524.76,
+    "unrealisedPnl": 1.34232,
+    "closedDetectedAt": 1790147101774
+  }
+}

@@ -1,8 +1,4 @@
 {
-  "XRPUSDT": {
-    "bias": 1,
-    "reset": false
-  },
   "SUIUSDT": {
     "bias": 1,
     "reset": true
@@ -12,6 +8,10 @@
     "reset": true
   },
   "BNBUSDT": {
+    "bias": -1,
+    "reset": false
+  },
+  "SOLUSDT": {
     "bias": -1,
     "reset": false
   }

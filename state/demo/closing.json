@@ -142,5 +142,41 @@
     "markPrice": 2739.25,
     "unrealisedPnl": -9.9974,
     "closedDetectedAt": 1790153401647
+  },
+  "BNBUSDT": {
+    "symbol": "BNBUSDT",
+    "bias": 1,
+    "entry": 791.5,
+    "stop": 783.4,
+    "initialStop": 783.4,
+    "t1": 799.6,
+    "t2": 807.7,
+    "t3": 815.8,
+    "qtyTotal": 1.38,
+    "qtyRemaining": 1.38,
+    "qtyT1": 0.55,
+    "qtyT2": 0.48,
+    "qtyT3": 0.35,
+    "margin": 109.227,
+    "notional": 1092.27,
+    "riskAmt": 11.178000000000031,
+    "filled": {
+      "t1": false,
+      "t2": false,
+      "t3": false
+    },
+    "breakeven": false,
+    "openedAt": 1790139968148,
+    "score": 84,
+    "orders": {
+      "entry": "be1869aa-c46e-4760-81d6-9d3be4e42fdd",
+      "t1": "892b1e52-0b69-401d-ade7-83d761250bd1",
+      "t2": "dc9f074e-2068-4a33-bf1e-8f571e7913ea",
+      "t3": "ef8a2f08-a64b-42b7-a5d4-6deaf20ce336"
+    },
+    "tickSize": 0.1,
+    "markPrice": 785.22,
+    "unrealisedPnl": -8.6664,
+    "closedDetectedAt": 1790153701598
   }
 }

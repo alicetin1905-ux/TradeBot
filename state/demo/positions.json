@@ -31,8 +31,8 @@
       "t3": "aefd8931-cb79-44d2-9d88-e0fd41715c5a"
     },
     "tickSize": 0.0001,
-    "markPrice": 1.5992,
-    "unrealisedPnl": 34.73752
+    "markPrice": 1.6114,
+    "unrealisedPnl": 46.44464
   },
   "DOGEUSDT": {
     "symbol": "DOGEUSDT",
@@ -66,8 +66,8 @@
       "t3": "3b0aa7bc-af92-4d96-9293-d32bf51b2348"
     },
     "tickSize": 0.00001,
-    "markPrice": 0.10337,
-    "unrealisedPnl": 53.19204
+    "markPrice": 0.10338,
+    "unrealisedPnl": 53.3423
   },
   "HYPEUSDT": {
     "symbol": "HYPEUSDT",
@@ -101,8 +101,8 @@
       "t3": "c4716f3c-818a-413a-b5a9-2c77018c0c4d"
     },
     "tickSize": 0.01,
-    "markPrice": 97.031,
-    "unrealisedPnl": -15.0784
+    "markPrice": 96.84,
+    "unrealisedPnl": -19.968
   },
   "SOLUSDT": {
     "symbol": "SOLUSDT",
@@ -136,8 +136,8 @@
       "t3": "ce9159c0-62d7-459a-87ee-0603cf3faf3f"
     },
     "tickSize": 0.01,
-    "markPrice": 118.95,
-    "unrealisedPnl": 0.84
+    "markPrice": 118.795,
+    "unrealisedPnl": -2.415
   },
   "BTCUSDT": {
     "symbol": "BTCUSDT",
@@ -171,7 +171,42 @@
       "t3": "c0347d66-64cc-4c94-a0da-297c801b675f"
     },
     "tickSize": 0.1,
-    "markPrice": 86544.19,
-    "unrealisedPnl": 2.32309
+    "markPrice": 86610.78,
+    "unrealisedPnl": 3.05558
+  },
+  "ETHUSDT": {
+    "symbol": "ETHUSDT",
+    "bias": 1,
+    "entry": 2766.27,
+    "stop": 2733.67,
+    "initialStop": 2733.67,
+    "t1": 2799.18,
+    "t2": 2800.38,
+    "t3": 2865,
+    "qtyTotal": 0.37,
+    "qtyRemaining": 0.37,
+    "qtyT1": 0.14,
+    "qtyT2": 0.12,
+    "qtyT3": 0.11,
+    "margin": 102.35199,
+    "notional": 1023.5199,
+    "riskAmt": 12.061999999999966,
+    "filled": {
+      "t1": false,
+      "t2": false,
+      "t3": false
+    },
+    "breakeven": false,
+    "openedAt": 1790136366479,
+    "score": 82,
+    "orders": {
+      "entry": "bca1e0ca-c1ae-4bc4-82b5-94cd0e2eee19",
+      "t1": "b25c10b8-9b2e-437e-a198-f75926ff6f51",
+      "t2": "d58a9083-ee5c-4c20-a8af-a8e258f72a02",
+      "t3": "e18fae0c-4ecd-4f3c-91b9-8e94e84b6404"
+    },
+    "tickSize": 0.01,
+    "markPrice": 2766.56,
+    "unrealisedPnl": 0.1073
   }
 }

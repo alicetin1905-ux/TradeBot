@@ -1,8 +1,4 @@
 {
-  "SUIUSDT": {
-    "bias": 1,
-    "reset": true
-  },
   "ETHUSDT": {
     "bias": -1,
     "reset": true
@@ -18,5 +14,17 @@
   "BTCUSDT": {
     "bias": -1,
     "reset": true
+  },
+  "DOGEUSDT": {
+    "bias": -1,
+    "reset": false
+  },
+  "XRPUSDT": {
+    "bias": -1,
+    "reset": false
+  },
+  "SUIUSDT": {
+    "bias": -1,
+    "reset": false
   }
 }

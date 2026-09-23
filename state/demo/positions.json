@@ -31,8 +31,8 @@
       "t3": "aefd8931-cb79-44d2-9d88-e0fd41715c5a"
     },
     "tickSize": 0.0001,
-    "markPrice": 1.5951,
-    "unrealisedPnl": 12.83679
+    "markPrice": 1.5935,
+    "unrealisedPnl": 12.19695
   },
   "HYPEUSDT": {
     "symbol": "HYPEUSDT",
@@ -66,8 +66,8 @@
       "t3": "c4716f3c-818a-413a-b5a9-2c77018c0c4d"
     },
     "tickSize": 0.01,
-    "markPrice": 95.75,
-    "unrealisedPnl": -47.872
+    "markPrice": 95.64,
+    "unrealisedPnl": -50.688
   },
   "SUIUSDT": {
     "symbol": "SUIUSDT",
@@ -101,8 +101,8 @@
       "t3": "14f1e843-3eb2-481e-bec6-789d726e5c63"
     },
     "tickSize": 0.0001,
-    "markPrice": 1.01282,
-    "unrealisedPnl": -9.2876
+    "markPrice": 1.01446,
+    "unrealisedPnl": -7.5328
   },
   "ETHUSDT": {
     "symbol": "ETHUSDT",
@@ -136,7 +136,42 @@
       "t3": "9e396295-d2ab-49c5-9f0d-93c00776b251"
     },
     "tickSize": 0.01,
-    "markPrice": 2736.29,
-    "unrealisedPnl": -0.0035
+    "markPrice": 2731.58,
+    "unrealisedPnl": 1.645
+  },
+  "BNBUSDT": {
+    "symbol": "BNBUSDT",
+    "bias": -1,
+    "entry": 783.3,
+    "stop": 795,
+    "initialStop": 795,
+    "t1": 771.6,
+    "t2": 759.9,
+    "t3": 748.2,
+    "qtyTotal": 1.24,
+    "qtyRemaining": 1.24,
+    "qtyT1": 0.49,
+    "qtyT2": 0.43,
+    "qtyT3": 0.32,
+    "margin": 97.1292,
+    "notional": 971.2919999999999,
+    "riskAmt": 14.508000000000056,
+    "filled": {
+      "t1": false,
+      "t2": false,
+      "t3": false
+    },
+    "breakeven": false,
+    "openedAt": 1790157966954,
+    "score": -33,
+    "orders": {
+      "entry": "c7634e89-2a89-4b96-88a6-ea7af6f4d696",
+      "t1": "aff00090-cf0d-443d-890c-ab56e97b94a1",
+      "t2": "0071fca6-9dc0-4aae-b593-528be666d38a",
+      "t3": "e63a3e56-a905-41b4-88fc-b653ed244c81"
+    },
+    "tickSize": 0.1,
+    "markPrice": 783.34,
+    "unrealisedPnl": -0.0496
   }
 }

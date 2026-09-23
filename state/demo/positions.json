@@ -31,20 +31,20 @@
       "t3": "aefd8931-cb79-44d2-9d88-e0fd41715c5a"
     },
     "tickSize": 0.0001,
-    "markPrice": 1.591,
-    "unrealisedPnl": 44.7804
+    "markPrice": 1.5968,
+    "unrealisedPnl": 54.05634
   },
   "DOGEUSDT": {
     "symbol": "DOGEUSDT",
     "bias": 1,
     "entry": 0.09983,
-    "stop": 0.09726,
+    "stop": 0.09983,
     "initialStop": 0.09726,
     "t1": 0.1024,
     "t2": 0.10497,
     "t3": 0.10753,
     "qtyTotal": 25042,
-    "qtyRemaining": 25042,
+    "qtyRemaining": 15026,
     "qtyT1": 10016,
     "qtyT2": 8764,
     "qtyT3": 6262,
@@ -52,11 +52,11 @@
     "notional": 2499.94286,
     "riskAmt": 64.35794000000007,
     "filled": {
-      "t1": false,
+      "t1": true,
       "t2": false,
       "t3": false
     },
-    "breakeven": false,
+    "breakeven": true,
     "openedAt": 1790114765745,
     "score": 39,
     "orders": {
@@ -66,8 +66,8 @@
       "t3": "3b0aa7bc-af92-4d96-9293-d32bf51b2348"
     },
     "tickSize": 0.00001,
-    "markPrice": 0.10113,
-    "unrealisedPnl": 32.5546
+    "markPrice": 0.10263,
+    "unrealisedPnl": 42.0728
   },
   "HYPEUSDT": {
     "symbol": "HYPEUSDT",
@@ -101,8 +101,8 @@
       "t3": "c4716f3c-818a-413a-b5a9-2c77018c0c4d"
     },
     "tickSize": 0.01,
-    "markPrice": 97.37,
-    "unrealisedPnl": -6.4
+    "markPrice": 97.17,
+    "unrealisedPnl": -11.52
   },
   "SOLUSDT": {
     "symbol": "SOLUSDT",
@@ -136,7 +136,7 @@
       "t3": "ce9159c0-62d7-459a-87ee-0603cf3faf3f"
     },
     "tickSize": 0.01,
-    "markPrice": 118.95,
-    "unrealisedPnl": 0.84
+    "markPrice": 118.991,
+    "unrealisedPnl": 1.701
   }
 }

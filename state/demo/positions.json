@@ -1,50 +1,15 @@
 {
-  "SUIUSDT": {
-    "symbol": "SUIUSDT",
-    "bias": 1,
-    "entry": 1.0215,
-    "stop": 0.9943,
-    "initialStop": 0.9943,
-    "t1": 1.0487,
-    "t2": 1.0758,
-    "t3": 1.103,
-    "qtyTotal": 1070,
-    "qtyRemaining": 1070,
-    "qtyT1": 420,
-    "qtyT2": 370,
-    "qtyT3": 280,
-    "margin": 109.30050000000001,
-    "notional": 1093.005,
-    "riskAmt": 29.10400000000012,
-    "filled": {
-      "t1": false,
-      "t2": false,
-      "t3": false
-    },
-    "breakeven": false,
-    "openedAt": 1790139968148,
-    "score": 82,
-    "orders": {
-      "entry": "d6924983-a59f-4c2a-890d-8902267fd1e3",
-      "t1": "67fa7264-9dbc-4c8d-8d12-260354251d22",
-      "t2": "a9207b39-465e-44c2-9b96-2e671d1e62f4",
-      "t3": "14f1e843-3eb2-481e-bec6-789d726e5c63"
-    },
-    "tickSize": 0.0001,
-    "markPrice": 1.00481,
-    "unrealisedPnl": -17.8583
-  },
   "ETHUSDT": {
     "symbol": "ETHUSDT",
     "bias": -1,
     "entry": 2736.28,
-    "stop": 2778.55,
+    "stop": 2736.28,
     "initialStop": 2778.55,
     "t1": 2694.04,
     "t2": 2651.81,
     "t3": 2609.57,
     "qtyTotal": 0.35,
-    "qtyRemaining": 0.35,
+    "qtyRemaining": 0.21,
     "qtyT1": 0.14,
     "qtyT2": 0.12,
     "qtyT3": 0.09,
@@ -52,11 +17,11 @@
     "notional": 957.698,
     "riskAmt": 14.794499999999992,
     "filled": {
-      "t1": false,
+      "t1": true,
       "t2": false,
       "t3": false
     },
-    "breakeven": false,
+    "breakeven": true,
     "openedAt": 1790154366946,
     "score": -25,
     "orders": {
@@ -66,8 +31,8 @@
       "t3": "9e396295-d2ab-49c5-9f0d-93c00776b251"
     },
     "tickSize": 0.01,
-    "markPrice": 2713.25,
-    "unrealisedPnl": 8.0605
+    "markPrice": 2698.97,
+    "unrealisedPnl": 7.8351
   },
   "BNBUSDT": {
     "symbol": "BNBUSDT",
@@ -101,8 +66,8 @@
       "t3": "e63a3e56-a905-41b4-88fc-b653ed244c81"
     },
     "tickSize": 0.1,
-    "markPrice": 779.8,
-    "unrealisedPnl": 4.34
+    "markPrice": 775.6,
+    "unrealisedPnl": 9.548
   },
   "SOLUSDT": {
     "symbol": "SOLUSDT",
@@ -136,8 +101,8 @@
       "t3": "f384f575-34e2-43fd-a3cd-bba97f38fbdf"
     },
     "tickSize": 0.01,
-    "markPrice": 116.413,
-    "unrealisedPnl": 3.4194
+    "markPrice": 115.77,
+    "unrealisedPnl": 8.692
   },
   "BTCUSDT": {
     "symbol": "BTCUSDT",
@@ -171,7 +136,7 @@
       "t3": "ef707d1f-44c3-46dc-a6ac-049598dab4fa"
     },
     "tickSize": 0.1,
-    "markPrice": 85668.49,
-    "unrealisedPnl": -3.66839
+    "markPrice": 85300.26,
+    "unrealisedPnl": 0.38214
   }
 }

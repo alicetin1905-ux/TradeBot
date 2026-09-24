@@ -8,7 +8,7 @@ DOGE, HYPE and SUI perps on **Bybit Demo Trading** (mainnet prices, demo funds).
   stop, flip-triggered entry (`src/indicators.js`, `src/atlasScore.js`).
 - **GoldenRatio** — confluence filter: a *fresh* contradicting Fibonacci
   impulse holds the trade back (`src/fib.js`) — only while it ended within
-  the last 6 closed 1H candles and price hasn't won back 61.8% of it
+  the last 6 closed 4H candles and price hasn't won back 61.8% of it
   (`config.js` → `FIB_MAX_AGE_H`, `FIB_RECOVERY`). Every trade it still
   blocks is followed as a **shadow trade** (`src/shadow.js`, same levels,
   size and exit rules, never sent to Bybit) so the dashboard can show
@@ -27,23 +27,28 @@ number as a rehearsal of the strategy, not investment advice.
 ## Rules (`config.js` → `PORTFOLIO`)
 
 - **One shared 1000 USDT balance** for all eight coins.
-- **A fixed 200 USDT margin per trade**, at **10x leverage** = 2000 USDT
-  position value, however the balance moves (`MARGIN_USDT`; set it to null
-  to size by `MARGIN_PCT` of the balance instead).
-  The strategy's own stop/targets decide the exit, so the loss at the stop
-  is 1000 x the stop distance (e.g. a 1.5% stop loses ~15 USDT).
-- **Max 5 open positions** (5 x 200 = up to 1000 USDT margin — only as many
-  full-size trades as the balance can fund), **at most
+- **30 USDT risk per trade** (`RISK_USDT`): each position is sized so
+  hitting its stop loses ~30 USDT — a 3% stop gets a 1000 USDT position
+  (100 USDT margin at 10x), a 5% stop 600 USDT. Capped at **200 USDT margin
+  / 2000 USDT position** (`MARGIN_USDT`), so a tight stop can't blow up the
+  size. `RISK_USDT: null` goes back to a fixed 200 USDT margin per trade.
+- **Max 5 open positions** (only as many full-size trades as the balance
+  can fund), **at most
   3 in the same direction**, and a new trade needs a score of **at least 50**
   (`ENTRY_MIN_SCORE`; 25 still counts as a flip for exits). If more coins
   qualify than there are free slots, the strongest |score| gets the slot. A
   trade never uses more margin than is still free.
-- Entries decided on closed 1H candles only — nothing repaints intrabar.
+- **4H signals** (`ENTRY_TF: '240'`): entries, flips and levels come from
+  closed 4H candles only — nothing repaints intrabar. The bot still runs
+  hourly (fills, breakeven, flips), but opens new trades only on the run
+  right after a 4H close (00/04/08/12/16/20 UTC, `ENTRY_FRESH_MIN`), like
+  the backtest.
 - **One trade per signal:** once a coin has been traded long (or short), it
   isn't entered in that direction again until its score has gone neutral or
   flipped at least once since — closing a trade never triggers an instant
   re-entry on the same signal (`state/demo/usedSignals.json`).
-- Scaled exit: 40% off at T1 (1R), 35% at T2 (2R), 25% at T3 (3R), with the
+- Scaled exit: 40% off at T1 (1.5R), 35% at T2 (3R), 25% at T3 (4.5R) —
+  R = the stop distance (`TARGETS_R`) — with the
   stop moved to breakeven the moment T1 fills. A firm score flip against an
   open position closes it.
 
@@ -94,9 +99,9 @@ Findings (Sep 2025 → Sep 2026, three 120-day windows):
 
 | Variant | Sep–Jan | Jan–May | May–Sep | 360 days | Max DD (360d) | PF (360d) |
 |---|---:|---:|---:|---:|---:|---:|
-| 1H · $200 margin · live levels (live now) | −86% | −82% | −81% | −86% | 91% | 0.80 |
+| 1H · $200 margin · live levels (old live rules) | −86% | −82% | −81% | −86% | 91% | 0.80 |
 | 4H · $200 margin · 1.5/3/4.5R | −7% | +136% | +157% | +317% | 73% | 1.26 |
-| 4H · $30 at stop · 1.5/3/4.5R | +25% | +66% | +85% | +177% | 30% | 1.35 |
+| 4H · $30 at stop · 1.5/3/4.5R (live now) | +25% | +66% | +85% | +177% | 30% | 1.35 |
 | 4H · $30 at stop · 2/4/6R | +17% | +80% | +91% | +195% | 39% | 1.40 |
 
 The 1H signal doesn't cover its fees. 4H with bigger targets does, but with
@@ -115,7 +120,7 @@ window. Limit entries and breakeven-after-T2 didn't help.
   prices differ slightly). Instrument rules and mark prices come from
   Bybit's public mainnet API (`api.bybit.com`, no key sent); orders go to
   `api-demo`.
-- **Sizing:** 200 USDT margin at 10x, capped by the bot's **allocation**. The allocation
+- **Sizing:** 30 USDT at the stop (max 200 USDT margin at 10x), capped by the bot's **allocation**. The allocation
   starts at 1000 USDT and moves with realized P&L (from Bybit's closed-P&L
   records, net of fees), so a demo wallet with more USDT still trades like
   a 1000 USDT account. Never more margin than Bybit says is free.

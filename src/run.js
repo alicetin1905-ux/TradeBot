@@ -45,6 +45,9 @@ if (MODE !== 'demo') {
 }
 
 const P = config.PORTFOLIO;
+// Length of one signal candle, and its name for messages ("4H").
+const TF_MS = config.ENTRY_TF === 'D' ? 86400000 : +config.ENTRY_TF * 60000;
+const TF_LABEL = config.ENTRY_TF === 'D' ? '1D' : TF_MS >= 3600000 ? `${TF_MS / 3600000}H` : `${TF_MS / 60000}m`;
 const DIR = path.join(__dirname, '..', 'state', 'demo');
 
 /* ---------------- persistence ---------------- */
@@ -57,7 +60,7 @@ function writeJson(name, data) {
   fs.writeFileSync(path.join(DIR, name + '.json'), JSON.stringify(data, null, 2) + '\n');
 }
 function freshAccount() {
-  return { balance: P.STARTING_BALANCE, startingBalance: P.STARTING_BALANCE, marginPct: P.MARGIN_PCT, marginUsdt: P.MARGIN_USDT, leverage: P.LEVERAGE, maxOpenPositions: P.MAX_OPEN_POSITIONS, mode: MODE };
+  return { balance: P.STARTING_BALANCE, startingBalance: P.STARTING_BALANCE, marginPct: P.MARGIN_PCT, marginUsdt: P.MARGIN_USDT, riskUsdt: P.RISK_USDT, targetsR: config.TARGETS_R, entryTf: config.ENTRY_TF, leverage: P.LEVERAGE, maxOpenPositions: P.MAX_OPEN_POSITIONS, mode: MODE };
 }
 function loadState() {
   return {
@@ -79,6 +82,9 @@ function saveState(st) {
   delete st.account.riskPct; // pre-MARGIN_PCT field
   st.account.marginPct = P.MARGIN_PCT;
   st.account.marginUsdt = P.MARGIN_USDT;
+  st.account.riskUsdt = P.RISK_USDT;
+  st.account.targetsR = config.TARGETS_R;
+  st.account.entryTf = config.ENTRY_TF;
   st.account.leverage = P.LEVERAGE;
   st.account.maxOpenPositions = P.MAX_OPEN_POSITIONS;
   st.account.mode = MODE;
@@ -113,8 +119,8 @@ async function scoreAll(st, events) {
 
 // Coins with no open position whose signal passes the entry gates,
 // strongest |score| first. A coin held back gets a code in scores.json
-// (wait: 'weak' | 'used' | 'fib' | 'chase') so the dashboard can say why.
-function entryCandidates(signals, st, events, blocked = []) {
+// (wait: 'weak' | 'used' | 'stale' | 'fib' | 'chase') so the dashboard can say why.
+function entryCandidates(signals, st, events, blocked = [], now = Date.now()) {
   const out = [];
   for (const sig of Object.values(signals)) {
     const { symbol, data, analysis } = sig;
@@ -131,6 +137,12 @@ function entryCandidates(signals, st, events, blocked = []) {
     if (strategy.signalUsed(st.usedSignals, symbol, analysis.bias)) {
       if (st.scores[symbol]) st.scores[symbol].wait = 'used';
       events.push({ symbol, type: 'hold', reason: 'already traded this signal — waits for the score to go neutral or flip first', score: analysis.score });
+      continue;
+    }
+    const closedAgo = now - (analysis.closedAt + TF_MS);
+    if (config.ENTRY_FRESH_MIN != null && closedAgo > config.ENTRY_FRESH_MIN * 60000) {
+      if (st.scores[symbol]) st.scores[symbol].wait = 'stale';
+      events.push({ symbol, type: 'hold', reason: `signal candle closed ${Math.round(closedAgo / 60000)} min ago — new entries only right after a ${TF_LABEL} close`, score: analysis.score });
       continue;
     }
     const check = strategy.entryFilters({ symbol, data, analysis });

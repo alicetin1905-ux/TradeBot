@@ -39,10 +39,14 @@ function fixStep(x, step) {
 // still trades like the configured 1000 USDT account.
 function sizingBase(st, wallet) { return Math.max(0, Math.min(st.account.balance, wallet.equity)); }
 
-// Margin for one new trade: the fixed MARGIN_USDT when set, else MARGIN_PCT
-// of the (allocation-capped) balance.
-function marginPerTrade(base) {
-  return P.MARGIN_USDT != null ? P.MARGIN_USDT : base * P.MARGIN_PCT / 100;
+// Margin for one new trade. The cap is MARGIN_USDT when set, else MARGIN_PCT
+// of the (allocation-capped) balance. With RISK_USDT and a stop distance
+// (fraction of entry), the position is sized so the stop loses RISK_USDT,
+// never more than the cap.
+function marginPerTrade(base, stopDist = null) {
+  const cap = P.MARGIN_USDT != null ? P.MARGIN_USDT : base * P.MARGIN_PCT / 100;
+  if (P.RISK_USDT == null || !(stopDist > 0)) return cap;
+  return Math.min(P.RISK_USDT / stopDist, cap * P.LEVERAGE) / P.LEVERAGE;
 }
 
 function usedMargin(positions) {
@@ -207,13 +211,6 @@ async function openEntries({ client, st, exPos, wallet, candidates, events, halt
       }
 
       const base = sizingBase(st, wallet);
-      // Only full-size trades: if what's still free can't fund a full trade's margin
-      // the balance (e.g. older, bigger positions still hold it), wait for a
-      // close instead of opening an odd, undersized position.
-      const margin = marginPerTrade(base);
-      const free = Math.min(base - usedMargin(st.positions), available * 0.95);
-      if (free < margin * 0.99) { hold(`not enough free margin for a full $${margin.toFixed(0)} trade ($${Math.max(0, free).toFixed(0)} free)`); continue; }
-
       // Strategy levels (with GoldenRatio/CRUCIBLE refinement) as % of entry.
       const basePlan = sizeFor({
         symbol: sym, equity: base, bias: c.analysis.bias, entry: c.analysis.plan.entry, stop: c.analysis.plan.stop,
@@ -223,6 +220,13 @@ async function openEntries({ client, st, exPos, wallet, candidates, events, halt
       if (!opened.position) { hold(opened.reason); continue; }
       const lv = opened.position;
       const ratio = (x) => x / lv.entry;
+
+      // Only full-size trades: if what's still free can't fund this trade's margin
+      // (e.g. older, bigger positions still hold it), wait for a close instead
+      // of opening an odd, undersized position.
+      const margin = marginPerTrade(base, Math.abs(1 - ratio(lv.stop)));
+      const free = Math.min(base - usedMargin(st.positions), available * 0.95);
+      if (free < margin * 0.99) { hold(`not enough free margin for a full $${margin.toFixed(0)} trade ($${Math.max(0, free).toFixed(0)} free)`); continue; }
 
       const inst = await client.getInstrument(sym);
       const mark = await client.getMarkPrice(sym);

@@ -3,9 +3,14 @@ module.exports = {
   // The six coins ATLAS / GoldenRatio / CRUCIBLE / BTCLiveBoard track, plus HYPE and SUI.
   SYMBOLS: ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'XRPUSDT', 'BNBUSDT', 'DOGEUSDT', 'HYPEUSDT', 'SUIUSDT'],
 
-  // ATLAS's own default read timeframe for its trade plan / BTCLiveBoard's
-  // "ATLAS 1H score" — entries are decided on closed 1H candles only.
-  ENTRY_TF: '60',
+  // Signal timeframe: entries, flips and levels are decided on closed 4H
+  // candles (OKX "4H", UTC-aligned). The 1H version didn't cover its fees in
+  // the backtest (backtest/REPORT.md); 4H with wider targets did.
+  ENTRY_TF: '240',
+  // New entries only on the run right after a signal candle closes (within
+  // this many minutes of the close), like the backtest; a signal that's still
+  // standing an hour or more later isn't chased. null = any time.
+  ENTRY_FRESH_MIN: 60,
 
   // Multi-timeframe alignment check, same set ATLAS's own panel uses.
   MTF_TFS: ['30', '60', '240', 'D'],
@@ -25,7 +30,7 @@ module.exports = {
   FIB_THRESHOLD: { BTCUSDT: 2, ETHUSDT: 1, SOLUSDT: 3, XRPUSDT: 3, BNBUSDT: 2, DOGEUSDT: 2, HYPEUSDT: 3, SUIUSDT: 4 },
   FIB_WINDOW: 12,
   // A contradicting impulse only blocks while it's fresh (ended within this
-  // many closed 1H candles) AND price hasn't won back this share of it yet —
+  // many closed signal candles — 4H now, so 24h) AND price hasn't won back this share of it yet —
   // i.e. "don't buy right into a fresh dump", not "never buy after a dump".
   FIB_MAX_AGE_H: 6,
   FIB_RECOVERY: 0.618,
@@ -44,11 +49,16 @@ module.exports = {
   // of all-or-nothing, and move the stop to breakeven once T1 fills so a
   // full round-trip back to entry can't turn a winner into a loser.
   TARGET_SPLIT: [0.40, 0.35, 0.25], // T1 / T2 / T3 shares, must sum to 1
+  // T1 / T2 / T3 at these multiples of the stop distance (R) from entry.
+  // null = the strategy's own levels (1R / 2R / 3R, T2 liquidity-refined).
+  TARGETS_R: [1.5, 3, 4.5],
 
   // Money rules: all coins trade out of ONE shared balance.
   PORTFOLIO: {
     STARTING_BALANCE: 1000,  // USDT
-    MARGIN_USDT: 200,        // fixed margin per trade in USDT; set to null to use MARGIN_PCT instead
+    RISK_USDT: 30,           // max loss at the stop per trade: the position is sized so a stop costs this much
+                             // (capped at MARGIN_USDT x LEVERAGE, so tight stops don't blow up the size); null = always full MARGIN_USDT
+    MARGIN_USDT: 200,        // max margin per trade in USDT (fixed margin when RISK_USDT is null); null = use MARGIN_PCT
     MARGIN_PCT: 10,          // % of the current shared balance put up as margin per trade (when MARGIN_USDT is null)
     LEVERAGE: 10,            // position value = margin x leverage (100 USDT -> 1000 USDT)
     MAX_OPEN_POSITIONS: 5,

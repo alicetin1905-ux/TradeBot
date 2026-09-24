@@ -15,6 +15,8 @@ config.PORTFOLIO.MARGIN_PCT = 25;
 config.PORTFOLIO.MARGIN_USDT = null;
 config.PORTFOLIO.MAX_SAME_DIRECTION = null;
 config.PORTFOLIO.MAX_OPEN_POSITIONS = 4;
+config.PORTFOLIO.RISK_USDT = null;
+config.TARGETS_R = null;
 
 const INST = {
   BTCUSDT: { qtyStep: 0.001, minOrderQty: 0.001, minNotional: 5, tickSize: 0.1 },
@@ -483,6 +485,25 @@ test('fixed MARGIN_USDT: every trade gets the same margin whatever the balance',
   assert.ok(Math.abs(st.positions.XRPUSDT.margin - 100) < 1e-9);
   assert.equal(st.positions.XRPUSDT.qtyTotal, 400);      // $100 x10 / 2.5
   assert.ok(Math.abs(st.positions.BTCUSDT.margin - 100) < 1e-9);
+});
+
+test('RISK_USDT sizing: a stop loses $30, capped at MARGIN_USDT; targets at TARGETS_R', async () => {
+  const { client } = fakeBybit({ equity: 5000, marks });
+  const st = freshState();
+  st.account.balance = 1000;
+  Object.assign(config.PORTFOLIO, { MARGIN_USDT: 200, RISK_USDT: 30 });
+  config.TARGETS_R = [1.5, 3, 4.5];
+  try {
+    await exchange.runExchange({ client, st, signals: {}, candidates: [candidate('XRPUSDT', 1, 80, 2.5, 0.05), candidate('BTCUSDT', -1, -70, 100000, 0.01)], events: [] });
+  } finally { Object.assign(config.PORTFOLIO, { MARGIN_USDT: null, RISK_USDT: null }); config.TARGETS_R = null; }
+  const x = st.positions.XRPUSDT, b = st.positions.BTCUSDT;
+  assert.equal(x.qtyTotal, 240);                         // 5% stop: $30 / 0.05 = $600 position, $60 margin
+  assert.ok(Math.abs(x.margin - 60) < 1e-9);
+  assert.ok(Math.abs(x.riskAmt - 30) < 1e-6);
+  assert.deepEqual([x.stop, x.t1, x.t2, x.t3], [2.375, 2.6875, 2.875, 3.0625]);
+  assert.equal(b.qtyTotal, 0.02);                        // 1% stop would need $3000: capped at $200 x10
+  assert.ok(Math.abs(b.margin - 200) < 1e-9);
+  assert.deepEqual([b.stop, b.t1, b.t2, b.t3], [101000, 98500, 97000, 95500]);
 });
 
 test('max 3 in one direction: a 4th long waits, a short still gets in', async () => {

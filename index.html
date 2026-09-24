@@ -253,7 +253,7 @@
     { id: 'SUIUSDT', label: 'SUI' },
   ];
   var SCORE_THRESHOLD = 50; // matches config.js ENTRY_MIN_SCORE — the |score| a new trade needs
-  var ENTRY_TF = '60';      // matches config.js ENTRY_TF — how flipEntries.json keys are built ("SYMBOL:60")
+  var ENTRY_TF = '240';     // matches config.js ENTRY_TF — how flipEntries.json keys are built ("SYMBOL:240")
   // Bybit demo account state, pushed to GitHub by scripts/exchange-run.sh
   // from the Mac that runs the bot.
   var EXCHANGE = 'Bybit demo';
@@ -338,6 +338,7 @@
               : sc.wait === 'used' ? 'already traded this signal · waits for a reset'
               : sc.wait === 'fib' ? 'score ready · waiting on Fibonacci check'
               : sc.wait === 'chase' ? 'score ready · price ran too far from the entry'
+              : sc.wait === 'stale' ? 'score ready · enters only right after a 4H close'
               : pct + '% to entry') + ' · ' + dirWord + '</div>' +
           '</div>';
       } else {
@@ -356,12 +357,19 @@
 
   function renderRules(account, openCount) {
     var max = account.maxOpenPositions || 4;
+    var tf = account.entryTf === '240' ? '4H' : account.entryTf === '60' ? '1H' : account.entryTf;
     els.rules.innerHTML =
-      (account.marginUsdt != null
+      (tf ? '<span class="chip">Signals <b>' + tf + '</b></span>' : '') +
+      (account.riskUsdt != null
+        ? '<span class="chip">Risk <b>' + fmtMoney(account.riskUsdt) + '</b> / trade</span>' +
+          (account.marginUsdt != null ? '<span class="chip">Max margin <b>' + fmtMoney(account.marginUsdt) + '</b> (' + fmtMoney(account.marginUsdt * (account.leverage || 1)) + ' position)</span>' : '')
+        : '') +
+      (account.targetsR ? '<span class="chip">Targets <b>' + account.targetsR.join(' / ') + 'R</b></span>' : '') +
+      (account.riskUsdt != null ? '' : account.marginUsdt != null
         ? '<span class="chip">Margin <b>' + fmtMoney(account.marginUsdt) + '</b> / trade</span>'
         : '<span class="chip">Margin <b>' + (account.marginPct != null ? account.marginPct : '—') + '%</b> of balance / trade</span>') +
       '<span class="chip">Leverage <b>' + (account.leverage != null ? account.leverage : '—') + 'x</b></span>' +
-      (account.leverage != null && (account.marginUsdt != null || account.marginPct != null)
+      (account.riskUsdt == null && account.leverage != null && (account.marginUsdt != null || account.marginPct != null)
         ? '<span class="chip">Position value <b>' + fmtMoney((account.marginUsdt != null ? account.marginUsdt : account.balance * account.marginPct / 100) * account.leverage) + '</b> / trade</span>' : '') +
       '<span class="chip">Max <b>' + max + '</b> open positions</span>';
     var bars = '';

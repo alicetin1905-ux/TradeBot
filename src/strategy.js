@@ -49,7 +49,7 @@ function openEntry({ symbol, data, analysis, plan, fibCheck }) {
     config.LEV_TIERS,
     config.LIQ_MMR,
   );
-  const refined = liquidity.refinePlan(plan, clusters);
+  const refined = withTargetsR(liquidity.refinePlan(plan, clusters));
 
   const position = openPositionFromPlan(symbol, refined, analysis, fibCheck);
   const event = {
@@ -60,6 +60,16 @@ function openEntry({ symbol, data, analysis, plan, fibCheck }) {
     liqNote: refined.liqClusterNote,
   };
   return { position, event };
+}
+
+// config.TARGETS_R: T1/T2/T3 at those multiples of the (refined) stop
+// distance from entry, replacing the plan's own 1R/2R/3R levels.
+function withTargetsR(plan) {
+  const R = config.TARGETS_R;
+  if (!R) return plan;
+  const d = Math.abs(plan.entry - plan.stop);
+  const at = (m) => plan.entry + plan.bias * d * m;
+  return { ...plan, t1: at(R[0]), t2: at(R[1]), t3: at(R[2]) };
 }
 
 function openPositionFromPlan(symbol, plan, analysis, fibCheck) {
@@ -107,4 +117,4 @@ function signalUsed(memory, symbol, bias) {
   return !!m && !m.reset && m.bias === bias;
 }
 
-module.exports = { entryFilters, openEntry, rememberSignals, signalUsed };
+module.exports = { withTargetsR, entryFilters, openEntry, rememberSignals, signalUsed };

@@ -290,7 +290,7 @@ function simulate(series, symbols, times, rules) {
 const LIMIT = { atr: 0.25, hours: 3 };
 const BIG = [1.5, 3, 4.5], BIGGER = [2, 4, 6];
 const VARIANTS = [
-  { key: 'live', name: '1H · market · 1/2/3R (live now)', rules: {} },
+  { key: 'live', name: '1H · market · 1/2/3R (old live)', rules: {} },
   { key: 'live_nofees', name: '1H · market · 1/2/3R · no fees', rules: { fees: false } },
   { key: '1h_limit', name: '1H · limit entry · 1/2/3R', rules: { limit: LIMIT } },
   { key: '1h_big', name: '1H · market · 1.5/3/4.5R', rules: { targetsR: BIG } },
@@ -301,7 +301,7 @@ const VARIANTS = [
   { key: '4h_limit_big', name: '4H · limit · 1.5/3/4.5R', rules: { tf: '4H', limit: LIMIT, targetsR: BIG } },
   { key: '4h_limit_bigger', name: '4H · limit · 2/4/6R', rules: { tf: '4H', limit: LIMIT, targetsR: BIGGER } },
   { key: '4h_limit_big_be2', name: '4H · limit · 1.5/3/4.5R · BE after T2', rules: { tf: '4H', limit: LIMIT, targetsR: BIG, breakevenAfter: 't2' } },
-  { key: '4h_big_risk30', name: '4H · market · 1.5/3/4.5R · $30 risk', rules: { tf: '4H', targetsR: BIG, riskUsd: 30 }, focus: true },
+  { key: '4h_big_risk30', name: '4H · market · 1.5/3/4.5R · $30 risk (live now)', rules: { tf: '4H', targetsR: BIG, riskUsd: 30 }, focus: true },
   { key: '4h_big_risk20', name: '4H · market · 1.5/3/4.5R · $20 risk', rules: { tf: '4H', targetsR: BIG, riskUsd: 20 } },
   { key: '4h_big_risk40', name: '4H · market · 1.5/3/4.5R · $40 risk', rules: { tf: '4H', targetsR: BIG, riskUsd: 40 } },
   { key: '4h_risk30', name: '4H · market · 1/2/3R · $30 risk', rules: { tf: '4H', riskUsd: 30 } },

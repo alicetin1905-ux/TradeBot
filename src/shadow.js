@@ -1,7 +1,7 @@
 // Shadow trades: what the trades the Fibonacci check blocked would have
 // done. Each blocked entry is followed on paper with the same levels, size
 // and exit rules a real one would get (40/35/25% at T1/T2/T3, stop to
-// breakeven after T1, close on a score flip), replayed on closed 1H candles.
+// breakeven after T1, close on a score flip), replayed on closed signal (4H) candles.
 // Nothing here touches Bybit — it's only evidence for whether the check
 // earns its place. State: state/demo/shadow.json { open, closed, used }.
 'use strict';
@@ -9,6 +9,7 @@
 const config = require('../config');
 const strategy = require('./strategy');
 const { sizeFor } = require('./risk');
+const { marginPerTrade } = require('./exchange');
 
 const P = config.PORTFOLIO;
 
@@ -73,12 +74,14 @@ function update({ shadow, signals, blocked, balance }) {
   strategy.rememberSignals(shadow.used, signals, shadow.open);
   for (const b of blocked) {
     if (shadow.open[b.symbol] || strategy.signalUsed(shadow.used, b.symbol, b.analysis.bias)) continue;
-    // Same margin a real entry would get (fixed MARGIN_USDT or MARGIN_PCT of balance).
-    const margin = P.MARGIN_USDT != null ? P.MARGIN_USDT : balance * P.MARGIN_PCT / 100;
-    const plan = sizeFor({
-      symbol: b.symbol, equity: balance, bias: b.analysis.bias, entry: b.analysis.price, stop: b.analysis.plan.stop,
+    // Same margin and targets a real entry would get (RISK_USDT sizing capped
+    // at MARGIN_USDT, or MARGIN_PCT of balance; TARGETS_R levels).
+    const entry = b.analysis.price, stop = b.analysis.plan.stop;
+    const margin = marginPerTrade(balance, Math.abs(1 - stop / entry));
+    const plan = strategy.withTargetsR(sizeFor({
+      symbol: b.symbol, equity: balance, bias: b.analysis.bias, entry, stop,
       leverage: P.LEVERAGE, marginPct: (margin / balance) * 100,
-    });
+    }));
     if (plan.qty <= 0 || (plan.stop - plan.entry) * plan.bias >= 0) continue;
     const [a, c, d] = config.TARGET_SPLIT;
     shadow.open[b.symbol] = {

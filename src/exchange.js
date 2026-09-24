@@ -190,6 +190,11 @@ async function openEntries({ client, st, exPos, wallet, candidates, events, halt
     try {
       if (exPos[sym]) { hold('a position is already open on the exchange for this coin'); continue; }
       if (Object.keys(exPos).length >= P.MAX_OPEN_POSITIONS) { hold(`all ${P.MAX_OPEN_POSITIONS} position slots in use`); continue; }
+      const sameDir = Object.values(exPos).filter(p => p.bias === c.analysis.bias).length;
+      if (P.MAX_SAME_DIRECTION != null && sameDir >= P.MAX_SAME_DIRECTION) {
+        hold(`already ${sameDir} ${c.analysis.bias === 1 ? 'longs' : 'shorts'} open (max ${P.MAX_SAME_DIRECTION} in one direction)`);
+        continue;
+      }
 
       const base = sizingBase(st, wallet);
       // Only full-size trades: if what's still free can't fund a full trade's margin

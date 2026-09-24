@@ -113,7 +113,7 @@ async function scoreAll(st, events) {
 
 // Coins with no open position whose signal passes the entry gates,
 // strongest |score| first. A coin held back gets a code in scores.json
-// (wait: 'used' | 'fib' | 'chase') so the dashboard can say why.
+// (wait: 'weak' | 'used' | 'fib' | 'chase') so the dashboard can say why.
 function entryCandidates(signals, st, events, blocked = []) {
   const out = [];
   for (const sig of Object.values(signals)) {
@@ -121,6 +121,11 @@ function entryCandidates(signals, st, events, blocked = []) {
     if (st.positions[symbol]) continue;
     if (analysis.bias === 0 || !analysis.plan) {
       events.push({ symbol, type: 'flat', reason: analysis.bias === 0 ? 'score inside the stand-aside band' : 'no plan', score: analysis.score });
+      continue;
+    }
+    if (Math.abs(analysis.score) < config.ENTRY_MIN_SCORE) {
+      if (st.scores[symbol]) st.scores[symbol].wait = 'weak';
+      events.push({ symbol, type: 'hold', reason: `score ${analysis.score} is below the entry minimum of ${config.ENTRY_MIN_SCORE}`, score: analysis.score });
       continue;
     }
     if (strategy.signalUsed(st.usedSignals, symbol, analysis.bias)) {

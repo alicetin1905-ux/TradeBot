@@ -252,7 +252,7 @@
     { id: 'HYPEUSDT', label: 'HYPE' },
     { id: 'SUIUSDT', label: 'SUI' },
   ];
-  var SCORE_THRESHOLD = 25; // matches config.js SCORE_THRESHOLD — the |score| that triggers an entry
+  var SCORE_THRESHOLD = 50; // matches config.js ENTRY_MIN_SCORE — the |score| a new trade needs
   var ENTRY_TF = '60';      // matches config.js ENTRY_TF — how flipEntries.json keys are built ("SYMBOL:60")
   // Bybit demo account state, pushed to GitHub by scripts/exchange-run.sh
   // from the Mac that runs the bot.
@@ -334,7 +334,8 @@
           '<div class="pnl flat">no position</div>' +
           '<div class="proximity">' +
             '<div class="proximityTrack"><div class="proximityFill" style="width:' + pct + '%"></div></div>' +
-            '<div class="proximityLabel">' + (sc.wait === 'used' ? 'already traded this signal · waits for a reset'
+            '<div class="proximityLabel">' + (sc.wait === 'weak' ? pct + '% to entry (needs ' + SCORE_THRESHOLD + ')'
+              : sc.wait === 'used' ? 'already traded this signal · waits for a reset'
               : sc.wait === 'fib' ? 'score ready · waiting on Fibonacci check'
               : sc.wait === 'chase' ? 'score ready · price ran too far from the entry'
               : pct + '% to entry') + ' · ' + dirWord + '</div>' +

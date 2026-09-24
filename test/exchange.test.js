@@ -13,6 +13,7 @@ const config = require('../config');
 // changing the live settings in config.js doesn't change what's tested.
 config.PORTFOLIO.MARGIN_PCT = 25;
 config.PORTFOLIO.MARGIN_USDT = null;
+config.PORTFOLIO.MAX_SAME_DIRECTION = null;
 config.PORTFOLIO.MAX_OPEN_POSITIONS = 4;
 
 const INST = {
@@ -482,4 +483,24 @@ test('fixed MARGIN_USDT: every trade gets the same margin whatever the balance',
   assert.ok(Math.abs(st.positions.XRPUSDT.margin - 100) < 1e-9);
   assert.equal(st.positions.XRPUSDT.qtyTotal, 400);      // $100 x10 / 2.5
   assert.ok(Math.abs(st.positions.BTCUSDT.margin - 100) < 1e-9);
+});
+
+test('max 3 in one direction: a 4th long waits, a short still gets in', async () => {
+  const { client } = fakeBybit({ equity: 10000, marks });
+  const st = freshState();
+  const events = [];
+  config.PORTFOLIO.MAX_SAME_DIRECTION = 3;
+  config.PORTFOLIO.MAX_OPEN_POSITIONS = 5;
+  config.PORTFOLIO.MARGIN_USDT = 100;
+  try {
+    await exchange.runExchange({ client, st, signals: {}, events, candidates: [
+      candidate('XRPUSDT', 1, 90, 2.5, 0.02), candidate('BTCUSDT', 1, 85, 100000, 0.01),
+      candidate('SOLUSDT', 1, 80, 200, 0.02), candidate('BNBUSDT', 1, 75, 900, 0.02),
+      candidate('ETHUSDT', -1, -70, 4000, 0.015),
+    ] });
+  } finally {
+    config.PORTFOLIO.MAX_SAME_DIRECTION = null; config.PORTFOLIO.MAX_OPEN_POSITIONS = 4; config.PORTFOLIO.MARGIN_USDT = null;
+  }
+  assert.deepEqual(Object.keys(st.positions).sort(), ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'XRPUSDT']);
+  assert.ok(events.some(e => e.symbol === 'BNBUSDT' && /already 3 longs open/.test(e.reason)));
 });

@@ -12,6 +12,10 @@ module.exports = {
 
   // ATLAS's bias threshold: |score| below this is "stand aside".
   SCORE_THRESHOLD: 25,
+  // A new trade needs a stronger score than that: |score| of at least this.
+  // (SCORE_THRESHOLD still decides when a signal counts as flipped — which
+  // closes an open trade — and when a used signal has reset.)
+  ENTRY_MIN_SCORE: 50,
 
   // GoldenRatio's own per-coin impulse thresholds (%) — set earlier on the
   // FIBO page itself, reused here so the confluence check agrees with what
@@ -47,7 +51,8 @@ module.exports = {
     MARGIN_USDT: 100,        // fixed margin per trade in USDT; set to null to use MARGIN_PCT instead
     MARGIN_PCT: 10,          // % of the current shared balance put up as margin per trade (when MARGIN_USDT is null)
     LEVERAGE: 10,            // position value = margin x leverage (100 USDT -> 1000 USDT)
-    MAX_OPEN_POSITIONS: 8,   // 8 x 10% = at most 80% of the balance in use
+    MAX_OPEN_POSITIONS: 5,
+    MAX_SAME_DIRECTION: 3,   // at most this many longs (and this many shorts) open at once
   },
 
   // Bybit execution safety limits.

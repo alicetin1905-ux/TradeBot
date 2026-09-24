@@ -32,7 +32,9 @@ number as a rehearsal of the strategy, not investment advice.
   to size by `MARGIN_PCT` of the balance instead).
   The strategy's own stop/targets decide the exit, so the loss at the stop
   is 1000 x the stop distance (e.g. a 1.5% stop loses ~15 USDT).
-- **Max 8 open positions** (8 x 100 = at most 800 USDT margin). If more coins
+- **Max 5 open positions** (5 x 100 = at most 500 USDT margin), **at most
+  3 in the same direction**, and a new trade needs a score of **at least 50**
+  (`ENTRY_MIN_SCORE`; 25 still counts as a flip for exits). If more coins
   qualify than there are free slots, the strongest |score| gets the slot. A
   trade never uses more margin than is still free.
 - Entries decided on closed 1H candles only — nothing repaints intrabar.
@@ -89,7 +91,7 @@ remembers its balance and positions, and what the dashboard reads.
   a 1000 USDT account. Never more margin than Bybit says is free.
 - **Each hourly run:** books fills, moves the stop to breakeven on Bybit once
   T1 fills, closes at market on a firm score flip, cancels leftover target
-  orders after a close, then fills free slots (max 8). Any open USDT-perp
+  orders after a close, then fills free slots (max 5, max 3 per direction). Any open USDT-perp
   position on the account, including ones the bot didn't open, counts as a
   used slot; the bot leaves positions it didn't open alone. Best to give the
   bot its own (sub-)account.

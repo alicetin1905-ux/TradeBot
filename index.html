@@ -380,6 +380,7 @@
               : sc.wait === 'fib' ? 'score ready · waiting on Fibonacci check'
               : sc.wait === 'chase' ? 'score ready · price ran too far from the entry'
               : sc.wait === 'stale' ? 'score ready · enters only right after a 4H close'
+              : sc.wait === 'btc' ? 'score ready · BTC points the other way'
               : pct + '% to entry') + ' · ' + dirWord + '</div>' +
           '</div>';
       } else {
@@ -468,6 +469,7 @@
     { g: 'Strategy', k: 'ENTRY_TF', label: 'Signal timeframe', t: 'enum', opts: [['240', '4H'], ['60', '1H']] },
     { g: 'Strategy', k: 'ENTRY_MIN_SCORE', label: 'Min score to enter', t: 'num', min: 25, max: 100, int: true },
     { g: 'Strategy', k: 'USE_FIB', label: 'Fibonacci check', t: 'bool' },
+    { g: 'Strategy', k: 'BTC_FILTER', label: 'BTC filter (no alt trades against BTC)', t: 'bool' },
     { g: 'Strategy', k: 'MAX_CHASE_ATR', label: 'Max chase (x ATR)', t: 'num', min: 0.1, max: 5 },
     { g: 'Strategy', k: 'ENTRY_FRESH_MIN', label: 'Enter within (min of close)', t: 'num', min: 5, max: 240, int: true, nullable: true },
     { g: 'Strategy', k: 'SYMBOLS', label: 'Coins', t: 'coins' },

@@ -1,7 +1,7 @@
 {
   "period": "2025-09-29 → 2026-09-24",
   "days": 360,
-  "generatedAt": "2026-09-24T18:39:00.532Z",
+  "generatedAt": "2026-09-24T18:42:33.406Z",
   "rules": {
     "tf": "1H",
     "margin": 200,
@@ -1002,7 +1002,7 @@
     },
     {
       "key": "4h_big_risk50",
-      "name": "4H · market · 1.5/3/4.5R · $50 risk (live now)",
+      "name": "4H · market · 1.5/3/4.5R · $50 risk",
       "rules": {
         "tf": "4H",
         "targetsR": [
@@ -1012,7 +1012,6 @@
         ],
         "riskUsd": 50
       },
-      "focus": true,
       "trades": 346,
       "winRate": 0.42485549132947975,
       "net": 2560.418266171663,
@@ -2089,7 +2088,7 @@
     },
     {
       "key": "x_btc",
-      "name": "idea: no trades against BTC trend",
+      "name": "4H · $50 risk · BTC filter (live now)",
       "rules": {
         "tf": "4H",
         "targetsR": [
@@ -2100,6 +2099,7 @@
         "riskUsd": 50,
         "btcFilter": true
       },
+      "focus": true,
       "trades": 322,
       "winRate": 0.43788819875776397,
       "net": 2185.2397527472776,

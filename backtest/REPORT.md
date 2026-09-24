@@ -1,6 +1,6 @@
 # Backtest 2025-09-29 → 2026-09-24
 
-360 days · 8 coins · start 1000 USDT · $200 margin ×10 · max 5 positions, 3 per direction · entry score ≥ 50 · generated 2026-09-24 18:39 UTC
+360 days · 8 coins · start 1000 USDT · $200 margin ×10 · max 5 positions, 3 per direction · entry score ≥ 50 · generated 2026-09-24 18:42 UTC
 
 Approximation: price/volume signals only (no funding, OI, long/short, book, tape); exits replayed on 1H candles, stop first when a candle touches stop and target; Bybit fees (0.055% taker, 0.02% maker). Limit entries: 0.25×ATR better than the signal close, valid 3 hours, skipped if not filled.
 
@@ -18,7 +18,7 @@ Approximation: price/volume signals only (no funding, OI, long/short, book, tape
 | 4H · limit · 2/4/6R | 87 | 31 | -842 | -84.2 | 90.8 | 0.82 | 141.0 | -77.5 | 60 |
 | 4H · limit · 1.5/3/4.5R · BE after T2 | 46 | 35 | -811 | -81.1 | 87.2 | 0.71 | 122.7 | -92.5 | 30 |
 | 4H · market · 1.5/3/4.5R · $30 risk | 346 | 42 | 1734 | 173.4 | 31.0 | 1.35 | 45.4 | -24.8 |  |
-| 4H · market · 1.5/3/4.5R · $50 risk (live now) | 346 | 42 | 2560 | 256.0 | 45.6 | 1.33 | 69.8 | -38.7 |  |
+| 4H · market · 1.5/3/4.5R · $50 risk | 346 | 42 | 2560 | 256.0 | 45.6 | 1.33 | 69.8 | -38.7 |  |
 | 1H · 1.5/3/4.5R · $50 risk | 151 | 33 | -969 | -96.9 | 97.9 | 0.73 | 51.2 | -34.9 |  |
 |   + volume ≥ 1.2x avg | 171 | 33 | -999 | -99.9 | 99.9 | 0.75 | 51.7 | -34.6 |  |
 |   + volume ≥ 1.5x avg | 238 | 35 | -993 | -99.3 | 99.7 | 0.81 | 51.8 | -34.1 |  |
@@ -31,7 +31,7 @@ Approximation: price/volume signals only (no funding, OI, long/short, book, tape
 | idea: min score 35 | 385 | 39 | 1663 | 166.3 | 68.6 | 1.19 | 68.3 | -37.4 |  |
 | idea: min score 60 | 288 | 42 | 844 | 84.4 | 41.3 | 1.13 | 62.2 | -40.0 |  |
 | idea: min score 70 | 195 | 37 | 245 | 24.5 | 48.8 | 1.05 | 74.1 | -41.4 |  |
-| idea: no trades against BTC trend | 322 | 44 | 2185 | 218.5 | 36.1 | 1.31 | 65.6 | -39.0 |  |
+| 4H · $50 risk · BTC filter (live now) | 322 | 44 | 2185 | 218.5 | 36.1 | 1.31 | 65.6 | -39.0 |  |
 | idea: stop to T1 after T2 | 356 | 42 | 2400 | 240.0 | 46.2 | 1.30 | 69.4 | -38.9 |  |
 | idea: breakeven after T2 | 330 | 39 | 2519 | 251.9 | 47.4 | 1.34 | 77.0 | -36.3 |  |
 | idea: max 2 per direction | 253 | 42 | 1882 | 188.2 | 41.3 | 1.34 | 69.9 | -37.6 |  |
@@ -53,24 +53,24 @@ Approximation: price/volume signals only (no funding, OI, long/short, book, tape
 | 4H · limit · 1.5/3/4.5R · $30 risk | 299 | 43 | 1152 | 115.2 | 36.5 | 1.27 | 42.7 | -25.2 | 197 |
 | 4H · limit · 1.5/3/4.5R · no fees | 74 | 34 | -849 | -84.9 | 89.8 | 0.78 | 123.7 | -80.4 | 51 |
 
-## Candidate: 4H · market · 1.5/3/4.5R · $50 risk (live now) — per coin
+## Candidate: 4H · $50 risk · BTC filter (live now) — per coin
 
 | Coin | Trades | Win % | Net $ |
 |---|---:|---:|---:|
-| HYPE | 49 | 45 | 615 |
-| SUI | 40 | 45 | 604 |
-| DOGE | 48 | 46 | 488 |
-| BNB | 47 | 40 | 427 |
-| XRP | 39 | 44 | 415 |
-| SOL | 40 | 38 | 89 |
-| ETH | 40 | 40 | -1 |
-| BTC | 43 | 42 | -77 |
+| SUI | 37 | 41 | 479 |
+| DOGE | 49 | 47 | 420 |
+| HYPE | 36 | 50 | 409 |
+| BNB | 43 | 42 | 317 |
+| XRP | 30 | 47 | 304 |
+| BTC | 45 | 44 | 107 |
+| ETH | 40 | 43 | 81 |
+| SOL | 42 | 38 | 69 |
 
-## Candidate: 4H · market · 1.5/3/4.5R · $50 risk (live now) — by final exit
+## Candidate: 4H · $50 risk · BTC filter (live now) — by final exit
 
 | Exit | Trades | Net $ |
 |---|---:|---:|
-| stop | 114 | -5446 |
-| signal flip | 139 | 1000 |
-| T3 | 46 | 5693 |
-| breakeven stop | 47 | 1313 |
+| stop | 104 | -5016 |
+| signal flip | 129 | 979 |
+| breakeven stop | 50 | 1393 |
+| T3 | 39 | 4829 |

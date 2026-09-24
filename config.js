@@ -65,6 +65,8 @@ const config = module.exports = {
   FLIP_EXIT: true,
   // GoldenRatio Fibonacci confluence check on entries.
   USE_FIB: true,
+  // No altcoin entry while BTC's own signal points the other way.
+  BTC_FILTER: true,
 
   // Money rules: all coins trade out of ONE shared balance.
   PORTFOLIO: {

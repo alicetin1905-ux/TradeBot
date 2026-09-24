@@ -52,6 +52,10 @@ number as a rehearsal of the strategy, not investment advice.
   hourly (fills, breakeven, flips), but opens new trades only on the run
   right after a 4H close (00/04/08/12/16/20 UTC, `ENTRY_FRESH_MIN`), like
   the backtest.
+- **BTC filter** (`BTC_FILTER`): no altcoin trade while BTC's own 4H
+  signal points the other way. Backtest: +218% vs +256% over the year, but
+  the weakest 4 months +55% instead of +23% and the worst drop 36% instead
+  of 46%.
 - **One trade per signal:** once a coin has been traded long (or short), it
   isn't entered in that direction again until its score has gone neutral or
   flipped at least once since — closing a trade never triggers an instant

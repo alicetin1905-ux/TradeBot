@@ -43,6 +43,7 @@ const FIELDS = {
   ENTRY_TF: { at: ['ENTRY_TF'], check: oneOf('60', '240'), label: 'Signal timeframe ("60" = 1H, "240" = 4H)' },
   ENTRY_MIN_SCORE: { at: ['ENTRY_MIN_SCORE'], check: num(25, 100, { int: true }), label: 'Min |score| to enter' },
   USE_FIB: { at: ['USE_FIB'], check: bool, label: 'Fibonacci check on' },
+  BTC_FILTER: { at: ['BTC_FILTER'], check: bool, label: 'No altcoin trades against BTC\'s signal' },
   MAX_CHASE_ATR: { at: ['MAX_CHASE_ATR'], check: num(0.1, 5), label: 'Max distance from the flip entry (x ATR)' },
   ENTRY_FRESH_MIN: { at: ['ENTRY_FRESH_MIN'], check: num(5, 240, { int: true, nullable: true }), label: 'Enter only within this many minutes of a candle close (null = any time)' },
   SYMBOLS: { at: ['SYMBOLS'], check: null, label: 'Coins to trade' }, // checked against ALL_SYMBOLS below

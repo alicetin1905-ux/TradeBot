@@ -90,7 +90,7 @@ function hourly(st, now = Date.now()) {
   const waiting = Object.entries(st.scores || {})
     .filter(([s, v]) => !st.positions[s] && v.bias !== 0)
     .sort((x, y) => Math.abs(y[1].score) - Math.abs(x[1].score)).slice(0, 3)
-    .map(([s, v]) => `${coin(s)} ${v.score > 0 ? '+' : ''}${v.score}${v.wait ? ' (' + ({ fib: 'fib', chase: 'chase', used: 'used', stale: 'next 4H', weak: '<' + config.ENTRY_MIN_SCORE }[v.wait] || v.wait) + ')' : ''}`);
+    .map(([s, v]) => `${coin(s)} ${v.score > 0 ? '+' : ''}${v.score}${v.wait ? ' (' + ({ fib: 'fib', chase: 'chase', used: 'used', stale: 'next 4H', btc: 'vs BTC', weak: '<' + config.ENTRY_MIN_SCORE }[v.wait] || v.wait) + ')' : ''}`);
   if (waiting.length) lines.push(`Next up: ${waiting.join(', ')}`);
 
   return { title: `TradeBot $${equity.toFixed(2)} (${pct >= 0 ? '+' : ''}${pct}%)`, message: lines.join('\n'), tags: ['clock3'], priority: 2 };

@@ -658,3 +658,24 @@ test('real-liquidation tracking: buckets longs/shorts in USD, samples each candl
   assert.equal(x.f1, 1);                               // next close 101 vs 100
   assert.equal(x.f24, 6);                              // close 24h later: 106
 });
+
+test('BTC filter: no altcoin entry against BTC signal; BTC itself and agreeing alts still enter', () => {
+  const { entryCandidates } = require('../src/run');
+  const now = Date.now();
+  const sig = (symbol, bias, score) => ({
+    symbol, data: { candles: { [config.ENTRY_TF]: [] } },
+    analysis: { bias, score, price: 100, closedAt: now - 4 * 3600000 - 60000, atr: 2, plan: { entry: 100, stop: 97 } },
+  });
+  const signals = { BTCUSDT: sig('BTCUSDT', -1, -55), XRPUSDT: sig('XRPUSDT', 1, 70), SOLUSDT: sig('SOLUSDT', -1, -60) };
+  const st = { positions: {}, usedSignals: {}, scores: { XRPUSDT: {}, SOLUSDT: {}, BTCUSDT: {} } };
+  const saved = [config.BTC_FILTER, config.USE_FIB, config.ENTRY_FRESH_MIN];
+  config.USE_FIB = false; config.ENTRY_FRESH_MIN = 60;
+  try {
+    config.BTC_FILTER = true;
+    let events = [];
+    assert.deepEqual(entryCandidates(signals, st, events, [], now).map(c => c.symbol), ['SOLUSDT', 'BTCUSDT']);
+    assert.equal(st.scores.XRPUSDT.wait, 'btc');
+    config.BTC_FILTER = false;
+    assert.deepEqual(entryCandidates(signals, st, [], [], now).map(c => c.symbol), ['XRPUSDT', 'SOLUSDT', 'BTCUSDT']);
+  } finally { [config.BTC_FILTER, config.USE_FIB, config.ENTRY_FRESH_MIN] = saved; }
+});

@@ -107,7 +107,9 @@ function saveState(st) {
 // { symbol: { symbol, data, analysis } } for the ones with enough history.
 async function scoreAll(st, events) {
   const signals = {};
-  for (const symbol of config.SYMBOLS) {
+  // BTC is always scored when the BTC filter is on, even if it isn't traded.
+  const toScore = config.BTC_FILTER && !config.SYMBOLS.includes('BTCUSDT') ? [...config.SYMBOLS, 'BTCUSDT'] : config.SYMBOLS;
+  for (const symbol of toScore) {
     try {
       const data = await marketData.loadSymbolData(symbol, config.MTF_TFS, config.ENTRY_TF);
       const analysis = atlasScore.analyse({
@@ -128,12 +130,12 @@ async function scoreAll(st, events) {
 
 // Coins with no open position whose signal passes the entry gates,
 // strongest |score| first. A coin held back gets a code in scores.json
-// (wait: 'weak' | 'used' | 'stale' | 'fib' | 'chase') so the dashboard can say why.
+// (wait: 'weak' | 'used' | 'stale' | 'fib' | 'chase' | 'btc') so the dashboard can say why.
 function entryCandidates(signals, st, events, blocked = [], now = Date.now()) {
   const out = [];
   for (const sig of Object.values(signals)) {
     const { symbol, data, analysis } = sig;
-    if (st.positions[symbol]) continue;
+    if (st.positions[symbol] || !config.SYMBOLS.includes(symbol)) continue;
     if (analysis.bias === 0 || !analysis.plan) {
       events.push({ symbol, type: 'flat', reason: analysis.bias === 0 ? 'score inside the stand-aside band' : 'no plan', score: analysis.score });
       continue;
@@ -159,6 +161,14 @@ function entryCandidates(signals, st, events, blocked = [], now = Date.now()) {
       if (st.scores[symbol]) st.scores[symbol].wait = check.code;
       if (check.code === 'fib') blocked.push({ symbol, data, analysis, fibCheck: check.fibCheck });
       events.push({ symbol, type: 'hold', reason: check.reason, score: analysis.score });
+      continue;
+    }
+    // BTC filter: no altcoin trade against BTC's own signal (backtest: same
+    // profit range, about half the drawdown in the weak months).
+    const btc = signals.BTCUSDT && signals.BTCUSDT.analysis;
+    if (config.BTC_FILTER && symbol !== 'BTCUSDT' && btc && btc.bias === -analysis.bias) {
+      if (st.scores[symbol]) st.scores[symbol].wait = 'btc';
+      events.push({ symbol, type: 'hold', reason: `BTC signal points the other way (BTC score ${btc.score}) — BTC filter`, score: analysis.score });
       continue;
     }
     out.push({ symbol, data, analysis, fibCheck: check.fibCheck });
@@ -312,7 +322,9 @@ function px(x) {
 }
 function money(x) { return `${x < 0 ? '-' : '+'}$${fmt(Math.abs(x))}`; }
 
-if (process.argv.includes('--reset')) {
+if (require.main !== module) {
+  module.exports = { entryCandidates }; // for tests
+} else if (process.argv.includes('--reset')) {
   reset();
 } else if (process.argv.includes('--sync')) {
   syncOnExchange().catch((err) => { console.error(err); process.exit(1); });

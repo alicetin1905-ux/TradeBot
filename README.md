@@ -47,7 +47,7 @@ number as a rehearsal of the strategy, not investment advice.
   isn't entered in that direction again until its score has gone neutral or
   flipped at least once since — closing a trade never triggers an instant
   re-entry on the same signal (`state/demo/usedSignals.json`).
-- Scaled exit: 40% off at T1 (1.5R), 35% at T2 (3R), 25% at T3 (4.5R) —
+- Scaled exit: 40% off at T1 (2R), 35% at T2 (3R), 25% at T3 (4.5R) —
   R = the stop distance (`TARGETS_R`) — with the
   stop moved to breakeven the moment T1 fills. A firm score flip against an
   open position closes it.
@@ -86,7 +86,7 @@ remembers its balance and positions, and what the dashboard reads.
 hour by hour on OKX 1H history for all coins and compares variants: 1H vs
 4H signals (4H candles built from 1H, exits still checked on 1H), market vs
 limit entries (0.25×ATR better, valid 3 h, skipped if unfilled), target
-sets (live levels, 1.5/3/4.5R, 2/4/6R), sizing ($200 margin vs a fixed
+sets (live levels, 1.5/3/4.5R, 2/3/4R, 2/3/4.5R, 2/4/6R), sizing ($200 margin vs a fixed
 dollar loss at the stop), breakeven rule and fees on/off. Results go to
 `backtest/REPORT.md` and `backtest/results.json`; `--end-days N` tests an
 earlier window (ending N days ago) and only prints. Candles are cached in
@@ -102,7 +102,9 @@ Findings (Sep 2025 → Sep 2026, three 120-day windows):
 | 1H · $200 margin · live levels (old live rules) | −86% | −82% | −81% | −86% | 91% | 0.80 |
 | 4H · $200 margin · 1.5/3/4.5R | −7% | +136% | +157% | +317% | 73% | 1.26 |
 | 4H · $30 at stop · 1.5/3/4.5R | +25% | +66% | +85% | +177% | 30% | 1.35 |
-| 4H · $50 at stop · 1.5/3/4.5R (live now) | +30% | +106% | +122% | +261% | 44% | 1.33 |
+| 4H · $50 at stop · 1.5/3/4.5R | +30% | +106% | +122% | +261% | 44% | 1.33 |
+| 4H · $50 at stop · 2/3/4R | −4% | +108% | +111% | +215% | 57% | 1.25 |
+| 4H · $50 at stop · 2/3/4.5R (live now) | +36% | +117% | +129% | +282% | 52% | 1.34 |
 | 4H · $30 at stop · 2/4/6R | +17% | +80% | +91% | +195% | 39% | 1.40 |
 
 The 1H signal doesn't cover its fees. 4H with bigger targets does, but with

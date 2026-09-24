@@ -6,6 +6,13 @@
   "leverage": 10,
   "maxOpenPositions": 5,
   "mode": "demo",
-  "updatedAt": 1790240767823,
-  "exchangeEquity": 1000.93854904
+  "updatedAt": 1790244366894,
+  "exchangeEquity": 1000.93854904,
+  "riskUsdt": 30,
+  "targetsR": [
+    1.5,
+    3,
+    4.5
+  ],
+  "entryTf": "240"
 }

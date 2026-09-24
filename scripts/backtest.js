@@ -24,6 +24,9 @@
 const fs = require('fs');
 const path = require('path');
 const config = require('../config');
+// Variants set their own targets (targetsR); the live TARGETS_R must not
+// leak into the strategy's base levels here.
+config.TARGETS_R = null;
 const atlasScore = require('../src/atlasScore');
 const strategy = require('../src/strategy');
 const { sizeFor } = require('../src/risk');
@@ -301,7 +304,8 @@ const VARIANTS = [
   { key: '4h_limit_big', name: '4H · limit · 1.5/3/4.5R', rules: { tf: '4H', limit: LIMIT, targetsR: BIG } },
   { key: '4h_limit_bigger', name: '4H · limit · 2/4/6R', rules: { tf: '4H', limit: LIMIT, targetsR: BIGGER } },
   { key: '4h_limit_big_be2', name: '4H · limit · 1.5/3/4.5R · BE after T2', rules: { tf: '4H', limit: LIMIT, targetsR: BIG, breakevenAfter: 't2' } },
-  { key: '4h_big_risk30', name: '4H · market · 1.5/3/4.5R · $30 risk (live now)', rules: { tf: '4H', targetsR: BIG, riskUsd: 30 }, focus: true },
+  { key: '4h_big_risk30', name: '4H · market · 1.5/3/4.5R · $30 risk', rules: { tf: '4H', targetsR: BIG, riskUsd: 30 } },
+  { key: '4h_big_risk50', name: '4H · market · 1.5/3/4.5R · $50 risk (live now)', rules: { tf: '4H', targetsR: BIG, riskUsd: 50 }, focus: true },
   { key: '4h_big_risk20', name: '4H · market · 1.5/3/4.5R · $20 risk', rules: { tf: '4H', targetsR: BIG, riskUsd: 20 } },
   { key: '4h_big_risk40', name: '4H · market · 1.5/3/4.5R · $40 risk', rules: { tf: '4H', targetsR: BIG, riskUsd: 40 } },
   { key: '4h_risk30', name: '4H · market · 1/2/3R · $30 risk', rules: { tf: '4H', riskUsd: 30 } },

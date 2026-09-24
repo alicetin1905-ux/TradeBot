@@ -7,6 +7,7 @@
 
 const I = require('./indicators');
 const { sizeFor } = require('./risk');
+const config = require('../config');
 
 const nn = I.nn;
 const watchKey = (s, t) => `${s}:${t}`;
@@ -176,7 +177,8 @@ function analyse({ symbol, candles, ticker, oi, ratio, book, tape, entryTf, mtfT
   let plan = null;
   if (bias !== 0) {
     const entry = flipEntryPrice(flipStore, symbol, entryTf, price);
-    let stop = bias === 1 ? entry - 1.5 * a14 : entry + 1.5 * a14;
+    const stopAtr = config.STOP_ATR ?? 1.5;
+    let stop = bias === 1 ? entry - stopAtr * a14 : entry + stopAtr * a14;
     if (bias === 1 && ce.dir[i] === 1 && ce.longStop[i] < entry) stop = Math.min(stop, ce.longStop[i]);
     if (bias === -1 && ce.dir[i] === -1 && ce.shortStop[i] > entry) stop = Math.max(stop, ce.shortStop[i]);
     plan = sizeFor({ symbol, equity: account, bias, entry, stop, riskPct, leverage });

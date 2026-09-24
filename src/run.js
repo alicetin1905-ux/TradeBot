@@ -49,6 +49,8 @@ const P = config.PORTFOLIO;
 const TF_MS = config.ENTRY_TF === 'D' ? 86400000 : +config.ENTRY_TF * 60000;
 const TF_LABEL = config.ENTRY_TF === 'D' ? '1D' : TF_MS >= 3600000 ? `${TF_MS / 3600000}H` : `${TF_MS / 60000}m`;
 const DIR = path.join(__dirname, '..', 'state', 'demo');
+if (Object.keys(config.SETTINGS_APPLIED).length) console.log('settings.json:', JSON.stringify(config.SETTINGS_APPLIED));
+for (const e of config.SETTINGS_ERRORS) console.log('settings.json ignored —', e);
 
 /* ---------------- persistence ---------------- */
 
@@ -85,6 +87,10 @@ function saveState(st) {
   st.account.riskUsdt = P.RISK_USDT;
   st.account.targetsR = config.TARGETS_R;
   st.account.entryTf = config.ENTRY_TF;
+  // Effective adjustable settings (config.js + control/settings.json) for the dashboard.
+  st.account.settings = require('./settings').current(config);
+  st.account.settingsDefaults = config.SETTINGS_DEFAULTS;
+  st.account.settingsErrors = config.SETTINGS_ERRORS;
   st.account.leverage = P.LEVERAGE;
   st.account.maxOpenPositions = P.MAX_OPEN_POSITIONS;
   st.account.mode = MODE;
@@ -240,7 +246,10 @@ async function syncOnExchange() {
   const events = [];
   const ranCommand = await runCommands(client, st, events);
   await exchange.runExchange({ client, st, signals: {}, candidates: [], events });
-  if (!ranCommand && snapshot() === before) { console.log(`[${MODE}] sync: no changes`); return; }
+  // A new control/settings.json also counts, so the dashboard shows it within minutes.
+  const settingsChanged = JSON.stringify(require('./settings').current(config)) !== JSON.stringify(st.account.settings)
+    || JSON.stringify(config.SETTINGS_ERRORS) !== JSON.stringify(st.account.settingsErrors || []);
+  if (!ranCommand && !settingsChanged && snapshot() === before) { console.log(`[${MODE}] sync: no changes`); return; }
   saveState(st);
   printSummary(events, st);
   await notify.send(events, st);

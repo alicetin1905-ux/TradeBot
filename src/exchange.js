@@ -53,10 +53,15 @@ function usedMargin(positions) {
   return Object.values(positions).reduce((s, p) => s + p.margin * (p.qtyRemaining / p.qtyTotal), 0);
 }
 
+// When this position's stop goes to entry: fixed at open (BREAKEVEN_AFTER);
+// positions opened before the setting existed used 't1'.
+function beAfter(pos) { return pos.beAfter || 't1'; }
+
 function reasonFor(pos, orderId) {
   const o = pos.orders || {};
-  if (orderId && orderId === o.t1) return 'T1 hit, stop moved to breakeven';
-  if (orderId && orderId === o.t2) return 'T2 hit';
+  const be = beAfter(pos);
+  if (orderId && orderId === o.t1) return be === 't1' ? 'T1 hit, stop moved to breakeven' : 'T1 hit';
+  if (orderId && orderId === o.t2) return be === 't2' ? 'T2 hit, stop moved to breakeven' : 'T2 hit';
   if (orderId && orderId === o.t3) return 'T3 hit, position closed';
   if (orderId && orderId === o.close) return pos.closedBy === 'command' ? 'closed by close-all' : 'signal-flip';
   return pos.breakeven ? 'breakeven stop hit' : 'stop hit';
@@ -126,13 +131,14 @@ async function reconcile({ client, st, exPos, signals, events, now }) {
       if (!pos.filled.t1 && live.size <= pos.qtyTotal - pos.qtyT1 + eps) pos.filled.t1 = true;
       if (!pos.filled.t2 && pos.qtyT2 > 0 && live.size <= pos.qtyT3 + eps) pos.filled.t2 = true;
 
-      if (pos.filled.t1 && !pos.breakeven) {
+      const be = beAfter(pos);
+      if (be !== 'off' && pos.filled[be] && !pos.breakeven) {
         try {
-          const be = pos.tickSize ? roundStep(pos.entry, pos.tickSize) : pos.entry;
-          await client.setStopLoss(sym, be);
-          pos.stop = be;
+          const bePrice = pos.tickSize ? roundStep(pos.entry, pos.tickSize) : pos.entry;
+          await client.setStopLoss(sym, bePrice);
+          pos.stop = bePrice;
           pos.breakeven = true;
-          events.push({ symbol: sym, type: 'info', reason: 'T1 filled, exchange stop moved to breakeven' });
+          events.push({ symbol: sym, type: 'info', reason: `${be.toUpperCase()} filled, exchange stop moved to breakeven` });
         } catch (err) {
           // Price already back through entry: a breakeven stop would have
           // triggered, so close what's left now.
@@ -150,7 +156,7 @@ async function reconcile({ client, st, exPos, signals, events, now }) {
       }
 
       const sig = signals[sym];
-      if (st.positions[sym] && sig && sig.analysis.bias !== 0 && sig.analysis.bias !== pos.bias) {
+      if (config.FLIP_EXIT !== false && st.positions[sym] && sig && sig.analysis.bias !== 0 && sig.analysis.bias !== pos.bias) {
         await client.cancelAll(sym);
         const id = await client.closeMarket({ symbol: sym, bias: pos.bias, qty: live.size });
         pos.orders = { ...pos.orders, close: id };
@@ -263,7 +269,7 @@ async function openEntries({ client, st, exPos, wallet, candidates, events, halt
         t1: tp[0], t2: tp[1], t3: tp[2],
         qtyTotal: live.size, qtyRemaining: live.size, qtyT1: q1, qtyT2: q2, qtyT3: q3,
         margin: posMargin, notional: live.size * entry, riskAmt: live.size * Math.abs(entry - stopLoss),
-        filled: { t1: q1 === 0, t2: q2 === 0, t3: false }, breakeven: false,
+        filled: { t1: q1 === 0, t2: q2 === 0, t3: false }, breakeven: false, beAfter: config.BREAKEVEN_AFTER || 't1',
         openedAt: now, score: c.analysis.score, orders, tickSize: inst.tickSize,
         markPrice: live.markPrice || entry, unrealisedPnl: live.unrealisedPnl || 0,
       };
@@ -291,7 +297,7 @@ async function runExchange({ client, st, signals, candidates, events, halt = fal
 // the bot's coins, tracked or not.
 async function closeAll({ client, st, events, now = Date.now() }) {
   const exPos = await client.getPositions();
-  for (const sym of config.SYMBOLS) {
+  for (const sym of config.ALL_SYMBOLS || config.SYMBOLS) {
     try {
       await client.cancelAll(sym);
       const live = exPos[sym];

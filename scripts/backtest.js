@@ -23,6 +23,8 @@
 
 const fs = require('fs');
 const path = require('path');
+// Reproducible: config.js defaults, not the live control/settings.json.
+process.env.TRADEBOT_SETTINGS = 'off';
 const config = require('../config');
 // Variants set their own targets (targetsR); the live TARGETS_R must not
 // leak into the strategy's base levels here.

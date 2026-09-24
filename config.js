@@ -1,7 +1,12 @@
 // Central knobs for the whole bot. Everything else reads from here.
-module.exports = {
+// control/settings.json can override the adjustable ones (src/settings.js)
+// without touching this file — these are the defaults.
+const config = module.exports = {
   // The six coins ATLAS / GoldenRatio / CRUCIBLE / BTCLiveBoard track, plus HYPE and SUI.
   SYMBOLS: ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'XRPUSDT', 'BNBUSDT', 'DOGEUSDT', 'HYPEUSDT', 'SUIUSDT'],
+  // Every coin the bot knows (SYMBOLS can be narrowed to a subset of these;
+  // close-all always covers all of them).
+  ALL_SYMBOLS: ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'XRPUSDT', 'BNBUSDT', 'DOGEUSDT', 'HYPEUSDT', 'SUIUSDT'],
 
   // Signal timeframe: entries, flips and levels are decided on closed 4H
   // candles (OKX "4H", UTC-aligned). The 1H version didn't cover its fees in
@@ -52,6 +57,14 @@ module.exports = {
   // T1 / T2 / T3 at these multiples of the stop distance (R) from entry.
   // null = the strategy's own levels (1R / 2R / 3R, T2 liquidity-refined).
   TARGETS_R: [1.5, 3, 4.5],
+  // Stop = entry -/+ this many ATRs, widened to the Chandelier Exit stop when that's further.
+  STOP_ATR: 1.5,
+  // Move the stop to entry once this target fills: 't1', 't2' or 'off'.
+  BREAKEVEN_AFTER: 't1',
+  // Close at market when the score flips firmly against an open trade.
+  FLIP_EXIT: true,
+  // GoldenRatio Fibonacci confluence check on entries.
+  USE_FIB: true,
 
   // Money rules: all coins trade out of ONE shared balance.
   PORTFOLIO: {
@@ -94,3 +107,9 @@ module.exports = {
     WATCHDOG_REPEAT_H: 6,
   },
 };
+
+// control/settings.json overrides (validated; see src/settings.js).
+const settings = require('./src/settings').load(config);
+config.SETTINGS_APPLIED = settings.applied;
+config.SETTINGS_ERRORS = settings.errors;
+config.SETTINGS_DEFAULTS = settings.defaults;

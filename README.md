@@ -52,6 +52,23 @@ number as a rehearsal of the strategy, not investment advice.
   stop moved to breakeven the moment T1 fills. A firm score flip against an
   open position closes it.
 
+## Adjusting the settings
+
+`control/settings.json` overrides the adjustable values in `config.js`
+(`src/settings.js` lists them with their limits): risk and max margin per
+trade, leverage, max positions (total / per direction), daily loss limit,
+targets (T1/T2/T3 in R and the share closed at each), stop distance (x ATR),
+when the stop moves to breakeven, flip exit on/off, signal timeframe (1H/4H),
+min entry score, Fibonacci check on/off, max chase, entry window, which coins
+to trade, and how often the status push comes.
+
+Easiest from the phone: dashboard → **Settings → Edit settings → Save**,
+then paste into the GitHub editor it opens and commit. The Mac pulls it on
+its next run or sync (≤ 5 min); new trades use it from the next hourly run,
+open positions keep the stop/targets they were opened with. Every value is
+checked; anything missing, unknown or out of range keeps the default and is
+listed in red on the dashboard. Deleting the file = all defaults.
+
 ## Running it
 
 ```

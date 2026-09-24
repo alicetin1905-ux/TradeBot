@@ -2,6 +2,8 @@
 // order flow can be checked without network access or API keys.
 'use strict';
 
+// Tests run on config.js defaults, never on the live control/settings.json.
+process.env.TRADEBOT_SETTINGS = 'off';
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const crypto = require('crypto');
@@ -201,6 +203,71 @@ test('score flip closes the position at market', async () => {
   assert.ok(!ex.positions.XRPUSDT && !st.positions.XRPUSDT);
   assert.equal(st.trades.at(-1).reason, 'signal-flip');
   assert.ok(Math.abs(st.account.balance - 1020) < 1e-6);
+});
+
+test('BREAKEVEN_AFTER t2: stop stays put after T1, moves to entry after T2', async () => {
+  const { ex, client } = fakeBybit({ marks });
+  const st = freshState();
+  config.BREAKEVEN_AFTER = 't2';
+  try {
+    await exchange.runExchange({ client, st, signals: {}, candidates: [candidate('XRPUSDT', 1, 80, 2.5, 0.02)], events: [] });
+  } finally { config.BREAKEVEN_AFTER = 't1'; }
+  const pos = st.positions.XRPUSDT;
+  assert.equal(pos.beAfter, 't2');
+  ex.marks.XRPUSDT = 2.6;
+  ex.fillOrder(pos.orders.t1);
+  await exchange.runExchange({ client, st, signals: {}, candidates: [], events: [] });
+  assert.equal(st.positions.XRPUSDT.breakeven, false);
+  assert.equal(ex.positions.XRPUSDT.stopLoss, 2.45);
+  assert.equal(st.trades.at(-1).reason, 'T1 hit');
+  ex.fillOrder(pos.orders.t2);
+  await exchange.runExchange({ client, st, signals: {}, candidates: [], events: [] });
+  assert.equal(st.positions.XRPUSDT.breakeven, true);
+  assert.equal(ex.positions.XRPUSDT.stopLoss, 2.5);
+  assert.equal(st.trades.at(-1).reason, 'T2 hit, stop moved to breakeven');
+});
+
+test('FLIP_EXIT false: a score flip leaves the position open', async () => {
+  const { ex, client } = fakeBybit({ marks });
+  const st = freshState();
+  await exchange.runExchange({ client, st, signals: {}, candidates: [candidate('XRPUSDT', 1, 80, 2.5, 0.02)], events: [] });
+  config.FLIP_EXIT = false;
+  try {
+    await exchange.runExchange({ client, st, signals: { XRPUSDT: { analysis: { bias: -1, score: -40 } } }, candidates: [], events: [] });
+  } finally { config.FLIP_EXIT = true; }
+  assert.ok(ex.positions.XRPUSDT && st.positions.XRPUSDT);
+});
+
+test('settings.json: valid overrides apply, bad ones keep the default and are reported', () => {
+  const settings = require('../src/settings');
+  const cfg = {
+    SYMBOLS: ['BTCUSDT', 'ETHUSDT', 'XRPUSDT'], ALL_SYMBOLS: ['BTCUSDT', 'ETHUSDT', 'XRPUSDT'],
+    PORTFOLIO: { RISK_USDT: 50, MARGIN_USDT: 200, LEVERAGE: 10, MAX_OPEN_POSITIONS: 5, MAX_SAME_DIRECTION: 3 },
+    EXECUTION: { DAILY_LOSS_LIMIT_PCT: 20 }, NOTIFY: { STATUS_EVERY_H: 4 },
+    TARGETS_R: [1.5, 3, 4.5], TARGET_SPLIT: [0.4, 0.35, 0.25], STOP_ATR: 1.5, BREAKEVEN_AFTER: 't1', FLIP_EXIT: true,
+    ENTRY_TF: '240', ENTRY_MIN_SCORE: 50, USE_FIB: true, MAX_CHASE_ATR: 1, ENTRY_FRESH_MIN: 60,
+  };
+  const portfolio = cfg.PORTFOLIO;
+  const r = settings.apply(cfg, {
+    _note: 'comments are ignored',
+    RISK_USDT: 40, LEVERAGE: 5, TARGETS_R: [2, 3, 4.5], SYMBOLS: ['XRPUSDT', 'BTCUSDT'], USE_FIB: false, MAX_SAME_DIRECTION: null,
+    MARGIN_USDT: 5000, TARGET_SPLIT: [0.5, 0.5, 0.5], BREAKEVEN_AFTER: 't3', ENTRY_TF: '15', FOO: 1,
+  });
+  assert.equal(cfg.PORTFOLIO, portfolio);              // mutated in place, not replaced
+  assert.equal(cfg.PORTFOLIO.RISK_USDT, 40);
+  assert.equal(cfg.PORTFOLIO.LEVERAGE, 5);
+  assert.equal(cfg.PORTFOLIO.MAX_SAME_DIRECTION, null);
+  assert.deepEqual(cfg.TARGETS_R, [2, 3, 4.5]);
+  assert.deepEqual(cfg.SYMBOLS, ['BTCUSDT', 'XRPUSDT']);  // kept in the usual order
+  assert.equal(cfg.USE_FIB, false);
+  assert.equal(cfg.PORTFOLIO.MARGIN_USDT, 200);        // rejected: over 1000
+  assert.deepEqual(cfg.TARGET_SPLIT, [0.4, 0.35, 0.25]);
+  assert.equal(cfg.BREAKEVEN_AFTER, 't1');
+  assert.equal(cfg.ENTRY_TF, '240');
+  assert.equal(r.errors.length, 5);
+  assert.ok(r.errors.some(e => e.startsWith('FOO: unknown')));
+  assert.equal(r.defaults.RISK_USDT, 50);
+  assert.equal(settings.apply(cfg, [1, 2]).errors.length, 1);
 });
 
 test('halt and daily loss limit block new entries only', async () => {

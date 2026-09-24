@@ -156,6 +156,32 @@
     font-family:var(--mono); font-size:10.5px; padding:6px 10px; border-radius:8px; cursor:pointer;
     flex:0 0 auto;
   }
+  .setGroup{ margin-bottom:12px; }
+  .setGroup:last-child{ margin-bottom:0; }
+  .setGroup .gt{ font-size:9.5px; letter-spacing:0.12em; text-transform:uppercase; color:var(--text-tertiary); margin-bottom:4px; }
+  .setRow{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:6px 0; border-bottom:1px solid var(--border); font-size:12px; }
+  .setRow:last-child{ border-bottom:0; }
+  .setRow .k{ color:var(--text-secondary); flex:1; min-width:0; }
+  .setRow .v{ font-family:var(--mono); text-align:right; flex:0 0 auto; }
+  .setRow .v.changed{ color:var(--bot); }
+  .setRow .d{ display:block; font-size:9.5px; color:var(--text-tertiary); }
+  .setRow input[type=text], .setRow input[type=number], .setRow select{
+    width:110px; background:var(--panel2); border:1px solid var(--border); color:var(--text-primary);
+    font-family:var(--mono); font-size:16px; padding:5px 7px; border-radius:7px; text-align:right;
+  }
+  .setRow select{ text-align:left; }
+  .coinPick{ display:flex; flex-wrap:wrap; gap:6px; justify-content:flex-end; max-width:220px; }
+  .coinPick label{ font-family:var(--mono); font-size:11px; display:flex; align-items:center; gap:3px; }
+  .setErr{ background:rgba(255,77,106,0.08); border:1px solid rgba(255,77,106,0.3); color:var(--down); border-radius:8px; padding:8px 10px; font-size:11px; line-height:1.5; margin-bottom:12px; }
+  .setBtns{ display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
+  .setBtns button, .setBtns a{
+    background:var(--panel2); border:1px solid var(--border); color:var(--text-secondary); text-decoration:none;
+    font-family:var(--mono); font-size:11px; padding:7px 11px; border-radius:8px; cursor:pointer;
+  }
+  .setBtns .primary{ color:var(--bot); border-color:rgba(185,139,255,0.45); }
+  .setNote{ font-size:10.5px; line-height:1.55; color:var(--text-tertiary); margin-top:10px; }
+  #settingsJson{ width:100%; min-height:150px; margin-top:10px; background:var(--panel2); border:1px solid var(--border); color:var(--text-primary); font-family:var(--mono); font-size:11px; border-radius:8px; padding:8px; box-sizing:border-box; }
+
   #alertsToggle.on{ color:var(--bot); border-color:rgba(185,139,255,0.45); }
   #alertsHint{ font-size:10.5px; line-height:1.5; color:var(--text-tertiary); margin:-6px 0 14px; }
   #alertsHint:empty{ display:none; margin:0; }
@@ -233,6 +259,9 @@
 <h2>Recent trades</h2>
 <div class="tradesCard" id="tradeLog"><div class="empty">Loading…</div></div>
 
+<h2>Settings</h2>
+<div class="statCard" id="settingsCard"><div class="empty">Loading…</div></div>
+
 <div class="footer">
   <div class="hint" id="lastUpdated">—</div>
   <button type="button" id="refreshBtn">Refresh</button>
@@ -276,6 +305,7 @@
     refreshBtn: document.getElementById('refreshBtn'),
     alertsToggle: document.getElementById('alertsToggle'),
     alertsHint: document.getElementById('alertsHint'),
+    settingsCard: document.getElementById('settingsCard'),
   };
 
   function fmtMoney(x) {
@@ -375,6 +405,150 @@
     var bars = '';
     for (var i = 0; i < max; i++) bars += '<span' + (i < openCount ? ' class="on"' : '') + '></span>';
     els.slotBar.innerHTML = bars;
+  }
+
+  /* ---------------- settings (control/settings.json) ---------------- */
+  // Mirrors src/settings.js FIELDS: same keys and limits. The bot re-checks
+  // everything, so this is only for a friendlier form.
+  var SETTINGS_EDIT_URL = 'https://github.com/alicetin1905-ux/TradeBot/edit/main/control/settings.json';
+  var SETTING_FIELDS = [
+    { g: 'Money', k: 'RISK_USDT', label: 'Loss at stop per trade ($)', t: 'num', min: 1, max: 500, nullable: true },
+    { g: 'Money', k: 'MARGIN_USDT', label: 'Max margin per trade ($)', t: 'num', min: 10, max: 1000 },
+    { g: 'Money', k: 'LEVERAGE', label: 'Leverage (x)', t: 'num', min: 1, max: 25, int: true },
+    { g: 'Money', k: 'MAX_OPEN_POSITIONS', label: 'Max open positions', t: 'num', min: 1, max: 8, int: true },
+    { g: 'Money', k: 'MAX_SAME_DIRECTION', label: 'Max in one direction', t: 'num', min: 1, max: 8, int: true, nullable: true },
+    { g: 'Money', k: 'DAILY_LOSS_LIMIT_PCT', label: 'Daily loss limit (%)', t: 'num', min: 1, max: 100 },
+    { g: 'Take profit / stop loss', k: 'TARGETS_R', label: 'T1 / T2 / T3 (R)', t: 'list3' },
+    { g: 'Take profit / stop loss', k: 'TARGET_SPLIT', label: 'Share closed at T1 / T2 / T3', t: 'list3' },
+    { g: 'Take profit / stop loss', k: 'STOP_ATR', label: 'Stop distance (x ATR)', t: 'num', min: 0.5, max: 5 },
+    { g: 'Take profit / stop loss', k: 'BREAKEVEN_AFTER', label: 'Stop to entry after', t: 'enum', opts: [['t1', 'T1'], ['t2', 'T2'], ['off', 'never']] },
+    { g: 'Take profit / stop loss', k: 'FLIP_EXIT', label: 'Close on score flip', t: 'bool' },
+    { g: 'Strategy', k: 'ENTRY_TF', label: 'Signal timeframe', t: 'enum', opts: [['240', '4H'], ['60', '1H']] },
+    { g: 'Strategy', k: 'ENTRY_MIN_SCORE', label: 'Min score to enter', t: 'num', min: 25, max: 100, int: true },
+    { g: 'Strategy', k: 'USE_FIB', label: 'Fibonacci check', t: 'bool' },
+    { g: 'Strategy', k: 'MAX_CHASE_ATR', label: 'Max chase (x ATR)', t: 'num', min: 0.1, max: 5 },
+    { g: 'Strategy', k: 'ENTRY_FRESH_MIN', label: 'Enter within (min of close)', t: 'num', min: 5, max: 240, int: true, nullable: true },
+    { g: 'Strategy', k: 'SYMBOLS', label: 'Coins', t: 'coins' },
+    { g: 'Alerts', k: 'STATUS_EVERY_H', label: 'Status push every (h)', t: 'num', min: 1, max: 24, int: true },
+  ];
+  var settingsState = { editing: false, account: null };
+
+  function fmtSetting(f, v) {
+    if (v == null) return f.k === 'RISK_USDT' ? 'off (full margin)' : f.k === 'ENTRY_FRESH_MIN' ? 'any time' : 'no limit';
+    if (f.t === 'bool') return v ? 'on' : 'off';
+    if (f.t === 'enum') { var o = f.opts.filter(function (x) { return x[0] === v; })[0]; return o ? o[1] : String(v); }
+    if (f.k === 'TARGETS_R') return v.join(' / ') + 'R';
+    if (f.k === 'TARGET_SPLIT') return v.map(function (x) { return Math.round(x * 100) + '%'; }).join(' / ');
+    if (f.t === 'coins') return v.length === SYMBOLS.length ? 'all ' + v.length : v.map(function (s) { return s.replace('USDT', ''); }).join(', ');
+    if (f.k === 'RISK_USDT' || f.k === 'MARGIN_USDT') return '$' + v;
+    if (f.k === 'LEVERAGE') return v + 'x';
+    if (f.k === 'STOP_ATR' || f.k === 'MAX_CHASE_ATR') return v + ' ATR';
+    return String(v);
+  }
+
+  function esc(x) { return String(x).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+
+  function renderSettings(account) {
+    settingsState.account = account;
+    if (settingsState.editing) return; // don't wipe a form that's being filled in
+    var cur = account.settings, defs = account.settingsDefaults || {};
+    if (!cur) { els.settingsCard.innerHTML = '<div class="empty">Shown after the bot\'s next run.</div>'; return; }
+    var html = '';
+    if (account.settingsErrors && account.settingsErrors.length) {
+      html += '<div class="setErr"><b>Ignored in settings.json:</b><br>' + account.settingsErrors.map(esc).join('<br>') + '</div>';
+    }
+    var group = null;
+    SETTING_FIELDS.forEach(function (f) {
+      if (f.g !== group) { html += (group ? '</div>' : '') + '<div class="setGroup"><div class="gt">' + f.g + '</div>'; group = f.g; }
+      var changed = JSON.stringify(cur[f.k]) !== JSON.stringify(defs[f.k]) && defs[f.k] !== undefined;
+      html += '<div class="setRow"><span class="k">' + f.label + '</span><span class="v' + (changed ? ' changed' : '') + '">' + esc(fmtSetting(f, cur[f.k])) +
+        (changed ? '<span class="d">default ' + esc(fmtSetting(f, defs[f.k])) + '</span>' : '') + '</span></div>';
+    });
+    html += '</div><div class="setBtns"><button type="button" class="primary" id="setEdit">Edit settings</button></div>' +
+      '<div class="setNote">Changes apply to new trades; open positions keep their stop and targets. Purple = changed from the default.</div>';
+    els.settingsCard.innerHTML = html;
+    document.getElementById('setEdit').onclick = function () { settingsState.editing = true; renderSettingsForm(cur); };
+  }
+
+  function renderSettingsForm(cur) {
+    var html = '', group = null;
+    SETTING_FIELDS.forEach(function (f) {
+      if (f.g !== group) { html += (group ? '</div>' : '') + '<div class="setGroup"><div class="gt">' + f.g + '</div>'; group = f.g; }
+      var v = cur[f.k], input;
+      if (f.t === 'num') {
+        input = '<input type="text" inputmode="decimal" id="set_' + f.k + '" value="' + (v == null ? '' : v) + '" placeholder="' + (f.nullable ? 'empty = off' : '') + '">';
+      } else if (f.t === 'list3') {
+        input = '<input type="text" inputmode="decimal" id="set_' + f.k + '" value="' + v.join(', ') + '">';
+      } else if (f.t === 'enum') {
+        input = '<select id="set_' + f.k + '">' + f.opts.map(function (o) { return '<option value="' + o[0] + '"' + (o[0] === v ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select>';
+      } else if (f.t === 'bool') {
+        input = '<select id="set_' + f.k + '"><option value="true"' + (v ? ' selected' : '') + '>on</option><option value="false"' + (!v ? ' selected' : '') + '>off</option></select>';
+      } else {
+        input = '<div class="coinPick">' + SYMBOLS.map(function (s) {
+          return '<label><input type="checkbox" data-coin="' + s.id + '"' + (v.indexOf(s.id) >= 0 ? ' checked' : '') + '>' + s.label + '</label>';
+        }).join('') + '</div>';
+      }
+      html += '<div class="setRow"><span class="k">' + f.label + (f.nullable ? '<span class="d">leave empty for ' + esc(fmtSetting(f, null)) + '</span>' : '') + '</span>' + input + '</div>';
+    });
+    html += '</div><div id="setFormErr"></div>' +
+      '<div class="setBtns"><button type="button" class="primary" id="setSave">Save</button><button type="button" id="setDefaults">Defaults</button><button type="button" id="setCancel">Cancel</button></div>' +
+      '<div id="setOut"></div>';
+    els.settingsCard.innerHTML = html;
+    document.getElementById('setCancel').onclick = function () { settingsState.editing = false; renderSettings(settingsState.account); };
+    document.getElementById('setDefaults').onclick = function () { renderSettingsForm(settingsState.account.settingsDefaults || cur); };
+    document.getElementById('setSave').onclick = saveSettings;
+  }
+
+  function readSettingsForm() {
+    var out = {}, errs = [];
+    SETTING_FIELDS.forEach(function (f) {
+      if (f.t === 'coins') {
+        var picked = [];
+        els.settingsCard.querySelectorAll('input[data-coin]').forEach(function (c) { if (c.checked) picked.push(c.getAttribute('data-coin')); });
+        if (!picked.length) errs.push('Coins: pick at least one');
+        out[f.k] = picked; return;
+      }
+      var el = document.getElementById('set_' + f.k), raw = el.value.trim();
+      if (f.t === 'enum') { out[f.k] = raw; return; }
+      if (f.t === 'bool') { out[f.k] = raw === 'true'; return; }
+      if (f.t === 'list3') {
+        var parts = raw.split(/[\s,\/]+/).filter(Boolean).map(Number);
+        if (parts.length !== 3 || parts.some(isNaN)) { errs.push(f.label + ': enter 3 numbers'); return; }
+        if (f.k === 'TARGETS_R' && !(parts[0] < parts[1] && parts[1] < parts[2])) errs.push(f.label + ': must increase');
+        if (f.k === 'TARGET_SPLIT') {
+          if (parts.some(function (x) { return x > 1; })) parts = parts.map(function (x) { return x / 100; }); // 40, 35, 25 -> 0.4 ...
+          if (Math.abs(parts[0] + parts[1] + parts[2] - 1) > 0.001) errs.push(f.label + ': must add up to 100%');
+        }
+        out[f.k] = parts; return;
+      }
+      if (raw === '' && f.nullable) { out[f.k] = null; return; }
+      var n = Number(raw.replace(',', '.'));
+      if (raw === '' || isNaN(n)) { errs.push(f.label + ': enter a number'); return; }
+      if (f.int && Math.round(n) !== n) errs.push(f.label + ': whole number');
+      if (n < f.min || n > f.max) errs.push(f.label + ': ' + f.min + '–' + f.max);
+      out[f.k] = n;
+    });
+    return { out: out, errs: errs };
+  }
+
+  function saveSettings() {
+    var r = readSettingsForm();
+    var errBox = document.getElementById('setFormErr');
+    if (r.errs.length) { errBox.innerHTML = '<div class="setErr">' + r.errs.map(esc).join('<br>') + '</div>'; return; }
+    errBox.innerHTML = '';
+    var json = JSON.stringify(r.out, null, 2) + '\n';
+    var copied = false;
+    try { if (navigator.clipboard) { navigator.clipboard.writeText(json); copied = true; } } catch (e) {}
+    document.getElementById('setOut').innerHTML =
+      '<div class="setNote">' + (copied ? '<b>Copied.</b> ' : '') + 'Open the GitHub editor, select all, paste, then tap <b>Commit changes</b>. ' +
+      'The Mac picks it up within 5 minutes (shown here after that); new trades use it from the next hourly run.</div>' +
+      '<textarea id="settingsJson" readonly>' + esc(json) + '</textarea>' +
+      '<div class="setBtns"><a class="primary" href="' + SETTINGS_EDIT_URL + '" target="_blank" rel="noopener">Open GitHub editor</a><button type="button" id="setCopy">Copy again</button><button type="button" id="setDone">Done</button></div>';
+    document.getElementById('setCopy').onclick = function () {
+      var ta = document.getElementById('settingsJson');
+      try { navigator.clipboard.writeText(ta.value); } catch (e) { ta.select(); document.execCommand('copy'); }
+    };
+    document.getElementById('setDone').onclick = function () { settingsState.editing = false; renderSettings(settingsState.account); };
   }
 
   var OKX_BASE = 'https://www.okx.com';
@@ -803,6 +977,7 @@
       els.startedValue.textContent = fmtMoney(started);
 
       renderRules(account, openSymbols.length);
+      renderSettings(account);
       renderCoins(positions, scores, markPrices);
       renderOpenPositions(positions, markPrices);
       renderPerformance(trades, started);

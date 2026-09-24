@@ -32,7 +32,7 @@ function replay(pos, candles) {
       out.push({ qty, price: pos[k], reason: `${k.toUpperCase()} hit`, at: c.t });
       pos.qtyRemaining -= qty;
       pos.filled[k] = true;
-      if (k === 't1') { pos.stop = pos.entry; pos.breakeven = true; }
+      if (k === (pos.beAfter || 't1')) { pos.stop = pos.entry; pos.breakeven = true; }
       if (k === 't3') return out;
     }
   }
@@ -62,7 +62,7 @@ function update({ shadow, signals, blocked, balance }) {
     const closed = sig.data.candles[config.ENTRY_TF].slice(0, -1).filter(c => c.t > pos.lastCandle);
     if (closed.length) pos.lastCandle = closed[closed.length - 1].t;
     book(shadow, pos, replay(pos, closed), pos.lastCandle);
-    if (shadow.open[pos.symbol] && sig.analysis.bias !== 0 && sig.analysis.bias !== pos.bias) {
+    if (config.FLIP_EXIT !== false && shadow.open[pos.symbol] && sig.analysis.bias !== 0 && sig.analysis.bias !== pos.bias) {
       const at = sig.analysis.closedAt;
       const fill = { qty: pos.qtyRemaining, price: sig.analysis.price, reason: 'signal-flip', at };
       pos.qtyRemaining = 0;
@@ -87,7 +87,7 @@ function update({ shadow, signals, blocked, balance }) {
     shadow.open[b.symbol] = {
       symbol: b.symbol, bias: plan.bias, entry: plan.entry, stop: plan.stop, t1: plan.t1, t2: plan.t2, t3: plan.t3,
       qty: plan.qty, qtyRemaining: plan.qty, split: { t1: a, t2: c, t3: d }, filled: { t1: false, t2: false, t3: false },
-      breakeven: false, pnl: 0, score: b.analysis.score, openedAt: b.analysis.closedAt, lastCandle: b.analysis.closedAt,
+      breakeven: false, beAfter: config.BREAKEVEN_AFTER || 't1', pnl: 0, score: b.analysis.score, openedAt: b.analysis.closedAt, lastCandle: b.analysis.closedAt,
       blockedBy: b.fibCheck && b.fibCheck.impulse ? `${b.fibCheck.impulse.dir} ${b.fibCheck.impulse.movePct.toFixed(1)}%` : 'fib',
     };
   }

@@ -14,7 +14,7 @@ function dirName(bias) { return bias === 1 ? 'long' : bias === -1 ? 'short' : 'f
 // confluence and the max-chase distance from the flip entry. src/run.js sizes
 // the plan itself.
 function entryFilters({ symbol, data, analysis }) {
-  const fibCheck = fib.confluence({
+  const fibCheck = config.USE_FIB === false ? { agrees: true, impulse: null } : fib.confluence({
     candles1h: data.candles[config.ENTRY_TF],
     thresholdPct: config.FIB_THRESHOLD[symbol] ?? 2,
     windowN: config.FIB_WINDOW,

@@ -31,10 +31,11 @@
       "t3": "e050fe08-53b8-4477-a3a2-cf3ed37ee69b",
       "close": "22cf141c-0bc5-4fd0-acc9-d68f6d60eda9"
     },
-    "tickSize": 0.00001,
+    "tickSize": 1e-05,
     "markPrice": 0.09399,
     "unrealisedPnl": 7.78164,
-    "closedDetectedAt": 1790237102067
+    "closedDetectedAt": 1790237102067,
+    "closedBy": "command"
   },
   "SOLUSDT": {
     "symbol": "SOLUSDT",
@@ -71,7 +72,8 @@
     "tickSize": 0.01,
     "markPrice": 114.56,
     "unrealisedPnl": 11.35,
-    "closedDetectedAt": 1790237102067
+    "closedDetectedAt": 1790237102067,
+    "closedBy": "command"
   },
   "ETHUSDT": {
     "symbol": "ETHUSDT",
@@ -108,7 +110,8 @@
     "tickSize": 0.01,
     "markPrice": 2681.26,
     "unrealisedPnl": 4.9518,
-    "closedDetectedAt": 1790237102067
+    "closedDetectedAt": 1790237102067,
+    "closedBy": "command"
   },
   "BNBUSDT": {
     "symbol": "BNBUSDT",
@@ -145,7 +148,8 @@
     "tickSize": 0.1,
     "markPrice": 771,
     "unrealisedPnl": 3.936,
-    "closedDetectedAt": 1790237102067
+    "closedDetectedAt": 1790237102067,
+    "closedBy": "command"
   },
   "HYPEUSDT": {
     "symbol": "HYPEUSDT",
@@ -182,7 +186,8 @@
     "tickSize": 0.01,
     "markPrice": 92.23,
     "unrealisedPnl": 11.495,
-    "closedDetectedAt": 1790237102067
+    "closedDetectedAt": 1790237102067,
+    "closedBy": "command"
   },
   "XRPUSDT": {
     "symbol": "XRPUSDT",
@@ -219,7 +224,8 @@
     "tickSize": 0.0001,
     "markPrice": 1.4965,
     "unrealisedPnl": 20.1295,
-    "closedDetectedAt": 1790237102067
+    "closedDetectedAt": 1790237102067,
+    "closedBy": "command"
   },
   "SUIUSDT": {
     "symbol": "SUIUSDT",
@@ -256,7 +262,8 @@
     "tickSize": 0.0001,
     "markPrice": 0.95965,
     "unrealisedPnl": 21.511,
-    "closedDetectedAt": 1790237102067
+    "closedDetectedAt": 1790237102067,
+    "closedBy": "command"
   },
   "BTCUSDT": {
     "symbol": "BTCUSDT",
@@ -293,6 +300,7 @@
     "tickSize": 0.1,
     "markPrice": 83970.6,
     "unrealisedPnl": 5.4576,
-    "closedDetectedAt": 1790237102067
+    "closedDetectedAt": 1790237102067,
+    "closedBy": "command"
   }
 }

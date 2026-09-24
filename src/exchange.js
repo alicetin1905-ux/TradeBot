@@ -54,7 +54,7 @@ function reasonFor(pos, orderId) {
   if (orderId && orderId === o.t1) return 'T1 hit, stop moved to breakeven';
   if (orderId && orderId === o.t2) return 'T2 hit';
   if (orderId && orderId === o.t3) return 'T3 hit, position closed';
-  if (orderId && orderId === o.close) return 'signal-flip';
+  if (orderId && orderId === o.close) return pos.closedBy === 'command' ? 'closed by close-all' : 'signal-flip';
   return pos.breakeven ? 'breakeven stop hit' : 'stop hit';
 }
 
@@ -287,6 +287,7 @@ async function closeAll({ client, st, events, now = Date.now() }) {
       const pos = st.positions[sym];
       if (pos) {
         pos.orders = { ...pos.orders, close: id };
+        pos.closedBy = 'command';
         pos.closedDetectedAt = now;
         st.closing[sym] = pos;
         delete st.positions[sym];

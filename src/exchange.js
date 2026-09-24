@@ -7,7 +7,7 @@
 //      position size, move the stop to breakeven after T1, close on a signal
 //      flip, and forget positions the exchange has fully closed.
 //   2. Open new positions into free slots (strongest |score| first):
-//      margin = MARGIN_PCT of the allocated balance, x LEVERAGE, market entry
+//      margin = MARGIN_USDT (or MARGIN_PCT of the balance), x LEVERAGE, market entry
 //      with the stop attached, then reduce-only limit orders for T1/T2/T3.
 //
 // The stop and targets live ON the exchange, so they still work if this
@@ -38,6 +38,12 @@ function fixStep(x, step) {
 // smaller of this and the exchange's own equity, so a big demo wallet
 // still trades like the configured 1000 USDT account.
 function sizingBase(st, wallet) { return Math.max(0, Math.min(st.account.balance, wallet.equity)); }
+
+// Margin for one new trade: the fixed MARGIN_USDT when set, else MARGIN_PCT
+// of the (allocation-capped) balance.
+function marginPerTrade(base) {
+  return P.MARGIN_USDT != null ? P.MARGIN_USDT : base * P.MARGIN_PCT / 100;
+}
 
 function usedMargin(positions) {
   return Object.values(positions).reduce((s, p) => s + p.margin * (p.qtyRemaining / p.qtyTotal), 0);
@@ -186,10 +192,10 @@ async function openEntries({ client, st, exPos, wallet, candidates, events, halt
       if (Object.keys(exPos).length >= P.MAX_OPEN_POSITIONS) { hold(`all ${P.MAX_OPEN_POSITIONS} position slots in use`); continue; }
 
       const base = sizingBase(st, wallet);
-      // Only full-size trades: if what's still free can't fund MARGIN_PCT of
+      // Only full-size trades: if what's still free can't fund a full trade's margin
       // the balance (e.g. older, bigger positions still hold it), wait for a
       // close instead of opening an odd, undersized position.
-      const margin = base * P.MARGIN_PCT / 100;
+      const margin = marginPerTrade(base);
       const free = Math.min(base - usedMargin(st.positions), available * 0.95);
       if (free < margin * 0.99) { hold(`not enough free margin for a full $${margin.toFixed(0)} trade ($${Math.max(0, free).toFixed(0)} free)`); continue; }
 
@@ -286,4 +292,4 @@ async function closeAll({ client, st, events, now = Date.now() }) {
   }
 }
 
-module.exports = { runExchange, closeAll, splitTargets, sizingBase, usedMargin };
+module.exports = { runExchange, closeAll, splitTargets, sizingBase, usedMargin, marginPerTrade };

@@ -5,7 +5,7 @@
 // refinement, scaled T1/T2/T3 exit) are the same as UltimateTradingBot's;
 // the money rules differ:
 //   - ONE shared balance (config.PORTFOLIO.STARTING_BALANCE) for all coins
-//   - each trade puts up config.PORTFOLIO.MARGIN_PCT of the current balance
+//   - each trade puts up config.PORTFOLIO.MARGIN_USDT (or MARGIN_PCT of the balance)
 //     as margin; position value = margin x LEVERAGE (the strategy's own stop
 //     and targets still decide where it exits)
 //   - at most config.PORTFOLIO.MAX_OPEN_POSITIONS open at once; when more
@@ -57,7 +57,7 @@ function writeJson(name, data) {
   fs.writeFileSync(path.join(DIR, name + '.json'), JSON.stringify(data, null, 2) + '\n');
 }
 function freshAccount() {
-  return { balance: P.STARTING_BALANCE, startingBalance: P.STARTING_BALANCE, marginPct: P.MARGIN_PCT, leverage: P.LEVERAGE, maxOpenPositions: P.MAX_OPEN_POSITIONS, mode: MODE };
+  return { balance: P.STARTING_BALANCE, startingBalance: P.STARTING_BALANCE, marginPct: P.MARGIN_PCT, marginUsdt: P.MARGIN_USDT, leverage: P.LEVERAGE, maxOpenPositions: P.MAX_OPEN_POSITIONS, mode: MODE };
 }
 function loadState() {
   return {
@@ -77,6 +77,7 @@ function saveState(st) {
   // Settings are re-stamped every run so the dashboard always shows the live rules.
   delete st.account.riskPct; // pre-MARGIN_PCT field
   st.account.marginPct = P.MARGIN_PCT;
+  st.account.marginUsdt = P.MARGIN_USDT;
   st.account.leverage = P.LEVERAGE;
   st.account.maxOpenPositions = P.MAX_OPEN_POSITIONS;
   st.account.mode = MODE;
@@ -216,7 +217,7 @@ function reset() {
 /* ---------------- output ---------------- */
 
 function printSummary(events, st) {
-  console.log(`\n=== TradeBot [${MODE}] (${P.STARTING_BALANCE} USDT pool, ${P.LEVERAGE}x, ${P.MARGIN_PCT}% margin/trade, max ${P.MAX_OPEN_POSITIONS}) @ ${new Date().toISOString()} ===\n`);
+  console.log(`\n=== TradeBot [${MODE}] (${P.STARTING_BALANCE} USDT pool, ${P.LEVERAGE}x, ${P.MARGIN_USDT != null ? '$' + P.MARGIN_USDT : P.MARGIN_PCT + '%'} margin/trade, max ${P.MAX_OPEN_POSITIONS}) @ ${new Date().toISOString()} ===\n`);
   for (const ev of events) {
     if (ev.type === 'enter') {
       console.log(`[${ev.symbol}] ENTER ${ev.bias === 1 ? 'LONG' : 'SHORT'} @ ${px(ev.entry)} | score ${ev.score} | SL ${px(ev.stop)} T1 ${px(ev.t1)} T2 ${px(ev.t2)} T3 ${px(ev.t3)} | qty ${ev.qty} margin $${fmt(ev.margin)} risk $${fmt(ev.riskAmt)}`);

@@ -73,9 +73,11 @@ function update({ shadow, signals, blocked, balance }) {
   strategy.rememberSignals(shadow.used, signals, shadow.open);
   for (const b of blocked) {
     if (shadow.open[b.symbol] || strategy.signalUsed(shadow.used, b.symbol, b.analysis.bias)) continue;
+    // Same margin a real entry would get (fixed MARGIN_USDT or MARGIN_PCT of balance).
+    const margin = P.MARGIN_USDT != null ? P.MARGIN_USDT : balance * P.MARGIN_PCT / 100;
     const plan = sizeFor({
       symbol: b.symbol, equity: balance, bias: b.analysis.bias, entry: b.analysis.price, stop: b.analysis.plan.stop,
-      leverage: P.LEVERAGE, marginPct: P.MARGIN_PCT,
+      leverage: P.LEVERAGE, marginPct: (margin / balance) * 100,
     });
     if (plan.qty <= 0 || (plan.stop - plan.entry) * plan.bias >= 0) continue;
     const [a, c, d] = config.TARGET_SPLIT;

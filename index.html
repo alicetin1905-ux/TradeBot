@@ -356,10 +356,12 @@
   function renderRules(account, openCount) {
     var max = account.maxOpenPositions || 4;
     els.rules.innerHTML =
-      '<span class="chip">Margin <b>' + (account.marginPct != null ? account.marginPct : '—') + '%</b> of balance / trade</span>' +
+      (account.marginUsdt != null
+        ? '<span class="chip">Margin <b>' + fmtMoney(account.marginUsdt) + '</b> / trade</span>'
+        : '<span class="chip">Margin <b>' + (account.marginPct != null ? account.marginPct : '—') + '%</b> of balance / trade</span>') +
       '<span class="chip">Leverage <b>' + (account.leverage != null ? account.leverage : '—') + 'x</b></span>' +
-      (account.marginPct != null && account.leverage != null
-        ? '<span class="chip">Position value <b>' + fmtMoney(account.balance * account.marginPct / 100 * account.leverage) + '</b> / trade</span>' : '') +
+      (account.leverage != null && (account.marginUsdt != null || account.marginPct != null)
+        ? '<span class="chip">Position value <b>' + fmtMoney((account.marginUsdt != null ? account.marginUsdt : account.balance * account.marginPct / 100) * account.leverage) + '</b> / trade</span>' : '') +
       '<span class="chip">Max <b>' + max + '</b> open positions</span>';
     var bars = '';
     for (var i = 0; i < max; i++) bars += '<span' + (i < openCount ? ' class="on"' : '') + '></span>';

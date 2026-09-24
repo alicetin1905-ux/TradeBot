@@ -12,6 +12,7 @@ const config = require('../config');
 // These tests were written for 25% margin / max 4 positions; pin those so
 // changing the live settings in config.js doesn't change what's tested.
 config.PORTFOLIO.MARGIN_PCT = 25;
+config.PORTFOLIO.MARGIN_USDT = null;
 config.PORTFOLIO.MAX_OPEN_POSITIONS = 4;
 
 const INST = {
@@ -468,4 +469,17 @@ test('only full-size trades: waits instead of opening an undersized one', async 
   assert.ok(st.positions.XRPUSDT && Math.abs(st.positions.XRPUSDT.margin - 250) < 1e-6);
   assert.equal(st.positions.DOGEUSDT, undefined);
   assert.ok(events.some(e => e.symbol === 'DOGEUSDT' && /not enough free margin for a full \$250 trade \(\$0 free\)/.test(e.reason)), JSON.stringify(events));
+});
+
+test('fixed MARGIN_USDT: every trade gets the same margin whatever the balance', async () => {
+  const { client } = fakeBybit({ equity: 5000, marks });
+  const st = freshState();
+  st.account.balance = 1300;
+  config.PORTFOLIO.MARGIN_USDT = 100;
+  try {
+    await exchange.runExchange({ client, st, signals: {}, candidates: [candidate('XRPUSDT', 1, 80, 2.5, 0.02), candidate('BTCUSDT', 1, 70, 100000, 0.01)], events: [] });
+  } finally { config.PORTFOLIO.MARGIN_USDT = null; }
+  assert.ok(Math.abs(st.positions.XRPUSDT.margin - 100) < 1e-9);
+  assert.equal(st.positions.XRPUSDT.qtyTotal, 400);      // $100 x10 / 2.5
+  assert.ok(Math.abs(st.positions.BTCUSDT.margin - 100) < 1e-9);
 });

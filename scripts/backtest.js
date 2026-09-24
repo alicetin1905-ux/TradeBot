@@ -447,6 +447,13 @@ async function main() {
     const maxOpen = args.includes('--max-open') ? +args[args.indexOf('--max-open') + 1] : undefined;
     const r = simulate(series, COINS, times, maxOpen ? { ...live.rules, maxOpen, maxSameDir: Math.ceil(maxOpen * 0.6) } : live.rules);
     const part = [0, 1, 2].map(k => r.tradeList.filter(t => t.closedAt >= start + k * third && t.closedAt < start + (k + 1) * third).reduce((a, t) => a + t.pnl, 0));
+    let streak = 0, worstStreak = 0; const months = {};
+    for (const t of [...r.tradeList].sort((x, y) => x.closedAt - y.closedAt)) {
+      streak = t.pnl <= 0 ? streak + 1 : 0; worstStreak = Math.max(worstStreak, streak);
+      const m = new Date(t.closedAt).toISOString().slice(0, 7); months[m] = (months[m] || 0) + t.pnl;
+    }
+    const mv = Object.entries(months).sort((x, y) => x[1] - y[1]);
+    console.log(`  months ${mv.length}, losing ${mv.filter(x => x[1] < 0).length}; worst ${mv[0][0]} ${mv[0][1].toFixed(0)}, best ${mv[mv.length - 1][0]} ${mv[mv.length - 1][1].toFixed(0)}; longest losing streak ${worstStreak}`);
     console.log(`${COINS.map(c => c.replace('USDT', '')).join(',')}: trades ${r.trades} win ${(r.winRate * 100).toFixed(0)}% net ${r.net.toFixed(0)} (${r.returnPct.toFixed(0)}%) maxDD ${r.maxDDPct.toFixed(1)}% PF ${r.profitFactor.toFixed(2)} thirds ${part.map(x => x.toFixed(0)).join(' / ')}`);
     return;
   }

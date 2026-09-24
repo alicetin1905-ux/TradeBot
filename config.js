@@ -3,10 +3,10 @@
 // without touching this file — these are the defaults.
 const config = module.exports = {
   // The six coins ATLAS / GoldenRatio / CRUCIBLE / BTCLiveBoard track, plus HYPE and SUI.
-  SYMBOLS: ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'XRPUSDT', 'BNBUSDT', 'DOGEUSDT', 'HYPEUSDT', 'SUIUSDT'],
+  SYMBOLS: ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'XRPUSDT', 'BNBUSDT', 'DOGEUSDT', 'HYPEUSDT', 'SUIUSDT', 'ENAUSDT'],
   // Every coin the bot knows (SYMBOLS can be narrowed to a subset of these;
   // close-all always covers all of them).
-  ALL_SYMBOLS: ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'XRPUSDT', 'BNBUSDT', 'DOGEUSDT', 'HYPEUSDT', 'SUIUSDT'],
+  ALL_SYMBOLS: ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'XRPUSDT', 'BNBUSDT', 'DOGEUSDT', 'HYPEUSDT', 'SUIUSDT', 'ENAUSDT'],
 
   // Signal timeframe: entries, flips and levels are decided on closed 4H
   // candles (OKX "4H", UTC-aligned). The 1H version didn't cover its fees in
@@ -32,7 +32,7 @@ const config = module.exports = {
   // that page would actually flag as an impulse for each coin.
   // HYPE / SUI weren't on the FIBO page: set from their own 1H volatility
   // (HYPE moves like SOL/XRP, SUI a bit more — median 12h move ~1.7% / ~1.9%).
-  FIB_THRESHOLD: { BTCUSDT: 2, ETHUSDT: 1, SOLUSDT: 3, XRPUSDT: 3, BNBUSDT: 2, DOGEUSDT: 2, HYPEUSDT: 3, SUIUSDT: 4 },
+  FIB_THRESHOLD: { BTCUSDT: 2, ETHUSDT: 1, SOLUSDT: 3, XRPUSDT: 3, BNBUSDT: 2, DOGEUSDT: 2, HYPEUSDT: 3, SUIUSDT: 4, ENAUSDT: 2 }, // ENA: the 2% default it was backtested with
   FIB_WINDOW: 12,
   // A contradicting impulse only blocks while it's fresh (ended within this
   // many closed signal candles — 4H now, so 24h) AND price hasn't won back this share of it yet —
@@ -76,8 +76,8 @@ const config = module.exports = {
     MARGIN_USDT: 200,        // max margin per trade in USDT (fixed margin when RISK_USDT is null); null = use MARGIN_PCT
     MARGIN_PCT: 10,          // % of the current shared balance put up as margin per trade (when MARGIN_USDT is null)
     LEVERAGE: 10,            // position value = margin x leverage (100 USDT -> 1000 USDT)
-    MAX_OPEN_POSITIONS: 5,
-    MAX_SAME_DIRECTION: 3,   // at most this many longs (and this many shorts) open at once
+    MAX_OPEN_POSITIONS: 7,
+    MAX_SAME_DIRECTION: 4,   // at most this many longs (and this many shorts) open at once
   },
 
   // Bybit execution safety limits.

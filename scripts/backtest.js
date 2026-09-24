@@ -390,7 +390,7 @@ const VARIANTS = [
   { key: 'x_score35', name: 'idea: min score 35', rules: { tf: '4H', targetsR: BIG, riskUsd: 50, minScore: 35 } },
   { key: 'x_score60', name: 'idea: min score 60', rules: { tf: '4H', targetsR: BIG, riskUsd: 50, minScore: 60 } },
   { key: 'x_score70', name: 'idea: min score 70', rules: { tf: '4H', targetsR: BIG, riskUsd: 50, minScore: 70 } },
-  { key: 'x_btc', name: '4H · $50 risk · BTC filter (live now)', rules: { tf: '4H', targetsR: BIG, riskUsd: 50, btcFilter: true }, focus: true },
+  { key: 'x_btc', name: '4H · $50 risk · BTC filter · 7 slots (live now)', rules: { tf: '4H', targetsR: BIG, riskUsd: 50, btcFilter: true, maxOpen: 7, maxSameDir: 4 }, focus: true },
   { key: 'x_lock', name: 'idea: stop to T1 after T2', rules: { tf: '4H', targetsR: BIG, riskUsd: 50, lockT1AfterT2: true } },
   { key: 'x_be2', name: 'idea: breakeven after T2', rules: { tf: '4H', targetsR: BIG, riskUsd: 50, breakevenAfter: 't2' } },
   { key: 'x_dir2', name: 'idea: max 2 per direction', rules: { tf: '4H', targetsR: BIG, riskUsd: 50, maxSameDir: 2 } },

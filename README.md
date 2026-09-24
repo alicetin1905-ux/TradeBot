@@ -1,7 +1,7 @@
 # TradeBot
 
 Auto trading bot — a pooled-balance bot trading BTC, ETH, SOL, XRP, BNB,
-DOGE, HYPE and SUI perps on **Bybit Demo Trading** (mainnet prices, demo funds). It uses the same signal stack as
+DOGE, HYPE, SUI and ENA perps on **Bybit Demo Trading** (mainnet prices, demo funds). It uses the same signal stack as
 [UltimateTradingBot](https://github.com/alicetin1905-ux/UltimateTradingBot):
 
 - **ATLAS** — primary signal: ~25-indicator weighted score, Chandelier Exit
@@ -35,15 +35,15 @@ number as a rehearsal of the strategy, not investment advice.
 
 ## Rules (`config.js` → `PORTFOLIO`)
 
-- **One shared 1000 USDT balance** for all eight coins.
+- **One shared 1000 USDT balance** for all nine coins.
 - **50 USDT risk per trade** (`RISK_USDT`): each position is sized so
   hitting its stop loses ~50 USDT — a 4% stop gets a 1250 USDT position
   (125 USDT margin at 10x), a 5% stop 1000 USDT. Capped at **200 USDT margin
   / 2000 USDT position** (`MARGIN_USDT`), so a stop tighter than 2.5% loses
   less than 50 USDT rather than blowing up the size. `RISK_USDT: null` goes back to a fixed 200 USDT margin per trade.
-- **Max 5 open positions** (only as many full-size trades as the balance
+- **Max 7 open positions** (only as many full-size trades as the balance
   can fund), **at most
-  3 in the same direction**, and a new trade needs a score of **at least 50**
+  4 in the same direction**, and a new trade needs a score of **at least 50**
   (`ENTRY_MIN_SCORE`; 25 still counts as a flip for exits). If more coins
   qualify than there are free slots, the strongest |score| gets the slot. A
   trade never uses more margin than is still free.
@@ -159,7 +159,7 @@ window. Limit entries and breakeven-after-T2 didn't help.
   a 1000 USDT account. Never more margin than Bybit says is free.
 - **Each hourly run:** books fills, moves the stop to breakeven on Bybit once
   T1 fills, closes at market on a firm score flip, cancels leftover target
-  orders after a close, then fills free slots (max 5, max 3 per direction). Any open USDT-perp
+  orders after a close, then fills free slots (max 7, max 4 per direction). Any open USDT-perp
   position on the account, including ones the bot didn't open, counts as a
   used slot; the bot leaves positions it didn't open alone. Best to give the
   bot its own (sub-)account.

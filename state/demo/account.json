@@ -6,13 +6,88 @@
   "leverage": 10,
   "maxOpenPositions": 5,
   "mode": "demo",
-  "updatedAt": 1790251567187,
+  "updatedAt": 1790254202584,
   "exchangeEquity": 1000.93854904,
   "riskUsdt": 50,
   "targetsR": [
-    2,
+    1.5,
     3,
     4.5
   ],
-  "entryTf": "240"
+  "entryTf": "240",
+  "settings": {
+    "RISK_USDT": 50,
+    "MARGIN_USDT": 200,
+    "LEVERAGE": 10,
+    "MAX_OPEN_POSITIONS": 5,
+    "MAX_SAME_DIRECTION": 3,
+    "DAILY_LOSS_LIMIT_PCT": 20,
+    "TARGETS_R": [
+      1.5,
+      3,
+      4.5
+    ],
+    "TARGET_SPLIT": [
+      0.4,
+      0.35,
+      0.25
+    ],
+    "STOP_ATR": 1.5,
+    "BREAKEVEN_AFTER": "t1",
+    "FLIP_EXIT": true,
+    "ENTRY_TF": "240",
+    "ENTRY_MIN_SCORE": 50,
+    "USE_FIB": true,
+    "MAX_CHASE_ATR": 1,
+    "ENTRY_FRESH_MIN": 60,
+    "SYMBOLS": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT",
+      "BNBUSDT",
+      "DOGEUSDT",
+      "HYPEUSDT",
+      "SUIUSDT"
+    ],
+    "STATUS_EVERY_H": 4
+  },
+  "settingsDefaults": {
+    "RISK_USDT": 50,
+    "MARGIN_USDT": 200,
+    "LEVERAGE": 10,
+    "MAX_OPEN_POSITIONS": 5,
+    "MAX_SAME_DIRECTION": 3,
+    "DAILY_LOSS_LIMIT_PCT": 20,
+    "TARGETS_R": [
+      1.5,
+      3,
+      4.5
+    ],
+    "TARGET_SPLIT": [
+      0.4,
+      0.35,
+      0.25
+    ],
+    "STOP_ATR": 1.5,
+    "BREAKEVEN_AFTER": "t1",
+    "FLIP_EXIT": true,
+    "ENTRY_TF": "240",
+    "ENTRY_MIN_SCORE": 50,
+    "USE_FIB": true,
+    "MAX_CHASE_ATR": 1,
+    "ENTRY_FRESH_MIN": 60,
+    "SYMBOLS": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT",
+      "XRPUSDT",
+      "BNBUSDT",
+      "DOGEUSDT",
+      "HYPEUSDT",
+      "SUIUSDT"
+    ],
+    "STATUS_EVERY_H": 4
+  },
+  "settingsErrors": []
 }

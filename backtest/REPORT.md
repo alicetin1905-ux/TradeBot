@@ -1,6 +1,6 @@
 # Backtest 2025-09-29 → 2026-09-24
 
-360 days · 8 coins · start 1000 USDT · $200 margin ×10 · max 5 positions, 3 per direction · entry score ≥ 50 · generated 2026-09-24 18:31 UTC
+360 days · 8 coins · start 1000 USDT · $200 margin ×10 · max 5 positions, 3 per direction · entry score ≥ 50 · generated 2026-09-24 18:39 UTC
 
 Approximation: price/volume signals only (no funding, OI, long/short, book, tape); exits replayed on 1H candles, stop first when a candle touches stop and target; Bybit fees (0.055% taker, 0.02% maker). Limit entries: 0.25×ATR better than the signal close, valid 3 hours, skipped if not filled.
 
@@ -27,6 +27,8 @@ Approximation: price/volume signals only (no funding, OI, long/short, book, tape
 |   + 4H Supertrend + volume ≥ 1.2x | 200 | 34 | -979 | -97.9 | 98.9 | 0.79 | 53.6 | -34.3 |  |
 |   + 1H & 4H Supertrend + volume ≥ 1.2x | 170 | 34 | -980 | -98.0 | 99.0 | 0.76 | 52.2 | -35.8 |  |
 | idea: min score 40 | 378 | 40 | 1588 | 158.8 | 60.1 | 1.18 | 68.9 | -38.4 |  |
+| idea: min score 45 | 362 | 39 | 867 | 86.7 | 86.6 | 1.10 | 67.6 | -38.7 |  |
+| idea: min score 35 | 385 | 39 | 1663 | 166.3 | 68.6 | 1.19 | 68.3 | -37.4 |  |
 | idea: min score 60 | 288 | 42 | 844 | 84.4 | 41.3 | 1.13 | 62.2 | -40.0 |  |
 | idea: min score 70 | 195 | 37 | 245 | 24.5 | 48.8 | 1.05 | 74.1 | -41.4 |  |
 | idea: no trades against BTC trend | 322 | 44 | 2185 | 218.5 | 36.1 | 1.31 | 65.6 | -39.0 |  |

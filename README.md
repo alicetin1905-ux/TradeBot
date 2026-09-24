@@ -35,7 +35,7 @@ number as a rehearsal of the strategy, not investment advice.
 
 ## Rules (`config.js` → `PORTFOLIO`)
 
-- **One shared 1000 USDT balance** for all nine coins.
+- **One shared 2000 USDT balance** for all nine coins.
 - **50 USDT risk per trade** (`RISK_USDT`): each position is sized so
   hitting its stop loses ~50 USDT — a 4% stop gets a 1250 USDT position
   (125 USDT margin at 10x), a 5% stop 1000 USDT. Capped at **200 USDT margin
@@ -88,7 +88,7 @@ listed in red on the dashboard. Deleting the file = all defaults.
 node src/run.js              # one run: sync with Bybit, score, open/close trades
 node src/run.js --sync       # sync positions/fills only — no new entries
 node src/run.js --close-all  # cancel all orders + close every position on Bybit
-bash scripts/reset.sh demo   # close everything and start over from 1000 USDT
+bash scripts/reset.sh demo   # close everything and start over from 2000 USDT
 npm test                     # offline tests of the order logic
 ```
 
@@ -154,9 +154,9 @@ window. Limit entries and breakeven-after-T2 didn't help.
   Bybit's public mainnet API (`api.bybit.com`, no key sent); orders go to
   `api-demo`.
 - **Sizing:** 50 USDT at the stop (max 200 USDT margin at 10x), capped by the bot's **allocation**. The allocation
-  starts at 1000 USDT and moves with realized P&L (from Bybit's closed-P&L
+  starts at 2000 USDT and moves with realized P&L (from Bybit's closed-P&L
   records, net of fees), so a demo wallet with more USDT still trades like
-  a 1000 USDT account. Never more margin than Bybit says is free.
+  a 2000 USDT account. Never more margin than Bybit says is free.
 - **Each hourly run:** books fills, moves the stop to breakeven on Bybit once
   T1 fills, closes at market on a firm score flip, cancels leftover target
   orders after a close, then fills free slots (max 7, max 4 per direction). Any open USDT-perp
@@ -216,10 +216,10 @@ needs both `api-demo.bybit.com` and `api.bybit.com`).
    `logs/demo.log`.
 
 To start over: `scripts/reset.sh demo` closes every
-position and order on Bybit, resets the bot to 1000 USDT and uploads the
+position and order on Bybit, resets the bot to 2000 USDT and uploads the
 result; add `--clear-history` to also wipe the trade list. It holds the same
 lock as the scheduled runs and stops without resetting if anything fails to
 close.
 
 `node src/run.js --reset` on its own only resets the bot's own
-tracking (allocation back to 1000 USDT); it doesn't touch anything on Bybit.
+tracking (allocation back to 2000 USDT); it doesn't touch anything on Bybit.

@@ -70,7 +70,7 @@ const config = module.exports = {
 
   // Money rules: all coins trade out of ONE shared balance.
   PORTFOLIO: {
-    STARTING_BALANCE: 1000,  // USDT
+    STARTING_BALANCE: 2000,  // USDT
     RISK_USDT: 50,           // max loss at the stop per trade: the position is sized so a stop costs this much
                              // (capped at MARGIN_USDT x LEVERAGE, so tight stops don't blow up the size); null = always full MARGIN_USDT
     MARGIN_USDT: 200,        // max margin per trade in USDT (fixed margin when RISK_USDT is null); null = use MARGIN_PCT

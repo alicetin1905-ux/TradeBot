@@ -77,14 +77,32 @@ remembers its balance and positions, and what the dashboard reads.
 
 ## Backtest
 
-`node scripts/backtest.js [--days 120]` replays the rules hour by hour on
-OKX 1H history for all coins and compares variants (exit rules, entry
-score, Fibonacci check, sizing, BTC filter, fees on/off). Results go to
-`backtest/REPORT.md` and `backtest/results.json`; candles are cached in
+`node scripts/backtest.js [--days 360] [--end-days N]` replays the rules
+hour by hour on OKX 1H history for all coins and compares variants: 1H vs
+4H signals (4H candles built from 1H, exits still checked on 1H), market vs
+limit entries (0.25×ATR better, valid 3 h, skipped if unfilled), target
+sets (live levels, 1.5/3/4.5R, 2/4/6R), sizing ($200 margin vs a fixed
+dollar loss at the stop), breakeven rule and fees on/off. Results go to
+`backtest/REPORT.md` and `backtest/results.json`; `--end-days N` tests an
+earlier window (ending N days ago) and only prints. Candles are cached in
 `backtest/cache/` (git-ignored). It's an approximation: price/volume
 signals only (no funding, OI, long/short, book, tape — ~20% of the live
-score), fills at candle close, stop checked first when a candle touches
-both, Bybit fees included.
+score), fills at candle close with no slippage, stop checked first when a
+candle touches both, Bybit fees included.
+
+Findings (Sep 2025 → Sep 2026, three 120-day windows):
+
+| Variant | Sep–Jan | Jan–May | May–Sep | 360 days | Max DD (360d) | PF (360d) |
+|---|---:|---:|---:|---:|---:|---:|
+| 1H · $200 margin · live levels (live now) | −86% | −82% | −81% | −86% | 91% | 0.80 |
+| 4H · $200 margin · 1.5/3/4.5R | −7% | +136% | +157% | +317% | 73% | 1.26 |
+| 4H · $30 at stop · 1.5/3/4.5R | +25% | +66% | +85% | +177% | 30% | 1.35 |
+| 4H · $30 at stop · 2/4/6R | +17% | +80% | +91% | +195% | 39% | 1.40 |
+
+The 1H signal doesn't cover its fees. 4H with bigger targets does, but with
+$200 margin a 4H stop costs ~$80–90, so a bad stretch nearly wipes the
+account; a fixed dollar risk per trade is what makes it survive every
+window. Limit entries and breakeven-after-T2 didn't help.
 
 ## How it trades on Bybit
 

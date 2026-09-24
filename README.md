@@ -75,6 +75,17 @@ remembers its balance and positions, and what the dashboard reads.
 `index.html` is the dashboard (GitHub Pages, branch `main`, root); it reads
 `state/demo/*.json`.
 
+## Backtest
+
+`node scripts/backtest.js [--days 120]` replays the rules hour by hour on
+OKX 1H history for all coins and compares variants (exit rules, entry
+score, Fibonacci check, sizing, BTC filter, fees on/off). Results go to
+`backtest/REPORT.md` and `backtest/results.json`; candles are cached in
+`backtest/cache/` (git-ignored). It's an approximation: price/volume
+signals only (no funding, OI, long/short, book, tape — ~20% of the live
+score), fills at candle close, stop checked first when a candle touches
+both, Bybit fees included.
+
 ## How it trades on Bybit
 
 - **Entry:** market order with the **stop attached to the position** in the

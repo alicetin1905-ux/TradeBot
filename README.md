@@ -27,12 +27,13 @@ number as a rehearsal of the strategy, not investment advice.
 ## Rules (`config.js` → `PORTFOLIO`)
 
 - **One shared 1000 USDT balance** for all eight coins.
-- **A fixed 100 USDT margin per trade**, at **10x leverage** = 1000 USDT
+- **A fixed 200 USDT margin per trade**, at **10x leverage** = 2000 USDT
   position value, however the balance moves (`MARGIN_USDT`; set it to null
   to size by `MARGIN_PCT` of the balance instead).
   The strategy's own stop/targets decide the exit, so the loss at the stop
   is 1000 x the stop distance (e.g. a 1.5% stop loses ~15 USDT).
-- **Max 5 open positions** (5 x 100 = at most 500 USDT margin), **at most
+- **Max 5 open positions** (5 x 200 = up to 1000 USDT margin — only as many
+  full-size trades as the balance can fund), **at most
   3 in the same direction**, and a new trade needs a score of **at least 50**
   (`ENTRY_MIN_SCORE`; 25 still counts as a flip for exits). If more coins
   qualify than there are free slots, the strongest |score| gets the slot. A
@@ -85,7 +86,7 @@ remembers its balance and positions, and what the dashboard reads.
   prices differ slightly). Instrument rules and mark prices come from
   Bybit's public mainnet API (`api.bybit.com`, no key sent); orders go to
   `api-demo`.
-- **Sizing:** 100 USDT margin at 10x, capped by the bot's **allocation**. The allocation
+- **Sizing:** 200 USDT margin at 10x, capped by the bot's **allocation**. The allocation
   starts at 1000 USDT and moves with realized P&L (from Bybit's closed-P&L
   records, net of fees), so a demo wallet with more USDT still trades like
   a 1000 USDT account. Never more margin than Bybit says is free.

@@ -48,7 +48,7 @@ module.exports = {
   // Money rules: all coins trade out of ONE shared balance.
   PORTFOLIO: {
     STARTING_BALANCE: 1000,  // USDT
-    MARGIN_USDT: 100,        // fixed margin per trade in USDT; set to null to use MARGIN_PCT instead
+    MARGIN_USDT: 200,        // fixed margin per trade in USDT; set to null to use MARGIN_PCT instead
     MARGIN_PCT: 10,          // % of the current shared balance put up as margin per trade (when MARGIN_USDT is null)
     LEVERAGE: 10,            // position value = margin x leverage (100 USDT -> 1000 USDT)
     MAX_OPEN_POSITIONS: 5,

@@ -60,12 +60,14 @@ function reasonFor(pos, orderId) {
 
 // Pulls closed-pnl records for one position since its last sync and appends
 // any new ones to the trade log; returns the realized sum added.
-async function recordFills(client, st, pos, events) {
-  const seen = new Set(st.seenOrderIds);
+// `until` (ms) and `skipIds` keep a closed position from claiming records
+// that belong to a newer trade on the same coin.
+async function recordFills(client, st, pos, events, { until = Infinity, skipIds = [] } = {}) {
+  const seen = new Set([...st.seenOrderIds, ...skipIds]);
   const records = await client.getClosedPnl(pos.symbol, pos.openedAt - 60000);
   let added = 0;
   for (const r of records.sort((a, b) => a.at - b.at)) {
-    if (seen.has(r.orderId) || r.at < pos.openedAt - 60000) continue;
+    if (seen.has(r.orderId) || r.at < pos.openedAt - 60000 || r.at > until) continue;
     seen.add(r.orderId);
     st.seenOrderIds.push(r.orderId);
     const reason = reasonFor(pos, r.orderId);
@@ -82,9 +84,17 @@ async function recordFills(client, st, pos, events) {
 }
 
 async function reconcile({ client, st, exPos, signals, events, now }) {
-  // Positions closed earlier whose final closed-pnl record may have landed late.
+  // Positions closed earlier whose final closed-pnl record may have landed
+  // late. Only records from around the close count, and never the orders of
+  // a newer open trade on the same coin — otherwise that trade's target
+  // fills get booked under the old trade (and mislabelled 'stop hit').
+  const CLOSE_GRACE_MS = 5 * 60000;
   for (const [sym, pos] of Object.entries(st.closing)) {
-    await recordFills(client, st, pos, events);
+    const newer = st.positions[sym];
+    await recordFills(client, st, pos, events, {
+      until: (pos.closedDetectedAt || now) + CLOSE_GRACE_MS,
+      skipIds: newer && newer.orders ? Object.values(newer.orders) : [],
+    });
     if (now - pos.closedDetectedAt > DAY_MS) delete st.closing[sym];
   }
 

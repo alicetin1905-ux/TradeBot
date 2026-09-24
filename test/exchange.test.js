@@ -504,3 +504,28 @@ test('max 3 in one direction: a 4th long waits, a short still gets in', async ()
   assert.deepEqual(Object.keys(st.positions).sort(), ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'XRPUSDT']);
   assert.ok(events.some(e => e.symbol === 'BNBUSDT' && /already 3 longs open/.test(e.reason)));
 });
+
+test('a newer trade on the same coin keeps its own fills (no mix-up with the closed one)', async () => {
+  const { ex, client } = fakeBybit({ marks });
+  const st = freshState();
+  const t0 = Date.now();
+  // Long XRP opened, then signal flips: closed at market, short opened right after.
+  await exchange.runExchange({ client, st, signals: {}, candidates: [candidate('XRPUSDT', 1, 80, 2.5, 0.02)], events: [], now: t0 - 3 * 3600000 });
+  ex.marks.XRPUSDT = 2.48;
+  await exchange.runExchange({ client, st, signals: { XRPUSDT: { analysis: { bias: -1, score: -60 } } }, candidates: [], events: [], now: t0 - 2 * 3600000 });
+  // simulate the market-close record arriving at the flip time
+  for (const r of ex.closedPnl) r.at = t0 - 2 * 3600000 + 1000;
+  await exchange.runExchange({ client, st, signals: {}, candidates: [candidate('XRPUSDT', -1, -60, 2.48, 0.02)], events: [], now: t0 - 2 * 3600000 + 2000 });
+  const short = st.positions.XRPUSDT;
+  assert.equal(short.bias, -1);
+
+  // An hour later the short's T1 fills; the old long is still in `closing`.
+  ex.marks.XRPUSDT = 2.42;
+  ex.fillOrder(short.orders.t1, t0 - 3600000);
+  await exchange.runExchange({ client, st, signals: {}, candidates: [], events: [], now: t0 });
+  const t1 = st.trades.find(t => /T1 hit/.test(t.reason));
+  assert.ok(t1, JSON.stringify(st.trades.map(t => t.reason)));
+  assert.equal(t1.bias, -1);
+  assert.equal(t1.openedAt, short.openedAt);                  // booked under the short, not the old long
+  assert.ok(!st.trades.some(t => t.bias === 1 && t.pnl > 0 && /stop hit/.test(t.reason)));
+});

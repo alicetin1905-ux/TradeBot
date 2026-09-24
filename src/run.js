@@ -71,6 +71,7 @@ function loadState() {
     usedSignals: readJson('usedSignals', {}),   // one trade per signal (strategy.rememberSignals)
     shadow: readJson('shadow', null) || shadow.empty(), // what Fibonacci-blocked trades would have done
     summary: readJson('summary', null),         // last daily summary { date, balance }
+    commandsDone: readJson('commandsDone', []), // ids of control/commands.json entries already carried out
   };
 }
 function saveState(st) {
@@ -82,7 +83,7 @@ function saveState(st) {
   st.account.maxOpenPositions = P.MAX_OPEN_POSITIONS;
   st.account.mode = MODE;
   st.account.updatedAt = Date.now();
-  for (const k of ['account', 'positions', 'trades', 'flipEntries', 'scores', 'closing', 'seenOrderIds', 'usedSignals', 'shadow', 'summary']) writeJson(k, st[k]);
+  for (const k of ['account', 'positions', 'trades', 'flipEntries', 'scores', 'closing', 'seenOrderIds', 'usedSignals', 'shadow', 'summary', 'commandsDone']) writeJson(k, st[k]);
 }
 
 /* ---------------- one run ---------------- */
@@ -144,10 +145,46 @@ function exchangeClient() {
   return createClient({ env: MODE, apiKey: process.env.BYBIT_API_KEY, apiSecret: process.env.BYBIT_API_SECRET });
 }
 
+// Remote commands: control/commands.json (committed to the repo, pulled by the
+// Mac before every run and sync) lists one-off actions, e.g.
+//   [{ "id": "2026-09-24-close", "action": "close-all" }]
+// Each id is carried out once and remembered in commandsDone. A command that
+// hits an error isn't marked done, so the next sync retries it. Returns true
+// if anything was carried out.
+async function runCommands(client, st, events) {
+  let cmds = [];
+  try { cmds = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'control', 'commands.json'), 'utf8')); } catch (e) { return false; }
+  let ran = false;
+  for (const c of Array.isArray(cmds) ? cmds : []) {
+    if (!c || !c.id || st.commandsDone.includes(c.id)) continue;
+    if (c.action === 'close-all') {
+      const evs = [];
+      await exchange.closeAll({ client, st, events: evs });
+      events.push(...evs);
+      const failed = evs.filter(e => e.type === 'error');
+      const closed = evs.filter(e => e.type === 'info').map(e => e.symbol.replace('USDT', ''));
+      await notify.push([{
+        title: failed.length ? 'Close-all: some positions failed — retrying' : 'All positions closed',
+        message: `${closed.length ? 'Closed at market: ' + closed.join(', ') : 'Nothing was open.'} Orders cancelled.` +
+          (failed.length ? `\nFailed: ${failed.map(e => e.symbol.replace('USDT', '') + ' (' + e.reason + ')').join(', ')}` : '') +
+          '\nThe bot keeps running; coins it just held won\'t reopen on the same signal.',
+        tags: ['octagonal_sign'],
+      }]);
+      if (failed.length) continue;
+    } else {
+      events.push({ symbol: '-', type: 'error', reason: `unknown command ${c.action} (${c.id})` });
+    }
+    st.commandsDone.push(c.id);
+    ran = true;
+  }
+  return ran;
+}
+
 async function run() {
   const client = exchangeClient(); // fail fast on missing keys
   const st = loadState();
   const events = [];
+  await runCommands(client, st, events);
   const signals = await scoreAll(st, events);
 
   const halt = /^(1|true|yes)$/i.test(process.env.TRADEBOT_HALT || '');
@@ -184,8 +221,9 @@ async function syncOnExchange() {
     (k, v) => (k === 'markPrice' || k === 'unrealisedPnl' ? undefined : v));
   const before = snapshot();
   const events = [];
+  const ranCommand = await runCommands(client, st, events);
   await exchange.runExchange({ client, st, signals: {}, candidates: [], events });
-  if (snapshot() === before) { console.log(`[${MODE}] sync: no changes`); return; }
+  if (!ranCommand && snapshot() === before) { console.log(`[${MODE}] sync: no changes`); return; }
   saveState(st);
   printSummary(events, st);
   await notify.send(events, st);

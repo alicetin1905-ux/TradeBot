@@ -33,6 +33,7 @@ const atlasScore = require('../src/atlasScore');
 const strategy = require('../src/strategy');
 const { sizeFor } = require('../src/risk');
 const liquidity = require('../src/liquidity');
+const I = require('../src/indicators');
 
 const ROOT = path.join(__dirname, '..');
 const CACHE = path.join(ROOT, 'backtest', 'cache');
@@ -150,6 +151,37 @@ function heaviestClusters(closed, entry) {
   return { up: up ? up.price / entry : null, down: down ? down.price / entry : null };
 }
 
+// Inputs for the 1H entry filters: the signal candle's volume vs its 20-candle
+// average, the 1H Supertrend (10/3) direction, and the direction of the
+// Supertrend on the last CLOSED 4H candle at that moment.
+function addFilterInputs(ser) {
+  const h1 = ser.h1, st1 = I.supertrend(h1, 10, 3).dir;
+  const h4 = to4h(h1), st4 = I.supertrend(h4, 10, 3).dir;
+  const idx = new Map(h1.map((c, i) => [c.t, i]));
+  let j = -1;
+  const st4At = (closeT) => { // last 4H candle closed at or before closeT
+    while (j + 1 < h4.length && h4[j + 1].t + 4 * HOUR <= closeT) j++;
+    return j >= 0 ? st4[j] : null;
+  };
+  for (const [t, rec] of [...ser.sig1.entries()].sort((a, b) => a[0] - b[0])) {
+    const i = idx.get(t);
+    if (i == null || i < 20) continue;
+    const avg = h1.slice(i - 20, i).reduce((a, c) => a + c.v, 0) / 20;
+    rec.vr = avg > 0 ? h1[i].v / avg : null;
+    rec.st1 = st1[i];
+    rec.st4 = st4At(t + HOUR);
+  }
+  // 4H signals: same inputs on the 4H candle itself (st1 = its own Supertrend).
+  const idx4 = new Map(h4.map((c, i) => [c.t + 3 * HOUR, i])); // keyed like sig4 (actionable 1H time)
+  for (const [t, rec] of ser.sig4.entries()) {
+    const i = idx4.get(t);
+    if (i == null || i < 20) continue;
+    const avg = h4.slice(i - 20, i).reduce((a, c) => a + c.v, 0) / 20;
+    rec.vr = avg > 0 ? h4[i].v / avg : null;
+    rec.st1 = rec.st4 = st4[i];
+  }
+}
+
 /* ---------------- portfolio simulation ---------------- */
 
 const BASE_RULES = {
@@ -158,7 +190,10 @@ const BASE_RULES = {
   targetsR: null,          // e.g. [1.5, 3, 4.5]: targets at these multiples of the stop distance (null = live levels)
   limit: null,             // e.g. { atr: 0.25, hours: 3 }: limit entry this much better, valid this many hours
   liqTargets: null,        // ['t2'] / ['t3'] / ['t2','t3']: those targets just before the heaviest estimated liq cluster
-  liqFilter: false,        // skip trades whose heaviest liq cluster against them is nearer than the one for them
+  liqFilter: false,
+  volMin: null,            // 1H filters: signal-candle volume at least this x its 20-candle average
+  st1Agree: false,         //   1H Supertrend must point the trade's way
+  st4Agree: false,         //   4H Supertrend (last closed 4H candle) must point the trade's way        // skip trades whose heaviest liq cluster against them is nearer than the one for them
 };
 
 function simulate(series, symbols, times, rules) {
@@ -272,6 +307,9 @@ function simulate(series, symbols, times, rules) {
       if (!sig || sig.bias === 0 || !sig.ratio || Math.abs(sig.score) < R.minScore) continue;
       if (used[s] && !used[s].reset && used[s].bias === sig.bias) continue;
       if (!sig.gate.chase || (R.useFib && !sig.gate.fib)) continue;
+      if (R.volMin && !(sig.vr >= R.volMin)) continue;
+      if (R.st1Agree && sig.st1 !== sig.bias) continue;
+      if (R.st4Agree && sig.st4 !== sig.bias) continue;
       if (R.liqFilter && sig.liq) {
         // Skip when the heaviest cluster against the trade is closer than the one in its favour.
         const up = sig.liq.up ? sig.liq.up - 1 : Infinity, down = sig.liq.down ? 1 - sig.liq.down : Infinity;
@@ -340,6 +378,16 @@ const VARIANTS = [
   { key: '4h_limit_big_be2', name: '4H · limit · 1.5/3/4.5R · BE after T2', rules: { tf: '4H', limit: LIMIT, targetsR: BIG, breakevenAfter: 't2' } },
   { key: '4h_big_risk30', name: '4H · market · 1.5/3/4.5R · $30 risk', rules: { tf: '4H', targetsR: BIG, riskUsd: 30 } },
   { key: '4h_big_risk50', name: '4H · market · 1.5/3/4.5R · $50 risk (live now)', rules: { tf: '4H', targetsR: BIG, riskUsd: 50 }, focus: true },
+  { key: '1h_new', name: '1H · 1.5/3/4.5R · $50 risk', rules: { targetsR: BIG, riskUsd: 50 } },
+  { key: '1h_vol12', name: '  + volume ≥ 1.2x avg', rules: { targetsR: BIG, riskUsd: 50, volMin: 1.2 } },
+  { key: '1h_vol15', name: '  + volume ≥ 1.5x avg', rules: { targetsR: BIG, riskUsd: 50, volMin: 1.5 } },
+  { key: '1h_st1', name: '  + 1H Supertrend agrees', rules: { targetsR: BIG, riskUsd: 50, st1Agree: true } },
+  { key: '1h_st4', name: '  + 4H Supertrend agrees', rules: { targetsR: BIG, riskUsd: 50, st4Agree: true } },
+  { key: '1h_st4_vol', name: '  + 4H Supertrend + volume ≥ 1.2x', rules: { targetsR: BIG, riskUsd: 50, st4Agree: true, volMin: 1.2 } },
+  { key: '1h_all', name: '  + 1H & 4H Supertrend + volume ≥ 1.2x', rules: { targetsR: BIG, riskUsd: 50, st1Agree: true, st4Agree: true, volMin: 1.2 } },
+  { key: '4h_vol12', name: '4H live + volume ≥ 1.2x', rules: { tf: '4H', targetsR: BIG, riskUsd: 50, volMin: 1.2 } },
+  { key: '4h_vol15', name: '4H live + volume ≥ 1.5x', rules: { tf: '4H', targetsR: BIG, riskUsd: 50, volMin: 1.5 } },
+  { key: '4h_st', name: '4H live + Supertrend agrees', rules: { tf: '4H', targetsR: BIG, riskUsd: 50, st4Agree: true } },
   { key: 'liq_t2', name: '  + Liq: T2 at cluster', rules: { tf: '4H', targetsR: BIG, riskUsd: 50, liqTargets: ['t2'] } },
   { key: 'liq_t3', name: '  + Liq: T3 at cluster', rules: { tf: '4H', targetsR: BIG, riskUsd: 50, liqTargets: ['t3'] } },
   { key: 'liq_t23', name: '  + Liq: T2 + T3 at clusters', rules: { tf: '4H', targetsR: BIG, riskUsd: 50, liqTargets: ['t2', 't3'] } },
@@ -370,6 +418,7 @@ async function main() {
     process.stderr.write(`scoring ${s}…\n`);
     series[s].sig1 = precompute(s, series[s].h1, 1, start);
     series[s].sig4 = precompute(s, to4h(series[s].h1), 4, start);
+    addFilterInputs(series[s]);
   }
   const times = [...new Set(symbols.flatMap(s => series[s].h1.map(c => c.t)))].filter(t => t >= start && t <= now).sort((a, b) => a - b);
 

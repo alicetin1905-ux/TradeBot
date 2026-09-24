@@ -1,6 +1,6 @@
 # Backtest 2025-09-29 → 2026-09-24
 
-360 days · 8 coins · start 1000 USDT · $200 margin ×10 · max 5 positions, 3 per direction · entry score ≥ 50 · generated 2026-09-24 18:24 UTC
+360 days · 8 coins · start 1000 USDT · $200 margin ×10 · max 5 positions, 3 per direction · entry score ≥ 50 · generated 2026-09-24 18:31 UTC
 
 Approximation: price/volume signals only (no funding, OI, long/short, book, tape); exits replayed on 1H candles, stop first when a candle touches stop and target; Bybit fees (0.055% taker, 0.02% maker). Limit entries: 0.25×ATR better than the signal close, valid 3 hours, skipped if not filled.
 
@@ -26,6 +26,15 @@ Approximation: price/volume signals only (no funding, OI, long/short, book, tape
 |   + 4H Supertrend agrees | 188 | 32 | -999 | -99.9 | 99.9 | 0.77 | 55.5 | -34.5 |  |
 |   + 4H Supertrend + volume ≥ 1.2x | 200 | 34 | -979 | -97.9 | 98.9 | 0.79 | 53.6 | -34.3 |  |
 |   + 1H & 4H Supertrend + volume ≥ 1.2x | 170 | 34 | -980 | -98.0 | 99.0 | 0.76 | 52.2 | -35.8 |  |
+| idea: min score 40 | 378 | 40 | 1588 | 158.8 | 60.1 | 1.18 | 68.9 | -38.4 |  |
+| idea: min score 60 | 288 | 42 | 844 | 84.4 | 41.3 | 1.13 | 62.2 | -40.0 |  |
+| idea: min score 70 | 195 | 37 | 245 | 24.5 | 48.8 | 1.05 | 74.1 | -41.4 |  |
+| idea: no trades against BTC trend | 322 | 44 | 2185 | 218.5 | 36.1 | 1.31 | 65.6 | -39.0 |  |
+| idea: stop to T1 after T2 | 356 | 42 | 2400 | 240.0 | 46.2 | 1.30 | 69.4 | -38.9 |  |
+| idea: breakeven after T2 | 330 | 39 | 2519 | 251.9 | 47.4 | 1.34 | 77.0 | -36.3 |  |
+| idea: max 2 per direction | 253 | 42 | 1882 | 188.2 | 41.3 | 1.34 | 69.9 | -37.6 |  |
+| idea: max 3 positions | 311 | 41 | 936 | 93.6 | 37.8 | 1.13 | 64.5 | -39.0 |  |
+| idea: Fibonacci check off | 348 | 43 | 2611 | 261.1 | 54.0 | 1.34 | 70.0 | -38.7 |  |
 | 4H live + volume ≥ 1.2x | 282 | 39 | 674 | 67.4 | 48.6 | 1.10 | 67.1 | -38.4 |  |
 | 4H live + volume ≥ 1.5x | 182 | 31 | -908 | -90.8 | 95.1 | 0.82 | 73.5 | -39.9 |  |
 | 4H live + Supertrend agrees | 331 | 38 | 602 | 60.2 | 76.3 | 1.07 | 69.8 | -39.5 |  |

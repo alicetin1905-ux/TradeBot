@@ -356,7 +356,7 @@ function simulate(series, symbols, times, rules) {
     trades: trades.length, winRate: trades.length ? wins.length / trades.length : 0,
     net: balance - 1000, returnPct: (balance / 1000 - 1) * 100, maxDDPct: maxDD * 100,
     profitFactor: gl ? gw / gl : null, avgWin: wins.length ? gw / wins.length : 0, avgLoss: losses.length ? -gl / losses.length : 0,
-    missedLimits, stillOpen: Object.keys(open).length, byExit, bySymbol,
+    missedLimits, stillOpen: Object.keys(open).length, byExit, bySymbol, tradeList: trades,
   };
 }
 
@@ -413,8 +413,16 @@ const VARIANTS = [
   { key: '4h_limit_big_nofees', name: '4H · limit · 1.5/3/4.5R · no fees', rules: { tf: '4H', limit: LIMIT, targetsR: BIG, fees: false } },
 ];
 
+// --scan ADA,LINK,...: each coin traded on its own (live rules, one position)
+// over the whole period, split into three equal parts — to see which coins
+// the strategy works on before adding them. BTC is always loaded for the BTC filter.
+const SCAN = args.includes('--scan') ? String(args[args.indexOf('--scan') + 1] || '').split(',').filter(Boolean).map(x => x.toUpperCase().replace(/USDT$/, '') + 'USDT') : null;
+
+// --coins A,B,C: run just the live variant on this coin list (BTC is loaded for the BTC filter).
+const COINS = args.includes('--coins') ? String(args[args.indexOf('--coins') + 1] || '').split(',').filter(Boolean).map(x => x.toUpperCase().replace(/USDT$/, '') + 'USDT') : null;
+
 async function main() {
-  const symbols = config.SYMBOLS;
+  const symbols = SCAN ? [...new Set(['BTCUSDT', ...config.SYMBOLS, ...SCAN])] : COINS ? [...new Set(['BTCUSDT', ...COINS])] : config.SYMBOLS;
   const now = Date.now() - END_AGO * 24 * HOUR;
   const start = now - DAYS * 24 * HOUR;
   const from = start - (LOOKBACK * 4 + 48) * HOUR; // warm-up for the 4H series too
@@ -427,12 +435,21 @@ async function main() {
   }
   for (const s of symbols) {
     process.stderr.write(`scoring ${s}…\n`);
-    series[s].sig1 = precompute(s, series[s].h1, 1, start);
+    series[s].sig1 = SCAN || COINS ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
     series[s].sig4 = precompute(s, to4h(series[s].h1), 4, start);
     addFilterInputs(series[s]);
   }
   const times = [...new Set(symbols.flatMap(s => series[s].h1.map(c => c.t)))].filter(t => t >= start && t <= now).sort((a, b) => a - b);
 
+  if (SCAN) return scan(series, symbols, times, start, now);
+  if (COINS) {
+    const live = VARIANTS.find(v => v.focus), third = (now - start) / 3;
+    const maxOpen = args.includes('--max-open') ? +args[args.indexOf('--max-open') + 1] : undefined;
+    const r = simulate(series, COINS, times, maxOpen ? { ...live.rules, maxOpen, maxSameDir: Math.ceil(maxOpen * 0.6) } : live.rules);
+    const part = [0, 1, 2].map(k => r.tradeList.filter(t => t.closedAt >= start + k * third && t.closedAt < start + (k + 1) * third).reduce((a, t) => a + t.pnl, 0));
+    console.log(`${COINS.map(c => c.replace('USDT', '')).join(',')}: trades ${r.trades} win ${(r.winRate * 100).toFixed(0)}% net ${r.net.toFixed(0)} (${r.returnPct.toFixed(0)}%) maxDD ${r.maxDDPct.toFixed(1)}% PF ${r.profitFactor.toFixed(2)} thirds ${part.map(x => x.toFixed(0)).join(' / ')}`);
+    return;
+  }
   const results = VARIANTS.map(v => ({ ...v, ...simulate(series, symbols, times, v.rules) }));
   const period = `${new Date(times[0]).toISOString().slice(0, 10)} → ${new Date(times[times.length - 1]).toISOString().slice(0, 10)}`;
 
@@ -449,7 +466,7 @@ async function main() {
   const best = results.find(r => r.focus) || results.filter(r => r.rules.fees !== false).sort((a, b) => b.net - a.net)[0];
   if (END_AGO) return;
   fs.mkdirSync(OUT, { recursive: true });
-  fs.writeFileSync(path.join(OUT, 'results.json'), JSON.stringify({ period, days: DAYS, generatedAt: new Date().toISOString(), rules: BASE_RULES, results }, null, 2) + '\n');
+  fs.writeFileSync(path.join(OUT, 'results.json'), JSON.stringify({ period, days: DAYS, generatedAt: new Date().toISOString(), rules: BASE_RULES, results }, (k, v) => (k === 'tradeList' ? undefined : v), 2) + '\n');
   const md = [
     `# Backtest ${period}`, '',
     `${DAYS} days · ${symbols.length} coins · start 1000 USDT · $${BASE_RULES.margin} margin ×${BASE_RULES.leverage} · max ${BASE_RULES.maxOpen} positions, ${BASE_RULES.maxSameDir} per direction · entry score ≥ ${BASE_RULES.minScore} · generated ${new Date().toISOString().slice(0, 16).replace('T', ' ')} UTC`, '',
@@ -464,6 +481,24 @@ async function main() {
   ].join('\n');
   fs.writeFileSync(path.join(OUT, 'REPORT.md'), md);
   process.stderr.write(`\nwrote backtest/results.json and backtest/REPORT.md\n`);
+}
+
+function scan(series, symbols, times, start, end) {
+  const live = VARIANTS.find(v => v.focus);
+  const third = (end - start) / 3;
+  const rows = symbols.map((s) => {
+    const r = simulate(series, [s], times, { ...live.rules, maxOpen: 1 });
+    const part = [0, 1, 2].map(k => r.tradeList.filter(t => t.closedAt >= start + k * third && t.closedAt < start + (k + 1) * third).reduce((a, t) => a + t.pnl, 0));
+    return { s, new: !config.SYMBOLS.includes(s), trades: r.trades, win: r.winRate * 100, net: r.net, pf: r.profitFactor, dd: r.maxDDPct, part };
+  }).sort((a, b) => b.net - a.net);
+  const pad = (x, n) => String(x).padStart(n);
+  console.log(`\nPer-coin scan, ${live.name.replace(' (live now)', '')}, one coin at a time, ${new Date(start).toISOString().slice(0, 10)} → ${new Date(end).toISOString().slice(0, 10)}\n`);
+  console.log('coin'.padEnd(10) + pad('trades', 7) + pad('win%', 6) + pad('net $', 8) + pad('PF', 6) + pad('maxDD%', 8) + pad('1st 3rd', 9) + pad('2nd 3rd', 9) + pad('3rd 3rd', 9));
+  for (const r of rows) {
+    console.log((r.s.replace('USDT', '') + (r.new ? ' *' : '')).padEnd(10) + pad(r.trades, 7) + pad(r.win.toFixed(0), 6) + pad(r.net.toFixed(0), 8) +
+      pad(r.pf == null ? '—' : r.pf.toFixed(2), 6) + pad(r.dd.toFixed(1), 8) + r.part.map(x => pad(x.toFixed(0), 9)).join(''));
+  }
+  console.log('\n* = not traded now');
 }
 
 if (require.main === module) main().catch((e) => { console.error(e); process.exit(1); });

@@ -6,7 +6,7 @@
   "leverage": 10,
   "maxOpenPositions": 5,
   "mode": "demo",
-  "updatedAt": 1790273169553,
+  "updatedAt": 1790275503304,
   "exchangeEquity": 1000.93854904,
   "riskUsdt": 50,
   "targetsR": [
@@ -38,6 +38,7 @@
     "ENTRY_TF": "240",
     "ENTRY_MIN_SCORE": 50,
     "USE_FIB": true,
+    "BTC_FILTER": true,
     "MAX_CHASE_ATR": 1,
     "ENTRY_FRESH_MIN": 60,
     "SYMBOLS": [
@@ -75,6 +76,7 @@
     "ENTRY_TF": "240",
     "ENTRY_MIN_SCORE": 50,
     "USE_FIB": true,
+    "BTC_FILTER": true,
     "MAX_CHASE_ATR": 1,
     "ENTRY_FRESH_MIN": 60,
     "SYMBOLS": [

@@ -62,6 +62,13 @@ function due(st, now = Date.now()) {
 
 // Hourly status: equity (allocation + open P&L), each open trade's live
 // P&L from Bybit, targets hit, free slots, and the strongest waiting coins.
+// True on the runs that send the status push: the first run in every
+// NOTIFY.STATUS_EVERY_H-th UTC hour (runs are at :06, right after a candle close).
+function statusDue(now = Date.now()) {
+  const every = config.NOTIFY.STATUS_EVERY_H || 1;
+  return new Date(now).getUTCHours() % every === 0;
+}
+
 function hourly(st, now = Date.now()) {
   const a = st.account;
   const open = Object.values(st.positions);
@@ -83,10 +90,10 @@ function hourly(st, now = Date.now()) {
   const waiting = Object.entries(st.scores || {})
     .filter(([s, v]) => !st.positions[s] && v.bias !== 0)
     .sort((x, y) => Math.abs(y[1].score) - Math.abs(x[1].score)).slice(0, 3)
-    .map(([s, v]) => `${coin(s)} ${v.score > 0 ? '+' : ''}${v.score}${v.wait ? ' (' + ({ fib: 'fib', chase: 'chase', used: 'used', weak: '<' + config.ENTRY_MIN_SCORE }[v.wait] || v.wait) + ')' : ''}`);
+    .map(([s, v]) => `${coin(s)} ${v.score > 0 ? '+' : ''}${v.score}${v.wait ? ' (' + ({ fib: 'fib', chase: 'chase', used: 'used', stale: 'next 4H', weak: '<' + config.ENTRY_MIN_SCORE }[v.wait] || v.wait) + ')' : ''}`);
   if (waiting.length) lines.push(`Next up: ${waiting.join(', ')}`);
 
   return { title: `TradeBot $${equity.toFixed(2)} (${pct >= 0 ? '+' : ''}${pct}%)`, message: lines.join('\n'), tags: ['clock3'], priority: 2 };
 }
 
-module.exports = { due, build, hourly, positionsFrom };
+module.exports = { due, build, hourly, statusDue, positionsFrom };

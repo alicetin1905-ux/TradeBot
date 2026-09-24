@@ -82,9 +82,12 @@ module.exports = {
     // Daily summary: sent by the first hourly run at/after this hour, in the
     // running Mac's local time.
     DAILY_SUMMARY_HOUR: 8,
-    // Hourly status push after every hourly run: open trades with live P&L,
-    // equity, free slots. Sent at low priority (quiet). false turns it off.
+    // Status push (open trades with live P&L, equity, free slots), sent at
+    // low priority (quiet). false turns it off.
     HOURLY_STATUS: true,
+    // ...only on the run right after every Nth UTC hour — 4 = after each 4H
+    // close (00/04/08/12/16/20 UTC), in step with the 4H signals. 1 = hourly.
+    STATUS_EVERY_H: 4,
     // Watchdog (GitHub Actions, scripts/watchdog.js): alert when the bot's
     // last hourly run is older than this, repeat every REPEAT_H while it stays down.
     WATCHDOG_MAX_AGE_MIN: 130,

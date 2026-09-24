@@ -140,7 +140,7 @@ window. Limit entries and breakeven-after-T2 didn't help.
 
 ### Phone alerts
 
-Besides trade alerts, ntfy gets a quiet (low-priority) **hourly status** after each hourly run — each open trade's live P&L from Bybit, targets hit, equity, free slots and the strongest waiting coins (`NOTIFY.HOURLY_STATUS`) — a **daily summary** (first hourly run
+Besides trade alerts, ntfy gets a quiet (low-priority) **status every 4 hours** on the run right after each 4H close (00/04/08/12/16/20 UTC, `NOTIFY.STATUS_EVERY_H`) — each open trade's live P&L from Bybit, targets hit, equity, free slots and the strongest waiting coins (`NOTIFY.HOURLY_STATUS`) — a **daily summary** (first hourly run
 after 08:00 Mac time: balance and change, last-24h P&L, win rate, open
 trades, Fibonacci-blocked results — `src/summary.js`) and a **bot-down
 alarm**: `.github/workflows/watchdog.yml` runs `scripts/watchdog.js` on

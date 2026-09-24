@@ -223,7 +223,7 @@ async function run() {
   printSummary(events, st);
   await notify.send(events, st);
   if (daily) await notify.push([daily]);
-  else if (config.NOTIFY.HOURLY_STATUS) await notify.push([summary.hourly(st)]);
+  else if (config.NOTIFY.HOURLY_STATUS && summary.statusDue()) await notify.push([summary.hourly(st)]);
 }
 
 // Quick reconcile for the dashboard between hourly runs: books fills, moves

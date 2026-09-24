@@ -433,6 +433,12 @@ test('watchdog: alert when the bot stops, repeat every 6h, all-clear when back',
   assert.deepEqual(r.wd, { down: false });
 });
 
+test('status push only after every 4th UTC hour (4H closes)', () => {
+  const summary = require('../src/summary');
+  const at = (h) => Date.UTC(2026, 8, 24, h, 6);
+  assert.deepEqual([0, 1, 3, 4, 8, 11, 12, 20, 23].map(h => summary.statusDue(at(h))), [true, false, false, true, true, false, true, true, false]);
+});
+
 test('hourly status: live P&L per trade, equity, slots, next-up coins; low priority', () => {
   const summary = require('../src/summary');
   const st = {

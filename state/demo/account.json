@@ -4,9 +4,9 @@
   "marginPct": 10,
   "marginUsdt": 200,
   "leverage": 10,
-  "maxOpenPositions": 5,
+  "maxOpenPositions": 7,
   "mode": "demo",
-  "updatedAt": 1790276769572,
+  "updatedAt": 1790277303256,
   "exchangeEquity": 1000.93854904,
   "riskUsdt": 50,
   "targetsR": [
@@ -19,8 +19,8 @@
     "RISK_USDT": 50,
     "MARGIN_USDT": 200,
     "LEVERAGE": 10,
-    "MAX_OPEN_POSITIONS": 5,
-    "MAX_SAME_DIRECTION": 3,
+    "MAX_OPEN_POSITIONS": 7,
+    "MAX_SAME_DIRECTION": 4,
     "DAILY_LOSS_LIMIT_PCT": 20,
     "TARGETS_R": [
       1.5,
@@ -49,7 +49,8 @@
       "BNBUSDT",
       "DOGEUSDT",
       "HYPEUSDT",
-      "SUIUSDT"
+      "SUIUSDT",
+      "ENAUSDT"
     ],
     "STATUS_EVERY_H": 4
   },
@@ -57,8 +58,8 @@
     "RISK_USDT": 50,
     "MARGIN_USDT": 200,
     "LEVERAGE": 10,
-    "MAX_OPEN_POSITIONS": 5,
-    "MAX_SAME_DIRECTION": 3,
+    "MAX_OPEN_POSITIONS": 7,
+    "MAX_SAME_DIRECTION": 4,
     "DAILY_LOSS_LIMIT_PCT": 20,
     "TARGETS_R": [
       1.5,
@@ -87,7 +88,8 @@
       "BNBUSDT",
       "DOGEUSDT",
       "HYPEUSDT",
-      "SUIUSDT"
+      "SUIUSDT",
+      "ENAUSDT"
     ],
     "STATUS_EVERY_H": 4
   },

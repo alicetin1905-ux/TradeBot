@@ -51,7 +51,7 @@ module.exports = {
   TARGET_SPLIT: [0.40, 0.35, 0.25], // T1 / T2 / T3 shares, must sum to 1
   // T1 / T2 / T3 at these multiples of the stop distance (R) from entry.
   // null = the strategy's own levels (1R / 2R / 3R, T2 liquidity-refined).
-  TARGETS_R: [2, 3, 4.5],
+  TARGETS_R: [1.5, 3, 4.5],
 
   // Money rules: all coins trade out of ONE shared balance.
   PORTFOLIO: {

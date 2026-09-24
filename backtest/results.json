@@ -1,7 +1,7 @@
 {
   "period": "2025-09-29 → 2026-09-24",
   "days": 360,
-  "generatedAt": "2026-09-24T12:03:22.950Z",
+  "generatedAt": "2026-09-24T12:10:48.023Z",
   "rules": {
     "tf": "1H",
     "margin": 200,
@@ -997,7 +997,7 @@
     },
     {
       "key": "4h_big_risk50",
-      "name": "4H · market · 1.5/3/4.5R · $50 risk",
+      "name": "4H · market · 1.5/3/4.5R · $50 risk (live now)",
       "rules": {
         "tf": "4H",
         "targetsR": [
@@ -1007,6 +1007,7 @@
         ],
         "riskUsd": 50
       },
+      "focus": true,
       "trades": 345,
       "winRate": 0.42318840579710143,
       "net": 2609.7777912619,
@@ -1163,7 +1164,7 @@
     },
     {
       "key": "4h_2345_risk50",
-      "name": "4H · market · 2/3/4.5R · $50 risk (live now)",
+      "name": "4H · market · 2/3/4.5R · $50 risk",
       "rules": {
         "tf": "4H",
         "targetsR": [
@@ -1173,7 +1174,6 @@
         ],
         "riskUsd": 50
       },
-      "focus": true,
       "trades": 334,
       "winRate": 0.36826347305389223,
       "net": 2817.2610580632145,

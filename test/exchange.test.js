@@ -623,3 +623,38 @@ test('a newer trade on the same coin keeps its own fills (no mix-up with the clo
   assert.equal(t1.openedAt, short.openedAt);                  // booked under the short, not the old long
   assert.ok(!st.trades.some(t => t.bias === 1 && t.pnl > 0 && /stop hit/.test(t.reason)));
 });
+
+test('real-liquidation tracking: buckets longs/shorts in USD, samples each candle, fills forward moves', async () => {
+  const liq = require('../src/liqdata');
+  const H = 3600000, now = Date.UTC(2026, 8, 24, 12, 6);
+  const rows = [ // newest first, like OKX
+    { ts: String(now - 1 * H), sz: '10', bkPx: '100', posSide: 'long', side: 'sell' },
+    { ts: String(now - 2 * H), sz: '4', bkPx: '100', posSide: 'short', side: 'buy' },
+    { ts: String(now - 3 * H), sz: '6', bkPx: '100', posSide: 'net', side: 'sell' }, // net mode: a sell = long liquidated
+  ];
+  const fetchImpl = async (url) => ({
+    json: async () => url.includes('/instruments')
+      ? { code: '0', data: [{ ctVal: '0.1' }] }
+      : { code: '0', data: [{ details: url.includes('after=') ? [] : rows }] },
+  });
+  const log = liq.empty();
+  await liq.collect(log, ['SOLUSDT'], { now, fetchImpl });
+  const w = liq.windowSum(log, 'SOLUSDT', now, 4);
+  assert.deepEqual([w.long, w.short], [160, 40]);      // (10 + 6) x 0.1 x 100 / 4 x 0.1 x 100
+  await liq.collect(log, ['SOLUSDT'], { now, fetchImpl }); // same rows again: not double-counted
+  assert.deepEqual(Object.values(liq.windowSum(log, 'SOLUSDT', now, 4)), [160, 40]);
+
+  const t0 = Date.UTC(2026, 8, 24, 8);                 // 4H candle 08:00-12:00, closed at 12:00
+  const candles = (n) => Array.from({ length: n }, (_, i) => ({ t: t0 + i * 4 * H, c: 100 + i }));
+  const sig = (n) => ({ SOLUSDT: { analysis: { closedAt: t0 + (n - 2) * 4 * H, price: 100 + n - 2, score: 60, bias: 1 }, data: { candles: { [config.ENTRY_TF]: candles(n) } } } });
+  config.ENTRY_TF = '240';
+  liq.sample(log, sig(2), 4 * H);                      // candle 0 closed -> sample at 12:00
+  assert.equal(log.samples.length, 1);
+  assert.equal(log.samples[0].l4, 160);
+  liq.sample(log, sig(2), 4 * H);                      // same candle: no duplicate
+  assert.equal(log.samples.length, 1);
+  liq.sample(log, sig(9), 4 * H);                      // 7 more candles closed
+  const x = log.samples[0];
+  assert.equal(x.f1, 1);                               // next close 101 vs 100
+  assert.equal(x.f24, 6);                              // close 24h later: 106
+});

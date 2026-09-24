@@ -32,6 +32,7 @@ config.TARGETS_R = null;
 const atlasScore = require('../src/atlasScore');
 const strategy = require('../src/strategy');
 const { sizeFor } = require('../src/risk');
+const liquidity = require('../src/liquidity');
 
 const ROOT = path.join(__dirname, '..');
 const CACHE = path.join(ROOT, 'backtest', 'cache');
@@ -129,11 +130,24 @@ function precompute(symbol, candles, tfHours, fromMs) {
           chase: Math.abs(analysis.price - analysis.plan.entry) <= config.MAX_CHASE_ATR * analysis.atr,
         };
         rec.ratio = { stop: p.stop / e, t1: p.t1 / e, t2: p.t2 / e, t3: p.t3 / e };
+        rec.liq = heaviestClusters(closed, e);
       }
     }
     out.set(at, rec);
   }
   return out;
+}
+
+// Estimated liquidation clusters (the Liq page / CRUCIBLE model): the
+// heaviest one within 10% above and below price, as ratios of the entry.
+function heaviestClusters(closed, entry) {
+  const { clusters } = liquidity.estimateClusters(closed, config.LEV_TIERS, config.LIQ_MMR);
+  const price = closed[closed.length - 1].c;
+  const best = (side) => clusters
+    .filter(c => (side > 0 ? c.price > price : c.price < price) && Math.abs(c.price / price - 1) <= 0.10)
+    .sort((a, b) => b.weight - a.weight)[0];
+  const up = best(1), down = best(-1);
+  return { up: up ? up.price / entry : null, down: down ? down.price / entry : null };
 }
 
 /* ---------------- portfolio simulation ---------------- */
@@ -143,6 +157,8 @@ const BASE_RULES = {
   useFib: true, breakevenAfter: 't1', lockT1AfterT2: false, riskUsd: null, btcFilter: false, fees: true,
   targetsR: null,          // e.g. [1.5, 3, 4.5]: targets at these multiples of the stop distance (null = live levels)
   limit: null,             // e.g. { atr: 0.25, hours: 3 }: limit entry this much better, valid this many hours
+  liqTargets: null,        // ['t2'] / ['t3'] / ['t2','t3']: those targets just before the heaviest estimated liq cluster
+  liqFilter: false,        // skip trades whose heaviest liq cluster against them is nearer than the one for them
 };
 
 function simulate(series, symbols, times, rules) {
@@ -193,7 +209,18 @@ function simulate(series, symbols, times, rules) {
     if (!R.targetsR) return { stop: entry * sig.ratio.stop, t1: entry * sig.ratio.t1, t2: entry * sig.ratio.t2, t3: entry * sig.ratio.t3 };
     const dist = Math.abs(1 - sig.ratio.stop);
     const at = (m) => entry * (1 + sig.bias * dist * m);
-    return { stop: entry * sig.ratio.stop, t1: at(R.targetsR[0]), t2: at(R.targetsR[1]), t3: at(R.targetsR[2]) };
+    const lv = { stop: entry * sig.ratio.stop, t1: at(R.targetsR[0]), t2: at(R.targetsR[1]), t3: at(R.targetsR[2]) };
+    // Liq targets: put T2 and/or T3 just (0.2%) before the heaviest estimated
+    // liquidation cluster on the target side, when it's in a sensible range.
+    const c = sig.liq && (sig.bias === 1 ? sig.liq.up : sig.liq.down);
+    if (R.liqTargets && c) {
+      const rC = ((c - 1) * sig.bias) / dist;                  // cluster distance in R
+      const before = entry * (c - sig.bias * 0.002);
+      if (R.liqTargets.includes('t2') && rC > R.targetsR[0] + 0.25 && rC < R.targetsR[2]) lv.t2 = before;
+      if (R.liqTargets.includes('t3') && rC > R.targetsR[1] + 0.25 && rC <= 8) lv.t3 = before;
+      if ((lv.t3 - lv.t2) * sig.bias <= 0) lv.t2 = at(R.targetsR[1]); // keep T2 short of T3
+    }
+    return lv;
   }
 
   function openPosition(s, sig, entry, t, feeRate, margin) {
@@ -245,6 +272,11 @@ function simulate(series, symbols, times, rules) {
       if (!sig || sig.bias === 0 || !sig.ratio || Math.abs(sig.score) < R.minScore) continue;
       if (used[s] && !used[s].reset && used[s].bias === sig.bias) continue;
       if (!sig.gate.chase || (R.useFib && !sig.gate.fib)) continue;
+      if (R.liqFilter && sig.liq) {
+        // Skip when the heaviest cluster against the trade is closer than the one in its favour.
+        const up = sig.liq.up ? sig.liq.up - 1 : Infinity, down = sig.liq.down ? 1 - sig.liq.down : Infinity;
+        if ((sig.bias === 1 ? down < up : up < down)) continue;
+      }
       if (R.btcFilter && s !== 'BTCUSDT' && btc && btc.bias === -sig.bias) continue;
       cands.push({ s, sig });
     }
@@ -308,6 +340,10 @@ const VARIANTS = [
   { key: '4h_limit_big_be2', name: '4H · limit · 1.5/3/4.5R · BE after T2', rules: { tf: '4H', limit: LIMIT, targetsR: BIG, breakevenAfter: 't2' } },
   { key: '4h_big_risk30', name: '4H · market · 1.5/3/4.5R · $30 risk', rules: { tf: '4H', targetsR: BIG, riskUsd: 30 } },
   { key: '4h_big_risk50', name: '4H · market · 1.5/3/4.5R · $50 risk (live now)', rules: { tf: '4H', targetsR: BIG, riskUsd: 50 }, focus: true },
+  { key: 'liq_t2', name: '  + Liq: T2 at cluster', rules: { tf: '4H', targetsR: BIG, riskUsd: 50, liqTargets: ['t2'] } },
+  { key: 'liq_t3', name: '  + Liq: T3 at cluster', rules: { tf: '4H', targetsR: BIG, riskUsd: 50, liqTargets: ['t3'] } },
+  { key: 'liq_t23', name: '  + Liq: T2 + T3 at clusters', rules: { tf: '4H', targetsR: BIG, riskUsd: 50, liqTargets: ['t2', 't3'] } },
+  { key: 'liq_filter', name: '  + Liq: skip if magnet against', rules: { tf: '4H', targetsR: BIG, riskUsd: 50, liqFilter: true } },
   { key: '4h_234_risk50', name: '4H · market · 2/3/4R · $50 risk', rules: { tf: '4H', targetsR: [2, 3, 4], riskUsd: 50 } },
   { key: '4h_2345_risk50', name: '4H · market · 2/3/4.5R · $50 risk', rules: { tf: '4H', targetsR: [2, 3, 4.5], riskUsd: 50 } },
   { key: '4h_big_risk20', name: '4H · market · 1.5/3/4.5R · $20 risk', rules: { tf: '4H', targetsR: BIG, riskUsd: 20 } },

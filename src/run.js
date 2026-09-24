@@ -33,6 +33,7 @@ const strategy = require('./strategy');
 const exchange = require('./exchange');
 const notify = require('./notify');
 const shadow = require('./shadow');
+const liqdata = require('./liqdata');
 const summary = require('./summary');
 const { loadEnv } = require('./env');
 
@@ -59,7 +60,8 @@ function readJson(name, fallback) {
 }
 function writeJson(name, data) {
   fs.mkdirSync(DIR, { recursive: true });
-  fs.writeFileSync(path.join(DIR, name + '.json'), JSON.stringify(data, null, 2) + '\n');
+  // liqlog grows to thousands of samples: stored compact.
+  fs.writeFileSync(path.join(DIR, name + '.json'), JSON.stringify(data, null, name === 'liqlog' ? 0 : 2) + '\n');
 }
 function freshAccount() {
   return { balance: P.STARTING_BALANCE, startingBalance: P.STARTING_BALANCE, marginPct: P.MARGIN_PCT, marginUsdt: P.MARGIN_USDT, riskUsdt: P.RISK_USDT, targetsR: config.TARGETS_R, entryTf: config.ENTRY_TF, leverage: P.LEVERAGE, maxOpenPositions: P.MAX_OPEN_POSITIONS, mode: MODE };
@@ -77,6 +79,7 @@ function loadState() {
     shadow: readJson('shadow', null) || shadow.empty(), // what Fibonacci-blocked trades would have done
     summary: readJson('summary', null),         // last daily summary { date, balance }
     commandsDone: readJson('commandsDone', []), // ids of control/commands.json entries already carried out
+    liqlog: readJson('liqlog', null) || liqdata.empty(), // real OKX liquidations, tracking only
   };
 }
 function saveState(st) {
@@ -95,7 +98,7 @@ function saveState(st) {
   st.account.maxOpenPositions = P.MAX_OPEN_POSITIONS;
   st.account.mode = MODE;
   st.account.updatedAt = Date.now();
-  for (const k of ['account', 'positions', 'trades', 'flipEntries', 'scores', 'closing', 'seenOrderIds', 'usedSignals', 'shadow', 'summary', 'commandsDone']) writeJson(k, st[k]);
+  for (const k of ['account', 'positions', 'trades', 'flipEntries', 'scores', 'closing', 'seenOrderIds', 'usedSignals', 'shadow', 'summary', 'commandsDone', 'liqlog']) writeJson(k, st[k]);
 }
 
 /* ---------------- one run ---------------- */
@@ -222,6 +225,11 @@ async function run() {
   const candidates = entryCandidates(signals, st, events, blocked);
   await exchange.runExchange({ client, st, signals, candidates, events, halt });
   shadow.update({ shadow: st.shadow, signals, blocked, balance: st.account.balance });
+  // Real liquidations: tracking only, never blocks or changes a trade.
+  try {
+    await liqdata.collect(st.liqlog, config.ALL_SYMBOLS);
+    liqdata.sample(st.liqlog, signals, TF_MS);
+  } catch (err) { console.log('liquidation tracking:', err.message); }
   const daily = summary.due(st);
   strategy.rememberSignals(st.usedSignals, {}, st.positions); // mark what just opened
 

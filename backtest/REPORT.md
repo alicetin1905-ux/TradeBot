@@ -1,16 +1,16 @@
 # Backtest 2025-09-29 → 2026-09-24
 
-360 days · 8 coins · start 1000 USDT · $200 margin ×10 · max 5 positions, 3 per direction · entry score ≥ 50 · generated 2026-09-24 12:45 UTC
+360 days · 8 coins · start 1000 USDT · $200 margin ×10 · max 5 positions, 3 per direction · entry score ≥ 50 · generated 2026-09-24 13:20 UTC
 
 Approximation: price/volume signals only (no funding, OI, long/short, book, tape); exits replayed on 1H candles, stop first when a candle touches stop and target; Bybit fees (0.055% taker, 0.02% maker). Limit entries: 0.25×ATR better than the signal close, valid 3 hours, skipped if not filled.
 
 | Variant | Trades | Win % | Net $ | Return % | Max DD % | Profit factor | Avg win | Avg loss | Limits missed |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| 1H · market · 1/2/3R (old live) | 192 | 44 | -864 | -86.4 | 91.9 | 0.80 | 41.3 | -40.9 |  |
-| 1H · market · 1/2/3R · no fees | 224 | 42 | -817 | -81.7 | 89.8 | 0.83 | 42.0 | -37.3 |  |
-| 1H · limit entry · 1/2/3R | 182 | 40 | -817 | -81.7 | 86.4 | 0.79 | 42.9 | -36.2 | 49 |
-| 1H · market · 1.5/3/4.5R | 118 | 32 | -810 | -81.0 | 89.6 | 0.75 | 64.5 | -40.8 |  |
-| 1H · limit · 1.5/3/4.5R | 139 | 31 | -804 | -80.4 | 87.5 | 0.77 | 63.1 | -36.6 | 29 |
+| 1H · market · 1/2/3R (old live) | 188 | 45 | -851 | -85.1 | 90.7 | 0.80 | 40.6 | -41.0 |  |
+| 1H · market · 1/2/3R · no fees | 221 | 43 | -807 | -80.7 | 89.2 | 0.83 | 41.6 | -37.8 |  |
+| 1H · limit entry · 1/2/3R | 182 | 40 | -817 | -81.7 | 86.3 | 0.79 | 42.8 | -36.2 | 48 |
+| 1H · market · 1.5/3/4.5R | 116 | 32 | -813 | -81.3 | 89.5 | 0.75 | 66.3 | -41.3 |  |
+| 1H · limit · 1.5/3/4.5R | 131 | 31 | -806 | -80.6 | 87.9 | 0.76 | 61.4 | -36.9 | 29 |
 | 4H · market · 1/2/3R | 65 | 43 | -881 | -88.1 | 91.0 | 0.73 | 85.8 | -88.8 |  |
 | 4H · limit entry · 1/2/3R | 35 | 40 | -838 | -83.8 | 88.8 | 0.59 | 85.6 | -96.9 | 16 |
 | 4H · market · 1.5/3/4.5R | 334 | 43 | 3172 | 317.2 | 73.2 | 1.26 | 100.5 | -59.5 |  |
@@ -19,6 +19,10 @@ Approximation: price/volume signals only (no funding, OI, long/short, book, tape
 | 4H · limit · 1.5/3/4.5R · BE after T2 | 73 | 34 | -874 | -87.4 | 91.6 | 0.78 | 126.7 | -84.2 | 50 |
 | 4H · market · 1.5/3/4.5R · $30 risk | 345 | 42 | 1766 | 176.6 | 30.0 | 1.35 | 45.6 | -24.8 |  |
 | 4H · market · 1.5/3/4.5R · $50 risk (live now) | 345 | 42 | 2610 | 261.0 | 43.6 | 1.33 | 70.1 | -38.7 |  |
+|   + Liq: T2 at cluster | 345 | 42 | 2560 | 256.0 | 45.4 | 1.32 | 69.8 | -38.7 |  |
+|   + Liq: T3 at cluster | 345 | 42 | 2612 | 261.2 | 43.6 | 1.33 | 70.1 | -38.7 |  |
+|   + Liq: T2 + T3 at clusters | 345 | 42 | 2562 | 256.2 | 45.4 | 1.32 | 69.8 | -38.7 |  |
+|   + Liq: skip if magnet against | 271 | 42 | 666 | 66.6 | 40.6 | 1.09 | 60.3 | -40.9 |  |
 | 4H · market · 2/3/4R · $50 risk | 339 | 35 | 2146 | 214.6 | 57.4 | 1.25 | 85.9 | -37.7 |  |
 | 4H · market · 2/3/4.5R · $50 risk | 334 | 37 | 2817 | 281.7 | 51.9 | 1.34 | 86.5 | -37.5 |  |
 | 4H · market · 1.5/3/4.5R · $20 risk | 345 | 42 | 1187 | 118.7 | 21.9 | 1.35 | 30.5 | -16.6 |  |

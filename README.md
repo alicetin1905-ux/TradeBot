@@ -13,8 +13,17 @@ DOGE, HYPE and SUI perps on **Bybit Demo Trading** (mainnet prices, demo funds).
   blocks is followed as a **shadow trade** (`src/shadow.js`, same levels,
   size and exit rules, never sent to Bybit) so the dashboard can show
   whether the check is saving or costing money.
-- **CRUCIBLE** — liquidation-cluster model that nudges stops off dense
-  clusters and pulls T2 in short of them (`src/liquidity.js`).
+- **CRUCIBLE** — estimated liquidation-cluster model that nudges stops off
+  dense clusters (`src/liquidity.js`). Backtested: placing T2/T3 at the
+  heaviest cluster or skipping trades with a cluster "magnet" against them
+  didn't help (no better / clearly worse), so it stays a minor stop nudge.
+- **Real liquidations (tracking only)** — every hourly run collects OKX's
+  real liquidation feed per coin (`src/liqdata.js` → `state/demo/liqlog.json`)
+  and, at each 4H close, records the last 4h/24h of liquidated longs vs
+  shorts and where price went next. The dashboard shows whether a big long
+  flush or short squeeze predicts the next 24h. It doesn't affect trading;
+  OKX only keeps ~1 day of history, so it can't be backtested — it has to
+  prove itself over a few weeks first.
 
 ## Demo funds only
 

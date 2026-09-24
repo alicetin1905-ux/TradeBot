@@ -156,6 +156,13 @@
     font-family:var(--mono); font-size:10.5px; padding:6px 10px; border-radius:8px; cursor:pointer;
     flex:0 0 auto;
   }
+  .liqRow{ display:grid; grid-template-columns:44px 1fr 62px 62px; gap:8px; align-items:center; padding:5px 0; font-size:11.5px; border-bottom:1px solid var(--border); }
+  .liqRow:last-of-type{ border-bottom:0; }
+  .liqRow .n{ font-family:var(--mono); text-align:right; }
+  .liqRow.head{ font-size:9.5px; letter-spacing:0.08em; text-transform:uppercase; color:var(--text-tertiary); }
+  .liqBar{ height:6px; border-radius:3px; background:var(--panel2); overflow:hidden; display:flex; }
+  .liqBar .l{ background:var(--down); } .liqBar .s{ background:var(--up); }
+  .liqStats{ margin-top:12px; padding-top:10px; border-top:1px solid var(--border); font-size:11.5px; line-height:1.7; }
   .setGroup{ margin-bottom:12px; }
   .setGroup:last-child{ margin-bottom:0; }
   .setGroup .gt{ font-size:9.5px; letter-spacing:0.12em; text-transform:uppercase; color:var(--text-tertiary); margin-bottom:4px; }
@@ -253,6 +260,9 @@
 <h2>Fibonacci check — blocked trades</h2>
 <div class="statCard" id="shadowCard"><div class="empty">Loading…</div></div>
 
+<h2>Real liquidations — tracking only</h2>
+<div class="statCard" id="liqCard"><div class="empty">Loading…</div></div>
+
 <h2>Open positions</h2>
 <div id="openPositions"><div class="tradesCard"><div class="empty">Loading…</div></div></div>
 
@@ -306,6 +316,7 @@
     alertsToggle: document.getElementById('alertsToggle'),
     alertsHint: document.getElementById('alertsHint'),
     settingsCard: document.getElementById('settingsCard'),
+    liqCard: document.getElementById('liqCard'),
   };
 
   function fmtMoney(x) {
@@ -405,6 +416,37 @@
     var bars = '';
     for (var i = 0; i < max; i++) bars += '<span' + (i < openCount ? ' class="on"' : '') + '></span>';
     els.slotBar.innerHTML = bars;
+  }
+
+  /* ---------------- real liquidations (state/demo/liqlog.json) ---------------- */
+  function fmtUsdShort(x) {
+    if (!x) return '$0';
+    return x >= 1e6 ? '$' + (x / 1e6).toFixed(1) + 'M' : x >= 1e3 ? '$' + Math.round(x / 1e3) + 'k' : '$' + Math.round(x);
+  }
+  function renderLiq(log) {
+    if (!log || !log.hours) { els.liqCard.innerHTML = '<div class="empty">Starts with the next hourly run.</div>'; return; }
+    var from = Date.now() - 4 * 3600000;
+    var html = '<div class="liqRow head"><span>Coin</span><span>last 4h: longs vs shorts liquidated</span><span class="n">longs</span><span class="n">shorts</span></div>';
+    SYMBOLS.forEach(function (s) {
+      var b = log.hours[s.id] || {}, l = 0, sh = 0;
+      Object.keys(b).forEach(function (h) { if (+h + 3600000 > from) { l += b[h][0]; sh += b[h][1]; } });
+      var tot = l + sh, lp = tot ? l / tot * 100 : 0;
+      html += '<div class="liqRow"><span><b>' + s.label + '</b></span><span class="liqBar">' +
+        (tot ? '<span class="l" style="width:' + lp + '%"></span><span class="s" style="width:' + (100 - lp) + '%"></span>' : '') +
+        '</span><span class="n down">' + fmtUsdShort(l) + '</span><span class="n up">' + fmtUsdShort(sh) + '</span></div>';
+    });
+    var st = log.stats;
+    var line = function (label, g) {
+      if (!g || !g.n) return '<div>' + label + ': <span style="color:var(--text-tertiary)">no cases yet</span></div>';
+      return '<div>' + label + ' (' + g.n + '×): next 24h avg <b class="' + (g.avg24 >= 0 ? 'up' : 'down') + '">' + (g.avg24 >= 0 ? '+' : '') + g.avg24.toFixed(2) + '%</b>, up ' + g.up24 + '% of the time</div>';
+    };
+    html += '<div class="liqStats">' +
+      line('After a big long flush', st && st.longFlush) +
+      line('After a big short squeeze', st && st.shortSqueeze) +
+      line('Normal', st && st.normal) +
+      '<div class="setNote" style="margin-top:6px">' + (st ? st.samples : 0) + ' complete samples' + (st && st.pending ? ', ' + st.pending + ' waiting for their 24h' : '') +
+      '. Real OKX liquidations, collected hourly. Big = 2× the coin\'s usual 4h amount, ≥ 70% one side. Tracking only — it doesn\'t change any trade. Worth a look after a few weeks (30+ cases per group).</div></div>';
+    els.liqCard.innerHTML = html;
   }
 
   /* ---------------- settings (control/settings.json) ---------------- */
@@ -942,8 +984,9 @@
         fetchJson('account'), fetchJson('positions'), fetchJson('trades'),
         fetchJson('scores').catch(function () { return {}; }),
         fetchJson('shadow').catch(function () { return null; }),
+        fetchJson('liqlog').catch(function () { return null; }),
       ]);
-      var account = results[0], positions = results[1], trades = results[2], scores = results[3], shadowState = results[4];
+      var account = results[0], positions = results[1], trades = results[2], scores = results[3], shadowState = results[4], liqLog = results[5];
 
       var openSymbols = Object.keys(positions);
       var markPrices = openSymbols.length ? await fetchMarkPrices(openSymbols) : {};
@@ -982,6 +1025,7 @@
       renderOpenPositions(positions, markPrices);
       renderPerformance(trades, started);
       renderShadow(shadowState);
+      renderLiq(liqLog);
       renderCoinStats(trades);
       renderTrades(trades);
       if (watch.on) checkNewEntries(positions);

@@ -3,13 +3,13 @@
     "symbol": "ENAUSDT",
     "bias": 1,
     "entry": 0.22312,
-    "stop": 0.20089,
+    "stop": 0.22312,
     "initialStop": 0.20089,
     "t1": 0.2562,
     "t2": 0.28928,
     "t3": 0.32236,
     "qtyTotal": 4538,
-    "qtyRemaining": 4538,
+    "qtyRemaining": 2723,
     "qtyT1": 1815,
     "qtyT2": 1588,
     "qtyT3": 1135,
@@ -17,11 +17,11 @@
     "notional": 1012.5185600000001,
     "riskAmt": 100.87974,
     "filled": {
-      "t1": false,
+      "t1": true,
       "t2": false,
       "t3": false
     },
-    "breakeven": false,
+    "breakeven": true,
     "beAfter": "t1",
     "openedAt": 1790280367471,
     "score": 61,
@@ -32,8 +32,8 @@
       "t3": "18ce0124-deb2-4969-b898-cdb29e9b4bdf"
     },
     "tickSize": 0.00001,
-    "markPrice": 0.25086,
-    "unrealisedPnl": 125.88412
+    "markPrice": 0.25585,
+    "unrealisedPnl": 89.12379
   },
   "SUIUSDT": {
     "symbol": "SUIUSDT",
@@ -68,8 +68,8 @@
       "t3": "5bd5913a-0fe9-450d-a71c-393334a508c0"
     },
     "tickSize": 0.0001,
-    "markPrice": 1.1229,
-    "unrealisedPnl": 105.366
+    "markPrice": 1.1205,
+    "unrealisedPnl": 102.918
   },
   "SOLUSDT": {
     "symbol": "SOLUSDT",
@@ -104,7 +104,7 @@
       "t3": "74f916e9-5292-46d0-8bfb-8c502e2dc11a"
     },
     "tickSize": 0.01,
-    "markPrice": 120.316,
-    "unrealisedPnl": -8.4672
+    "markPrice": 121.246,
+    "unrealisedPnl": 7.1568
   }
 }

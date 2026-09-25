@@ -423,6 +423,10 @@ const SCAN = args.includes('--scan') ? String(args[args.indexOf('--scan') + 1] |
 // --coins A,B,C: run just the live variant on this coin list (BTC is loaded for the BTC filter).
 const COINS = args.includes('--coins') ? String(args[args.indexOf('--coins') + 1] || '').split(',').filter(Boolean).map(x => x.toUpperCase().replace(/USDT$/, '') + 'USDT') : null;
 
+// --tp-grid: every combination of T1/T2/T3 (in R) and close shares on the live
+// rules, ranked; also written to backtest/TP_GRID.md.
+const TP_GRID = args.includes('--tp-grid');
+
 async function main() {
   const symbols = SCAN ? [...new Set(['BTCUSDT', ...config.SYMBOLS, ...SCAN])] : COINS ? [...new Set(['BTCUSDT', ...COINS])] : config.SYMBOLS;
   const now = Date.now() - END_AGO * 24 * HOUR;
@@ -437,13 +441,14 @@ async function main() {
   }
   for (const s of symbols) {
     process.stderr.write(`scoring ${s}…\n`);
-    series[s].sig1 = SCAN || COINS ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
+    series[s].sig1 = SCAN || COINS || TP_GRID ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
     series[s].sig4 = precompute(s, to4h(series[s].h1), 4, start);
     addFilterInputs(series[s]);
   }
   const times = [...new Set(symbols.flatMap(s => series[s].h1.map(c => c.t)))].filter(t => t >= start && t <= now).sort((a, b) => a - b);
 
   if (SCAN) return scan(series, symbols, times, start, now);
+  if (TP_GRID) return tpGrid(series, symbols, times, start, now);
   if (COINS) {
     const live = VARIANTS.find(v => v.focus), third = (now - start) / 3;
     const maxOpen = args.includes('--max-open') ? +args[args.indexOf('--max-open') + 1] : undefined;
@@ -490,6 +495,41 @@ async function main() {
   ].join('\n');
   fs.writeFileSync(path.join(OUT, 'REPORT.md'), md);
   process.stderr.write(`\nwrote backtest/results.json and backtest/REPORT.md\n`);
+}
+
+function tpGrid(series, symbols, times, start, end) {
+  const live = VARIANTS.find(v => v.focus);
+  const third = (end - start) / 3;
+  const T1 = [1, 1.5, 2], T2 = [2, 2.5, 3, 4], T3 = [3, 3.5, 4.5, 6];
+  const SPLITS = [[0.5, 0.25, 0.25], [0.4, 0.35, 0.25], [0.34, 0.33, 0.33], [0.25, 0.25, 0.5]];
+  const rows = [];
+  for (const a of T1) for (const b of T2) for (const c of T3) {
+    if (!(a < b && b < c)) continue;
+    for (const sp of SPLITS) {
+      const r = simulate(series, symbols, times, { ...live.rules, targetsR: [a, b, c], split: sp });
+      const part = [0, 1, 2].map(k => r.tradeList.filter(t => t.closedAt >= start + k * third && t.closedAt < start + (k + 1) * third).reduce((x, t) => x + t.pnl, 0));
+      rows.push({ t: `${a} / ${b} / ${c}R`, sp: sp.map(x => Math.round(x * 100)).join('/') + '%', net: r.net, dd: r.maxDDPct, pf: r.profitFactor, win: r.winRate * 100, trades: r.trades, part, worst: Math.min(...part) });
+    }
+  }
+  const pad = (x, n) => String(x).padStart(n);
+  const line = (r) => r.t.padEnd(16) + r.sp.padEnd(12) + pad(r.trades, 7) + pad(r.win.toFixed(0), 5) + pad(r.net.toFixed(0), 8) + pad(r.dd.toFixed(1), 7) + pad(r.pf.toFixed(2), 6) + r.part.map(x => pad(x.toFixed(0), 7)).join('');
+  const head = 'targets'.padEnd(16) + 'shares'.padEnd(12) + pad('trades', 7) + pad('win%', 5) + pad('net $', 8) + pad('maxDD', 7) + pad('PF', 6) + pad('1/3', 7) + pad('2/3', 7) + pad('3/3', 7);
+  const byNet = [...rows].sort((x, y) => y.net - x.net);
+  const byWorst = [...rows].sort((x, y) => y.worst - x.worst);
+  const out = [`${rows.length} combinations, live rules (${live.name.replace(' (live now)', '')}), ${new Date(start).toISOString().slice(0, 10)} → ${new Date(end).toISOString().slice(0, 10)}, start 1000 USDT`, '',
+    'Top 15 by year result:', head, ...byNet.slice(0, 15).map(line), '',
+    'Top 10 by weakest third (most consistent):', head, ...byWorst.slice(0, 10).map(line), '',
+    'Bottom 5:', head, ...byNet.slice(-5).map(line)];
+  // average by each single choice, to see which levels are good regardless of the rest
+  const avgBy = (key, vals) => vals.map(v => { const xs = rows.filter(r => key(r) === v); return `${v}: ${(xs.reduce((a, r) => a + r.net, 0) / xs.length).toFixed(0)}`; }).join('  ');
+  out.push('', 'Average year result by choice:',
+    'T1 ' + avgBy(r => +r.t.split(' / ')[0], T1),
+    'T2 ' + avgBy(r => +r.t.split(' / ')[1], T2),
+    'T3 ' + avgBy(r => parseFloat(r.t.split(' / ')[2]), T3),
+    'shares ' + avgBy(r => r.sp, SPLITS.map(sp => sp.map(x => Math.round(x * 100)).join('/') + '%')));
+  console.log(out.join('\n'));
+  fs.mkdirSync(OUT, { recursive: true });
+  fs.writeFileSync(path.join(OUT, 'TP_GRID.md'), '# Take-profit grid\n\n```\n' + out.join('\n') + '\n```\n');
 }
 
 function scan(series, symbols, times, start, end) {

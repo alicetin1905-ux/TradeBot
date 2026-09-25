@@ -190,6 +190,7 @@ const BASE_RULES = {
   targetsR: null,          // e.g. [1.5, 3, 4.5]: targets at these multiples of the stop distance (null = live levels)
   limit: null,             // e.g. { atr: 0.25, hours: 3 }: limit entry this much better, valid this many hours
   liqTargets: null,        // ['t2'] / ['t3'] / ['t2','t3']: those targets just before the heaviest estimated liq cluster
+  split: [0.40, 0.35, 0.25], // share closed at T1 / T2 / T3
   liqFilter: false,
   volMin: null,            // 1H filters: signal-candle volume at least this x its 20-candle average
   st1Agree: false,         //   1H Supertrend must point the trade's way
@@ -198,7 +199,7 @@ const BASE_RULES = {
 
 function simulate(series, symbols, times, rules) {
   const R = { ...BASE_RULES, ...rules };
-  const split = config.TARGET_SPLIT;
+  const split = R.split || [0.40, 0.35, 0.25];
   const FEE_TAKER = R.fees ? FEES.taker : 0, FEE_MAKER = R.fees ? FEES.maker : 0;
   const sigKey = R.tf === '4H' ? 'sig4' : 'sig1';
   let balance = 1000, peak = 1000, maxDD = 0;
@@ -386,6 +387,7 @@ const VARIANTS = [
   { key: '1h_st4_vol', name: '  + 4H Supertrend + volume ≥ 1.2x', rules: { targetsR: BIG, riskUsd: 50, st4Agree: true, volMin: 1.2 } },
   { key: '1h_all', name: '  + 1H & 4H Supertrend + volume ≥ 1.2x', rules: { targetsR: BIG, riskUsd: 50, st1Agree: true, st4Agree: true, volMin: 1.2 } },
   { key: 'x_score40', name: 'idea: min score 40', rules: { tf: '4H', targetsR: BIG, riskUsd: 50, minScore: 40 } },
+  { key: 'new_tp', name: 'TP 1.5/2.5/3.5R, 50/25/25%', rules: { tf: '4H', targetsR: [1.5, 2.5, 3.5], split: [0.5, 0.25, 0.25], riskUsd: 50, btcFilter: true, maxOpen: 7, maxSameDir: 4 } },
   { key: 'x_score45', name: 'idea: min score 45', rules: { tf: '4H', targetsR: BIG, riskUsd: 50, minScore: 45 } },
   { key: 'x_score35', name: 'idea: min score 35', rules: { tf: '4H', targetsR: BIG, riskUsd: 50, minScore: 35 } },
   { key: 'x_score60', name: 'idea: min score 60', rules: { tf: '4H', targetsR: BIG, riskUsd: 50, minScore: 60 } },

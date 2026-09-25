@@ -3,10 +3,10 @@
 // without touching this file — these are the defaults.
 const config = module.exports = {
   // The six coins ATLAS / GoldenRatio / CRUCIBLE / BTCLiveBoard track, plus HYPE and SUI.
-  SYMBOLS: ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'XRPUSDT', 'BNBUSDT', 'DOGEUSDT', 'HYPEUSDT', 'SUIUSDT', 'ENAUSDT'],
+  SYMBOLS: ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'XRPUSDT', 'BNBUSDT', 'DOGEUSDT', 'HYPEUSDT', 'SUIUSDT', 'ENAUSDT', 'WLDUSDT', 'DYDXUSDT', 'LDOUSDT', 'GALAUSDT', 'KAITOUSDT', 'FARTCOINUSDT'],
   // Every coin the bot knows (SYMBOLS can be narrowed to a subset of these;
   // close-all always covers all of them).
-  ALL_SYMBOLS: ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'XRPUSDT', 'BNBUSDT', 'DOGEUSDT', 'HYPEUSDT', 'SUIUSDT', 'ENAUSDT'],
+  ALL_SYMBOLS: ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'XRPUSDT', 'BNBUSDT', 'DOGEUSDT', 'HYPEUSDT', 'SUIUSDT', 'ENAUSDT', 'WLDUSDT', 'DYDXUSDT', 'LDOUSDT', 'GALAUSDT', 'KAITOUSDT', 'FARTCOINUSDT'],
 
   // Signal timeframe: entries, flips and levels are decided on closed 4H
   // candles (OKX "4H", UTC-aligned). The 1H version didn't cover its fees in
@@ -32,7 +32,7 @@ const config = module.exports = {
   // that page would actually flag as an impulse for each coin.
   // HYPE / SUI weren't on the FIBO page: set from their own 1H volatility
   // (HYPE moves like SOL/XRP, SUI a bit more — median 12h move ~1.7% / ~1.9%).
-  FIB_THRESHOLD: { BTCUSDT: 2, ETHUSDT: 1, SOLUSDT: 3, XRPUSDT: 3, BNBUSDT: 2, DOGEUSDT: 2, HYPEUSDT: 3, SUIUSDT: 4, ENAUSDT: 2 }, // ENA: the 2% default it was backtested with
+  FIB_THRESHOLD: { BTCUSDT: 2, ETHUSDT: 1, SOLUSDT: 3, XRPUSDT: 3, BNBUSDT: 2, DOGEUSDT: 2, HYPEUSDT: 3, SUIUSDT: 4, ENAUSDT: 2, WLDUSDT: 2, DYDXUSDT: 2, LDOUSDT: 2, GALAUSDT: 2, KAITOUSDT: 2, FARTCOINUSDT: 2 }, // newer coins: the 2% default they were backtested with
   FIB_WINDOW: 12,
   // A contradicting impulse only blocks while it's fresh (ended within this
   // many closed signal candles — 4H now, so 24h) AND price hasn't won back this share of it yet —

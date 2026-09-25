@@ -1,7 +1,7 @@
 # TradeBot
 
 Auto trading bot — a pooled-balance bot trading BTC, ETH, SOL, XRP, BNB,
-DOGE, HYPE, SUI and ENA perps on **Bybit Demo Trading** (mainnet prices, demo funds). It uses the same signal stack as
+DOGE, HYPE, SUI, ENA, WLD, DYDX, LDO, GALA, KAITO and FARTCOIN perps on **Bybit Demo Trading** (mainnet prices, demo funds). It uses the same signal stack as
 [UltimateTradingBot](https://github.com/alicetin1905-ux/UltimateTradingBot):
 
 - **ATLAS** — primary signal: ~25-indicator weighted score, Chandelier Exit
@@ -35,7 +35,7 @@ number as a rehearsal of the strategy, not investment advice.
 
 ## Rules (`config.js` → `PORTFOLIO`)
 
-- **One shared 2000 USDT balance** for all nine coins.
+- **One shared 2000 USDT balance** for all fifteen coins.
 - **100 USDT risk per trade** (`RISK_USDT`, 5% of the balance): each
   position is sized so hitting its stop loses ~100 USDT — a 4% stop gets a
   2500 USDT position (250 USDT margin at 10x), a 5% stop 2000 USDT. Capped at

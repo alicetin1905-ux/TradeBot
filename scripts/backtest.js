@@ -185,6 +185,7 @@ function addFilterInputs(ser) {
 /* ---------------- portfolio simulation ---------------- */
 
 const BASE_RULES = {
+  start: 1000,             // starting balance (USDT)
   tf: '1H', margin: 200, leverage: 10, maxOpen: 5, maxSameDir: 3, minScore: 50,
   useFib: true, breakevenAfter: 't1', lockT1AfterT2: false, riskUsd: null, btcFilter: false, fees: true,
   targetsR: null,          // e.g. [1.5, 3, 4.5]: targets at these multiples of the stop distance (null = live levels)
@@ -202,7 +203,7 @@ function simulate(series, symbols, times, rules) {
   const split = R.split || [0.40, 0.35, 0.25];
   const FEE_TAKER = R.fees ? FEES.taker : 0, FEE_MAKER = R.fees ? FEES.maker : 0;
   const sigKey = R.tf === '4H' ? 'sig4' : 'sig1';
-  let balance = 1000, peak = 1000, maxDD = 0;
+  let balance = R.start, peak = R.start, maxDD = 0;
   const open = {};      // symbol -> position
   const pending = {};   // symbol -> resting limit entry
   const used = {};      // one trade per signal: symbol -> { bias, reset }
@@ -355,7 +356,7 @@ function simulate(series, symbols, times, rules) {
   }
   return {
     trades: trades.length, winRate: trades.length ? wins.length / trades.length : 0,
-    net: balance - 1000, returnPct: (balance / 1000 - 1) * 100, maxDDPct: maxDD * 100,
+    net: balance - R.start, returnPct: (balance / R.start - 1) * 100, maxDDPct: maxDD * 100,
     profitFactor: gl ? gw / gl : null, avgWin: wins.length ? gw / wins.length : 0, avgLoss: losses.length ? -gl / losses.length : 0,
     missedLimits, stillOpen: Object.keys(open).length, byExit, bySymbol, tradeList: trades,
   };
@@ -427,6 +428,9 @@ const COINS = args.includes('--coins') ? String(args[args.indexOf('--coins') + 1
 // --tp-grid: every combination of T1/T2/T3 (in R) and close shares on the live
 // rules, ranked; also written to backtest/TP_GRID.md.
 const TP_GRID = args.includes('--tp-grid');
+// --analyze: the live setup at the real account size (2000 USDT, $100 risk,
+// $400 max margin, config.SYMBOLS) in detail; also written to backtest/ANALYSIS.md.
+const ANALYZE = args.includes('--analyze');
 
 async function main() {
   const symbols = SCAN ? [...new Set(['BTCUSDT', ...config.SYMBOLS, ...SCAN])] : COINS ? [...new Set(['BTCUSDT', ...COINS])] : config.SYMBOLS;
@@ -442,7 +446,7 @@ async function main() {
   }
   for (const s of symbols) {
     process.stderr.write(`scoring ${s}…\n`);
-    series[s].sig1 = SCAN || COINS || TP_GRID ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
+    series[s].sig1 = SCAN || COINS || TP_GRID || ANALYZE ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
     series[s].sig4 = precompute(s, to4h(series[s].h1), 4, start);
     addFilterInputs(series[s]);
   }
@@ -450,6 +454,7 @@ async function main() {
 
   if (SCAN) return scan(series, symbols, times, start, now);
   if (TP_GRID) return tpGrid(series, symbols, times, start, now);
+  if (ANALYZE) return analyze(series, symbols, times, start, now);
   if (COINS) {
     const live = VARIANTS.find(v => v.focus), third = (now - start) / 3;
     const maxOpen = args.includes('--max-open') ? +args[args.indexOf('--max-open') + 1] : undefined;
@@ -496,6 +501,60 @@ async function main() {
   ].join('\n');
   fs.writeFileSync(path.join(OUT, 'REPORT.md'), md);
   process.stderr.write(`\nwrote backtest/results.json and backtest/REPORT.md\n`);
+}
+
+function analyze(series, symbols, times, start, end) {
+  const live = VARIANTS.find(v => v.focus);
+  const P = config.PORTFOLIO;
+  const rules = { ...live.rules, start: P.STARTING_BALANCE, riskUsd: P.RISK_USDT, margin: P.MARGIN_USDT, leverage: P.LEVERAGE };
+  const r = simulate(series, symbols, times, rules);
+  const T = [...r.tradeList].sort((a, b) => a.closedAt - b.closedAt);
+  const $ = (x) => (x < 0 ? '-$' : '$') + Math.abs(x).toLocaleString('en-US', { maximumFractionDigits: 0 });
+  const sum = (xs) => xs.reduce((a, t) => a + t.pnl, 0);
+  const wins = T.filter(t => t.pnl > 1), losses = T.filter(t => t.pnl < -1), flat = T.filter(t => Math.abs(t.pnl) <= 1);
+  let ws = 0, ls = 0, maxW = 0, maxL = 0;
+  for (const t of T) { if (t.pnl > 1) { ws++; ls = 0; } else if (t.pnl < -1) { ls++; ws = 0; } maxW = Math.max(maxW, ws); maxL = Math.max(maxL, ls); }
+  const hold = (xs) => xs.length ? (xs.reduce((a, t) => a + (t.closedAt - t.openedAt), 0) / xs.length / HOUR).toFixed(0) + 'h' : '—';
+  const gw = sum(wins), gl = -sum(losses);
+  const reached = (k) => T.filter(t => t.path.includes(k)).length;
+  const L = [];
+  L.push(`# Live setup analysis`, '', `${new Date(start).toISOString().slice(0, 10)} → ${new Date(end).toISOString().slice(0, 10)} · ${symbols.length} coins · start ${P.STARTING_BALANCE} USDT · $${P.RISK_USDT} risk (max $${P.MARGIN_USDT} margin, ${P.LEVERAGE}x) · ${rules.maxOpen} slots, ${rules.maxSameDir} per direction · targets ${rules.targetsR.join(' / ')}R, closing ${rules.split.map(x => Math.round(x * 100)).join(' / ')}% · BTC filter ${rules.btcFilter ? 'on' : 'off'} · fees included`, '');
+  L.push('## Overall', '', '| | |', '|---|---:|',
+    `| Start → end | ${$(P.STARTING_BALANCE)} → ${$(P.STARTING_BALANCE + r.net)} (${r.returnPct >= 0 ? '+' : ''}${r.returnPct.toFixed(0)}%) |`,
+    `| Trades | ${T.length} (${(T.length / ((end - start) / (30 * 24 * HOUR))).toFixed(0)} per month) |`,
+    `| Winners / losers / breakeven | ${wins.length} / ${losses.length} / ${flat.length} |`,
+    `| Win rate (winners of all trades) | ${(wins.length / T.length * 100).toFixed(0)}% |`,
+    `| Profit factor (gross won / gross lost) | ${(gw / gl).toFixed(2)} |`,
+    `| Gross won / gross lost | ${$(gw)} / ${$(-gl)} |`,
+    `| Average win / average loss | ${$(gw / wins.length)} / ${$(-gl / losses.length)} (${(gw / wins.length / (gl / losses.length)).toFixed(2)} : 1) |`,
+    `| Average per trade | ${$(r.net / T.length)} |`,
+    `| Biggest win / biggest loss | ${$(Math.max(...T.map(t => t.pnl)))} / ${$(Math.min(...T.map(t => t.pnl)))} |`,
+    `| Longest winning / losing streak | ${maxW} / ${maxL} |`,
+    `| Biggest drop from a peak | ${r.maxDDPct.toFixed(1)}% |`,
+    `| Average time in trade (win / loss) | ${hold(wins)} / ${hold(losses)} |`,
+    `| Reached T1 / T2 / T3 | ${reached('T1')} / ${reached('T2')} / ${reached('T3')} of ${T.length} |`, '');
+  const exits = {};
+  for (const t of T) { const e = t.exit; exits[e] = exits[e] || []; exits[e].push(t); }
+  L.push('## How trades ended', '', '| Final exit | Trades | Net |', '|---|---:|---:|',
+    ...Object.entries(exits).sort((a, b) => b[1].length - a[1].length).map(([e, xs]) => `| ${e} | ${xs.length} | ${$(sum(xs))} |`), '');
+  L.push('## Long vs short', '', '| | Trades | Win rate | Net |', '|---|---:|---:|---:|',
+    ...[[1, 'Long'], [-1, 'Short']].map(([b, n]) => { const xs = T.filter(t => t.bias === b); return `| ${n} | ${xs.length} | ${(xs.filter(t => t.pnl > 1).length / (xs.length || 1) * 100).toFixed(0)}% | ${$(sum(xs))} |`; }), '');
+  const coins = {};
+  for (const t of T) (coins[t.symbol] = coins[t.symbol] || []).push(t);
+  L.push('## Per coin', '', '| Coin | Trades | Win rate | Profit factor | Net |', '|---|---:|---:|---:|---:|',
+    ...Object.entries(coins).sort((a, b) => sum(b[1]) - sum(a[1])).map(([c, xs]) => {
+      const w = xs.filter(t => t.pnl > 0), l = xs.filter(t => t.pnl <= 0);
+      return `| ${c.replace('USDT', '')} | ${xs.length} | ${(xs.filter(t => t.pnl > 1).length / xs.length * 100).toFixed(0)}% | ${(sum(w) / (-sum(l) || 1)).toFixed(2)} | ${$(sum(xs))} |`;
+    }), '');
+  const months = {};
+  for (const t of T) (months[new Date(t.closedAt).toISOString().slice(0, 7)] = months[new Date(t.closedAt).toISOString().slice(0, 7)] || []).push(t);
+  L.push('## Per month', '', '| Month | Trades | Win rate | Net |', '|---|---:|---:|---:|',
+    ...Object.entries(months).sort().map(([m, xs]) => `| ${m} | ${xs.length} | ${(xs.filter(t => t.pnl > 1).length / xs.length * 100).toFixed(0)}% | ${$(sum(xs))} |`), '');
+  L.push('Picked partly on this same period (coins, targets, filters), so live results will likely be lower.');
+  const md = L.join('\n') + '\n';
+  console.log(md);
+  fs.mkdirSync(OUT, { recursive: true });
+  fs.writeFileSync(path.join(OUT, 'ANALYSIS.md'), md);
 }
 
 function tpGrid(series, symbols, times, start, end) {

@@ -6,13 +6,13 @@
   "leverage": 10,
   "maxOpenPositions": 7,
   "mode": "demo",
-  "updatedAt": 1790352372789,
-  "exchangeEquity": 2294.45778447,
+  "updatedAt": 1790354403504,
+  "exchangeEquity": 2314.97158249,
   "riskUsdt": 100,
   "targetsR": [
     1.5,
-    3,
-    4.5
+    2.5,
+    3.5
   ],
   "entryTf": "240",
   "settings": {
@@ -24,12 +24,12 @@
     "DAILY_LOSS_LIMIT_PCT": 20,
     "TARGETS_R": [
       1.5,
-      3,
-      4.5
+      2.5,
+      3.5
     ],
     "TARGET_SPLIT": [
-      0.4,
-      0.35,
+      0.5,
+      0.25,
       0.25
     ],
     "STOP_ATR": 1.5,

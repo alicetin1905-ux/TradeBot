@@ -472,6 +472,7 @@
     { g: 'Take profit / stop loss', k: 'TARGET_SPLIT', label: 'Share closed at T1 / T2 / T3', t: 'list3' },
     { g: 'Take profit / stop loss', k: 'STOP_ATR', label: 'Stop distance (x ATR)', t: 'num', min: 0.5, max: 5 },
     { g: 'Take profit / stop loss', k: 'BREAKEVEN_AFTER', label: 'Stop to entry after', t: 'enum', opts: [['t1', 'T1'], ['t2', 'T2'], ['off', 'never']] },
+    { g: 'Take profit / stop loss', k: 'LOCK_T1_AFTER_T2', label: 'Stop to T1 after T2', t: 'bool' },
     { g: 'Take profit / stop loss', k: 'FLIP_EXIT', label: 'Close on score flip', t: 'bool' },
     { g: 'Strategy', k: 'ENTRY_TF', label: 'Signal timeframe', t: 'enum', opts: [['240', '4H'], ['60', '1H']] },
     { g: 'Strategy', k: 'ENTRY_MIN_SCORE', label: 'Min score to enter', t: 'num', min: 25, max: 100, int: true },

@@ -61,10 +61,10 @@ number as a rehearsal of the strategy, not investment advice.
   isn't entered in that direction again until its score has gone neutral or
   flipped at least once since — closing a trade never triggers an instant
   re-entry on the same signal (`state/demo/usedSignals.json`).
-- Scaled exit: 40% off at T1 (1.5R), 35% at T2 (3R), 25% at T3 (4.5R) —
-  R = the stop distance (`TARGETS_R`) — with the
-  stop moved to breakeven the moment T1 fills. A firm score flip against an
-  open position closes it.
+- Scaled exit: 30% off at T1 (1.5R), 30% at T2 (3R), 40% at T3 (4.5R) —
+  R = the stop distance (`TARGETS_R`, `TARGET_SPLIT`). The stop moves to
+  breakeven the moment T1 fills, and up to T1 once T2 fills
+  (`LOCK_T1_AFTER_T2`). A firm score flip against an open position closes it.
 
 ## Adjusting the settings
 

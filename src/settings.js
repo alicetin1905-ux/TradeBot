@@ -38,6 +38,7 @@ const FIELDS = {
   TARGET_SPLIT: { at: ['TARGET_SPLIT'], check: split, label: 'Share closed at T1 / T2 / T3 (sums to 1)' },
   STOP_ATR: { at: ['STOP_ATR'], check: num(0.5, 5), label: 'Stop distance (x ATR, before the Chandelier Exit check)' },
   BREAKEVEN_AFTER: { at: ['BREAKEVEN_AFTER'], check: oneOf('t1', 't2', 'off'), label: 'Move the stop to entry after ("t1", "t2" or "off")' },
+  LOCK_T1_AFTER_T2: { at: ['LOCK_T1_AFTER_T2'], check: bool, label: 'Move the stop to T1 once T2 fills' },
   FLIP_EXIT: { at: ['FLIP_EXIT'], check: bool, label: 'Close when the score flips against the trade' },
   // Strategy
   ENTRY_TF: { at: ['ENTRY_TF'], check: oneOf('60', '240'), label: 'Signal timeframe ("60" = 1H, "240" = 4H)' },

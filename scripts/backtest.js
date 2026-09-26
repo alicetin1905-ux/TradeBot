@@ -389,7 +389,7 @@ const VARIANTS = [
   { key: '1h_all', name: '  + 1H & 4H Supertrend + volume ≥ 1.2x', rules: { targetsR: BIG, riskUsd: 50, st1Agree: true, st4Agree: true, volMin: 1.2 } },
   { key: 'x_score40', name: 'idea: min score 40', rules: { tf: '4H', targetsR: BIG, riskUsd: 50, minScore: 40 } },
   { key: 'new_tp', name: 'TP 1.5/2.5/3.5R, 50/25/25%', rules: { tf: '4H', targetsR: [1.5, 2.5, 3.5], split: [0.5, 0.25, 0.25], riskUsd: 50, btcFilter: true, maxOpen: 7, maxSameDir: 4 } },
-  { key: 'tp_303040', name: 'TP 1.5/3/4.5R, 30/30/40% (live now)', rules: { tf: '4H', targetsR: BIG, split: [0.3, 0.3, 0.4], riskUsd: 50, btcFilter: true, maxOpen: 7, maxSameDir: 5 }, focus: true },
+  { key: 'tp_303040', name: 'TP 1.5/3/4.5R, 30/30/40% (live now)', rules: { tf: '4H', targetsR: BIG, split: [0.3, 0.3, 0.4], riskUsd: 50, btcFilter: true, maxOpen: 7, maxSameDir: 5, lockT1AfterT2: true }, focus: true },
   { key: 'x_score45', name: 'idea: min score 45', rules: { tf: '4H', targetsR: BIG, riskUsd: 50, minScore: 45 } },
   { key: 'x_score35', name: 'idea: min score 35', rules: { tf: '4H', targetsR: BIG, riskUsd: 50, minScore: 35 } },
   { key: 'x_score60', name: 'idea: min score 60', rules: { tf: '4H', targetsR: BIG, riskUsd: 50, minScore: 60 } },
@@ -458,7 +458,9 @@ async function main() {
   if (COINS) {
     const live = VARIANTS.find(v => v.focus), third = (now - start) / 3;
     const maxOpen = args.includes('--max-open') ? +args[args.indexOf('--max-open') + 1] : undefined;
-    const r = simulate(series, COINS, times, maxOpen ? { ...live.rules, maxOpen, maxSameDir: Math.ceil(maxOpen * 0.6) } : live.rules);
+    let rules = maxOpen ? { ...live.rules, maxOpen, maxSameDir: Math.ceil(maxOpen * 0.6) } : live.rules;
+    if (args.includes('--lock-t1')) rules = { ...rules, lockT1AfterT2: true };
+    const r = simulate(series, COINS, times, rules);
     const part = [0, 1, 2].map(k => r.tradeList.filter(t => t.closedAt >= start + k * third && t.closedAt < start + (k + 1) * third).reduce((a, t) => a + t.pnl, 0));
     let streak = 0, worstStreak = 0; const months = {};
     for (const t of [...r.tradeList].sort((x, y) => x.closedAt - y.closedAt)) {

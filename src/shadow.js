@@ -33,6 +33,7 @@ function replay(pos, candles) {
       pos.qtyRemaining -= qty;
       pos.filled[k] = true;
       if (k === (pos.beAfter || 't1')) { pos.stop = pos.entry; pos.breakeven = true; }
+      if (k === 't2' && config.LOCK_T1_AFTER_T2) { pos.stop = pos.t1; pos.lockedT1 = true; }
       if (k === 't3') return out;
     }
   }

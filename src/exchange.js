@@ -61,10 +61,10 @@ function reasonFor(pos, orderId) {
   const o = pos.orders || {};
   const be = beAfter(pos);
   if (orderId && orderId === o.t1) return be === 't1' ? 'T1 hit, stop moved to breakeven' : 'T1 hit';
-  if (orderId && orderId === o.t2) return be === 't2' ? 'T2 hit, stop moved to breakeven' : 'T2 hit';
+  if (orderId && orderId === o.t2) return config.LOCK_T1_AFTER_T2 ? 'T2 hit, stop moved to T1' : be === 't2' ? 'T2 hit, stop moved to breakeven' : 'T2 hit';
   if (orderId && orderId === o.t3) return 'T3 hit, position closed';
   if (orderId && orderId === o.close) return pos.closedBy === 'command' ? 'closed by close-all' : 'signal-flip';
-  return pos.breakeven ? 'breakeven stop hit' : 'stop hit';
+  return pos.lockedT1 ? 'stop hit at T1 (locked after T2)' : pos.breakeven ? 'breakeven stop hit' : 'stop hit';
 }
 
 // Pulls closed-pnl records for one position since its last sync and appends
@@ -152,6 +152,35 @@ async function reconcile({ client, st, exPos, signals, events, now }) {
           delete st.positions[sym];
           delete exPos[sym];
           continue;
+        }
+      }
+
+      // LOCK_T1_AFTER_T2: once T2 fills, the exchange stop goes up to T1 so
+      // the last part of the trade can't give back more than T1's profit.
+      // Applies to every open position, including ones opened before it was on.
+      if (config.LOCK_T1_AFTER_T2 && pos.filled.t2 && !pos.lockedT1 && st.positions[sym]) {
+        const lockPrice = pos.tickSize ? roundStep(pos.t1, pos.tickSize) : pos.t1;
+        try {
+          await client.setStopLoss(sym, lockPrice);
+          pos.stop = lockPrice;
+          pos.lockedT1 = true;
+          events.push({ symbol: sym, type: 'info', reason: `T2 filled, exchange stop moved to T1 (${lockPrice})` });
+        } catch (err) {
+          const mark = live.markPrice;
+          if (mark && (mark - lockPrice) * pos.bias <= 0) {
+            // Price already back through T1: the locked stop would have hit — close the rest now.
+            const id = await client.closeMarket({ symbol: sym, bias: pos.bias, qty: live.size });
+            pos.orders = { ...pos.orders, close: id };
+            pos.lockedT1 = true;
+            events.push({ symbol: sym, type: 'info', reason: `couldn't move stop to T1 (${err.message}) — price is past T1, closed at market` });
+            await recordFills(client, st, pos, events);
+            pos.closedDetectedAt = now;
+            st.closing[sym] = pos;
+            delete st.positions[sym];
+            delete exPos[sym];
+            continue;
+          }
+          events.push({ symbol: sym, type: 'error', reason: `couldn't move stop to T1 (${err.message}) — will retry next run` });
         }
       }
 

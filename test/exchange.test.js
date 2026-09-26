@@ -19,6 +19,7 @@ config.PORTFOLIO.MAX_SAME_DIRECTION = null;
 config.PORTFOLIO.MAX_OPEN_POSITIONS = 4;
 config.PORTFOLIO.RISK_USDT = null;
 config.TARGETS_R = null;
+config.LOCK_T1_AFTER_T2 = false;
 
 const INST = {
   BTCUSDT: { qtyStep: 0.001, minOrderQty: 0.001, minNotional: 5, tickSize: 0.1 },
@@ -678,4 +679,28 @@ test('BTC filter: no altcoin entry against BTC signal; BTC itself and agreeing a
     config.BTC_FILTER = false;
     assert.deepEqual(entryCandidates(signals, st, [], [], now).map(c => c.symbol), ['XRPUSDT', 'SOLUSDT', 'BTCUSDT']);
   } finally { [config.BTC_FILTER, config.USE_FIB, config.ENTRY_FRESH_MIN] = saved; }
+});
+
+test('LOCK_T1_AFTER_T2: after T2 fills the exchange stop moves up to T1; a stop there is labelled', async () => {
+  const { ex, client } = fakeBybit({ marks });
+  const st = freshState();
+  await exchange.runExchange({ client, st, signals: {}, candidates: [candidate('XRPUSDT', 1, 80, 2.5, 0.02)], events: [] });
+  const pos = st.positions.XRPUSDT;
+  config.LOCK_T1_AFTER_T2 = true;
+  try {
+    ex.marks.XRPUSDT = 2.56;
+    ex.fillOrder(pos.orders.t1);
+    await exchange.runExchange({ client, st, signals: {}, candidates: [], events: [] });
+    assert.equal(ex.positions.XRPUSDT.stopLoss, 2.5);          // breakeven after T1
+    ex.marks.XRPUSDT = 2.61;
+    ex.fillOrder(pos.orders.t2);
+    await exchange.runExchange({ client, st, signals: {}, candidates: [], events: [] });
+    assert.equal(st.positions.XRPUSDT.lockedT1, true);
+    assert.equal(ex.positions.XRPUSDT.stopLoss, pos.t1);       // locked at T1
+    assert.equal(st.trades.at(-1).reason, 'T2 hit, stop moved to T1');
+    ex.hitStop('XRPUSDT');
+    await exchange.runExchange({ client, st, signals: {}, candidates: [], events: [] });
+    assert.equal(st.trades.at(-1).reason, 'stop hit at T1 (locked after T2)');
+    assert.ok(st.trades.at(-1).pnl > 0);
+  } finally { config.LOCK_T1_AFTER_T2 = false; }
 });

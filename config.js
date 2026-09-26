@@ -61,6 +61,8 @@ const config = module.exports = {
   STOP_ATR: 1.5,
   // Move the stop to entry once this target fills: 't1', 't2' or 'off'.
   BREAKEVEN_AFTER: 't1',
+  // After T2 fills, move the stop up to T1 (locks T1's profit on the rest).
+  LOCK_T1_AFTER_T2: true,
   // Close at market when the score flips firmly against an open trade.
   FLIP_EXIT: true,
   // GoldenRatio Fibonacci confluence check on entries.

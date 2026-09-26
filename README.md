@@ -44,7 +44,7 @@ number as a rehearsal of the strategy, not investment advice.
   `RISK_USDT: null` goes back to a fixed `MARGIN_USDT` margin per trade.
 - **Max 7 open positions** (only as many full-size trades as the balance
   can fund), **at most
-  4 in the same direction**, and a new trade needs a score of **at least 50**
+  5 in the same direction**, and a new trade needs a score of **at least 50**
   (`ENTRY_MIN_SCORE`; 25 still counts as a flip for exits). If more coins
   qualify than there are free slots, the strongest |score| gets the slot. A
   trade never uses more margin than is still free.
@@ -160,7 +160,7 @@ window. Limit entries and breakeven-after-T2 didn't help.
   a 2000 USDT account. Never more margin than Bybit says is free.
 - **Each hourly run:** books fills, moves the stop to breakeven on Bybit once
   T1 fills, closes at market on a firm score flip, cancels leftover target
-  orders after a close, then fills free slots (max 7, max 4 per direction). Any open USDT-perp
+  orders after a close, then fills free slots (max 7, max 5 per direction). Any open USDT-perp
   position on the account, including ones the bot didn't open, counts as a
   used slot; the bot leaves positions it didn't open alone. Best to give the
   bot its own (sub-)account.

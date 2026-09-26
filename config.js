@@ -77,7 +77,7 @@ const config = module.exports = {
     MARGIN_PCT: 10,          // % of the current shared balance put up as margin per trade (when MARGIN_USDT is null)
     LEVERAGE: 10,            // position value = margin x leverage (100 USDT -> 1000 USDT)
     MAX_OPEN_POSITIONS: 7,
-    MAX_SAME_DIRECTION: 4,   // at most this many longs (and this many shorts) open at once
+    MAX_SAME_DIRECTION: 5,   // at most this many longs (and this many shorts) open at once
   },
 
   // Bybit execution safety limits.

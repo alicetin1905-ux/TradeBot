@@ -1,1 +1,39 @@
-{}
+{
+  "XRPUSDT": {
+    "symbol": "XRPUSDT",
+    "bias": 1,
+    "entry": 1.5786,
+    "stop": 1.5085,
+    "initialStop": 1.5085,
+    "t1": 1.6837,
+    "t2": 1.7887,
+    "t3": 1.8938,
+    "qtyTotal": 1427.7,
+    "qtyRemaining": 1427.7,
+    "qtyT1": 571,
+    "qtyT2": 499.6,
+    "qtyT3": 357.1,
+    "margin": 225.37672200000003,
+    "notional": 2253.76722,
+    "riskAmt": 100.08177000000008,
+    "filled": {
+      "t1": false,
+      "t2": false,
+      "t3": false
+    },
+    "breakeven": false,
+    "beAfter": "t1",
+    "openedAt": 1790352367155,
+    "score": 62,
+    "orders": {
+      "entry": "6b495174-7700-43cf-a337-7c6aa6981b57",
+      "t1": "efdd5968-bab2-4395-aa5f-8b0fc23bf300",
+      "t2": "959abfe2-0461-44a2-8269-9d078a7a6041",
+      "t3": "223524a9-b159-4861-abfe-6ef58d4c6fe3"
+    },
+    "tickSize": 0.0001,
+    "markPrice": 1.5247,
+    "unrealisedPnl": -76.95303,
+    "closedDetectedAt": 1790455501828
+  }
+}

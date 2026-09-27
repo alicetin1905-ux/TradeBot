@@ -248,7 +248,7 @@
   </div>
 </div>
 
-<h2>Open positions</h2>
+<h2>Open positions <span id="liveDot" style="color:var(--up); letter-spacing:0.05em; margin-left:6px;"></span></h2>
 <div id="openPositions"><div class="tradesCard"><div class="empty">Loading…</div></div></div>
 
 <h2>Signals</h2>
@@ -1021,7 +1021,36 @@
       var openSymbols = Object.keys(positions);
       var markPrices = openSymbols.length ? await fetchMarkPrices(openSymbols) : {};
       lastMarkPrices = markPrices;
+      live.account = account; live.positions = positions;
+      renderTotals(account, positions, markPrices);
+      liveSubscribe(openSymbols);
+      var started = account.startingBalance;
 
+      renderRules(account, openSymbols.length);
+      renderSettings(account);
+      renderCoins(positions, scores, markPrices);
+      renderOpenPositions(positions, markPrices);
+      renderPerformance(trades, started);
+      renderShadow(shadowState);
+      renderLiq(liqLog);
+      renderCoinStats(trades);
+      renderTrades(trades);
+      if (watch.on) checkNewEntries(positions);
+      else lastPositions = positions;
+
+      els.lastUpdated.textContent = 'updated ' + new Date().toLocaleTimeString() +
+        (account.updatedAt ? ' · bot data from ' + timeAgo(account.updatedAt) : '');
+    } catch (e) {
+      els.lastUpdated.textContent = /HTTP 404/.test(e.message)
+        ? 'no Bybit demo data yet — it appears after the first run pushes state/demo/ (see README)'
+        : 'fetch failed: ' + e.message;
+    } finally {
+      els.refreshBtn.textContent = 'Refresh';
+    }
+  }
+
+  function renderTotals(account, positions, markPrices) {
+      var openSymbols = Object.keys(positions);
       var balance = account.balance, started = account.startingBalance;
       var marginUsed = openSymbols.reduce(function (sum, symbol) {
         var p = positions[symbol];
@@ -1048,29 +1077,73 @@
         ' · margin used ' + fmtMoney(marginUsed) + ' · free ' + fmtMoney(Math.max(0, balance - marginUsed)) +
         ' · ' + openSymbols.length + '/' + (account.maxOpenPositions || 4) + ' slots';
       els.startedValue.textContent = fmtMoney(started);
-
-      renderRules(account, openSymbols.length);
-      renderSettings(account);
-      renderCoins(positions, scores, markPrices);
-      renderOpenPositions(positions, markPrices);
-      renderPerformance(trades, started);
-      renderShadow(shadowState);
-      renderLiq(liqLog);
-      renderCoinStats(trades);
-      renderTrades(trades);
-      if (watch.on) checkNewEntries(positions);
-      else lastPositions = positions;
-
-      els.lastUpdated.textContent = 'updated ' + new Date().toLocaleTimeString() +
-        (account.updatedAt ? ' · bot data from ' + timeAgo(account.updatedAt) : '');
-    } catch (e) {
-      els.lastUpdated.textContent = /HTTP 404/.test(e.message)
-        ? 'no Bybit demo data yet — it appears after the first run pushes state/demo/ (see README)'
-        : 'fetch failed: ' + e.message;
-    } finally {
-      els.refreshBtn.textContent = 'Refresh';
-    }
   }
+
+  /* ---------------- live prices (Bybit public WebSocket) ----------------
+     Open positions subscribe to Bybit's ticker stream: mark price, P&L, 24h
+     volume / change and open interest update in real time (redrawn at most
+     once a second). Bot data (positions, trades, scores) still reloads every
+     60 s. If the stream can't connect, the 60 s refresh keeps working alone. */
+  var live = { account: null, positions: null, ws: null, subs: '', dirty: false, ok: false, retry: null };
+  var WS_URL = 'wss://stream.bybit.com/v5/public/linear';
+
+  function liveSubscribe(symbols) {
+    var key = symbols.slice().sort().join(',');
+    if (key === live.subs && live.ws && live.ws.readyState <= 1) return;
+    live.subs = key;
+    if (live.ws) { try { live.ws.onclose = null; live.ws.close(); } catch (e) {} live.ws = null; }
+    clearTimeout(live.retry);
+    setLiveDot(false);
+    if (!symbols.length || typeof WebSocket === 'undefined') return;
+    var ws;
+    try { ws = new WebSocket(WS_URL); } catch (e) { return; }
+    live.ws = ws;
+    var ping;
+    ws.onopen = function () {
+      ws.send(JSON.stringify({ op: 'subscribe', args: symbols.map(function (s) { return 'tickers.' + s; }) }));
+      ping = setInterval(function () { try { ws.send('{"op":"ping"}'); } catch (e) {} }, 20000);
+    };
+    ws.onmessage = function (ev) {
+      var m; try { m = JSON.parse(ev.data); } catch (e) { return; }
+      if (!m.topic || !m.data) return;
+      var d = m.data, sym = d.symbol;
+      if (!sym) return;
+      var st = marketStats[sym] || (marketStats[sym] = { src: 'Bybit' });
+      if (d.turnover24h != null) st.vol24 = +d.turnover24h;
+      if (d.price24hPcnt != null) st.chg24 = +d.price24hPcnt * 100;
+      if (d.openInterestValue != null) st.oi = +d.openInterestValue;
+      st.src = 'Bybit';
+      if (d.markPrice != null && +d.markPrice > 0) lastMarkPrices[sym] = +d.markPrice;
+      if (!live.ok) { live.ok = true; setLiveDot(true); }
+      live.dirty = true;
+    };
+    ws.onclose = function () {
+      clearInterval(ping);
+      live.ok = false; setLiveDot(false);
+      if (live.ws !== ws) return;
+      live.ws = null; live.subs = '';
+      if (!document.hidden) live.retry = setTimeout(function () { if (live.positions) liveSubscribe(Object.keys(live.positions)); }, 3000);
+    };
+    ws.onerror = function () { try { ws.close(); } catch (e) {} };
+  }
+
+  function setLiveDot(on) {
+    var el = document.getElementById('liveDot');
+    if (el) el.textContent = on ? '● live' : '';
+  }
+
+  // Redraw from the stream at most once a second.
+  setInterval(function () {
+    if (!live.dirty || !live.account || !live.positions) return;
+    live.dirty = false;
+    renderTotals(live.account, live.positions, lastMarkPrices);
+    renderOpenPositions(live.positions, lastMarkPrices);
+  }, 1000);
+
+  // iOS pauses pages in the background: reload and reconnect when it comes back.
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) { live.subs = ''; refresh(); }
+  });
 
   els.refreshBtn.addEventListener('click', refresh);
   els.alertsToggle.addEventListener('click', toggleWatch);

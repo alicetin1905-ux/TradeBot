@@ -35,5 +35,43 @@
     "markPrice": 1.5247,
     "unrealisedPnl": -76.95303,
     "closedDetectedAt": 1790455501828
+  },
+  "SUIUSDT": {
+    "symbol": "SUIUSDT",
+    "bias": 1,
+    "entry": 1.0196,
+    "stop": 1.1074,
+    "initialStop": 0.9611,
+    "t1": 1.1074,
+    "t2": 1.1952,
+    "t3": 1.283,
+    "qtyTotal": 1700,
+    "qtyRemaining": 430,
+    "qtyT1": 680,
+    "qtyT2": 590,
+    "qtyT3": 430,
+    "margin": 173.33200000000002,
+    "notional": 1733.3200000000002,
+    "riskAmt": 99.45000000000019,
+    "filled": {
+      "t1": true,
+      "t2": true,
+      "t3": false
+    },
+    "breakeven": true,
+    "beAfter": "t1",
+    "openedAt": 1790280367471,
+    "score": 53,
+    "orders": {
+      "entry": "e85c161e-47b5-459e-a710-7af44a76c89c",
+      "t1": "0d87f477-3c2a-490d-ac3e-4838a681c82a",
+      "t2": "b095071c-e39c-4e5b-9f34-735c29ece57d",
+      "t3": "5bd5913a-0fe9-450d-a71c-393334a508c0"
+    },
+    "tickSize": 0.0001,
+    "markPrice": 1.26651,
+    "unrealisedPnl": 106.1713,
+    "lockedT1": true,
+    "closedDetectedAt": 1790498101450
   }
 }

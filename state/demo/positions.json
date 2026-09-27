@@ -32,8 +32,8 @@
       "t3": "18ce0124-deb2-4969-b898-cdb29e9b4bdf"
     },
     "tickSize": 0.00001,
-    "markPrice": 0.27263,
-    "unrealisedPnl": 134.81573
+    "markPrice": 0.27693,
+    "unrealisedPnl": 146.52463
   },
   "SOLUSDT": {
     "symbol": "SOLUSDT",
@@ -68,8 +68,8 @@
       "t3": "74f916e9-5292-46d0-8bfb-8c502e2dc11a"
     },
     "tickSize": 0.01,
-    "markPrice": 123.961,
-    "unrealisedPnl": 52.7688
+    "markPrice": 124.201,
+    "unrealisedPnl": 56.8008
   },
   "FARTCOINUSDT": {
     "symbol": "FARTCOINUSDT",
@@ -104,8 +104,8 @@
       "t3": "b7652fa6-c9f6-42e9-891c-92f6e8ea510c"
     },
     "tickSize": 0.00001,
-    "markPrice": 0.19624,
-    "unrealisedPnl": -17.6088
+    "markPrice": 0.19739,
+    "unrealisedPnl": -8.8044
   },
   "LDOUSDT": {
     "symbol": "LDOUSDT",
@@ -140,7 +140,43 @@
       "t3": "7c91836b-db44-4d0b-ba9e-caaf2b7e7788"
     },
     "tickSize": 0.0001,
-    "markPrice": 0.4856,
-    "unrealisedPnl": 30.3744
+    "markPrice": 0.4908,
+    "unrealisedPnl": 46.8272
+  },
+  "KAITOUSDT": {
+    "symbol": "KAITOUSDT",
+    "bias": 1,
+    "entry": 0.3611,
+    "stop": 0.3449,
+    "initialStop": 0.3449,
+    "t1": 0.3855,
+    "t2": 0.4098,
+    "t3": 0.4342,
+    "qtyTotal": 6157,
+    "qtyRemaining": 6157,
+    "qtyT1": 1847,
+    "qtyT2": 1847,
+    "qtyT3": 2463,
+    "margin": 222.32927,
+    "notional": 2223.2927,
+    "riskAmt": 99.74339999999995,
+    "filled": {
+      "t1": false,
+      "t2": false,
+      "t3": false
+    },
+    "breakeven": false,
+    "beAfter": "t1",
+    "openedAt": 1790510771419,
+    "score": 55,
+    "orders": {
+      "entry": "a9b1e4e9-9a06-47a2-b456-82648704a900",
+      "t1": "1b7688db-95d3-4be8-840a-111da123d1f6",
+      "t2": "37ebc4aa-e3c9-4878-b0d8-503aff5efef5",
+      "t3": "7fe93206-5a94-494a-8f01-41c195c6ecfa"
+    },
+    "tickSize": 0.0001,
+    "markPrice": 0.3611,
+    "unrealisedPnl": 0
   }
 }

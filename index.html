@@ -335,6 +335,10 @@
     return (n >= 0 ? '+' : '-') + '$' + Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
   function pnlClass(x) { return x > 0.005 ? 'up' : x < -0.005 ? 'down' : 'flat'; }
+  function fmtQty(x) {
+    if (x == null) return '—';
+    return (+x).toLocaleString('en-US', { maximumFractionDigits: x >= 100 ? 0 : x >= 1 ? 2 : 4 });
+  }
   function fmtPrice(x) {
     if (x == null) return '—';
     var abs = Math.abs(x);
@@ -679,8 +683,12 @@
             stat('T3', fmtPrice(pos.t3), pos.filled && pos.filled.t3) +
             stat('Risk', fmtMoney(pos.riskAmt)) +
             stat('Margin', fmtMoney(pos.margin)) +
+            // Trading volume: position value now (remaining size x live price) and when opened.
+            stat('Volume now', fmtMoney(pos.qtyRemaining * (mark != null ? mark : pos.entry))) +
+            stat('Opened with', fmtMoney(pos.notional != null ? pos.notional : pos.qtyTotal * pos.entry)) +
+            stat('Size', fmtQty(pos.qtyRemaining) + (pos.qtyTotal && pos.qtyRemaining < pos.qtyTotal ? ' <span style="color:var(--text-tertiary)">(' + Math.round(pos.qtyRemaining / pos.qtyTotal * 100) + '%)</span>' : '')) +
           '</div>' +
-          '<div class="posFoot"><span>score ' + (pos.score > 0 ? '+' : '') + pos.score + '</span><span>' + pos.qtyRemaining + ' ' + e.s.label + '</span></div>' +
+          '<div class="posFoot"><span>score ' + (pos.score > 0 ? '+' : '') + pos.score + '</span><span>' + (pos.margin ? Math.round((pos.notional || pos.qtyTotal * pos.entry) / pos.margin) + 'x' : '') + '</span></div>' +
         '</div>'
       );
     }).join('') + '</div>';

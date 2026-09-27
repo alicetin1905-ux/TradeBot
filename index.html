@@ -335,10 +335,6 @@
     return (n >= 0 ? '+' : '-') + '$' + Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
   function pnlClass(x) { return x > 0.005 ? 'up' : x < -0.005 ? 'down' : 'flat'; }
-  function fmtQty(x) {
-    if (x == null) return '—';
-    return (+x).toLocaleString('en-US', { maximumFractionDigits: x >= 100 ? 0 : x >= 1 ? 2 : 4 });
-  }
   function fmtPrice(x) {
     if (x == null) return '—';
     var abs = Math.abs(x);
@@ -616,18 +612,31 @@
   // same price the demo account's P&L uses), OKX's as a fallback if Bybit
   // can't be reached from this browser. A symbol with neither just shows
   // entry-only; never blocks the rest of the page.
+  // Whole-market stats per coin from the same ticker call: 24h trading
+  // volume (USDT turnover), 24h change, open interest. { symbol: {...} }
+  var marketStats = {};
   async function bybitMark(symbol) {
     var res = await fetch(BYBIT_BASE + '/v5/market/tickers?category=linear&symbol=' + symbol, { cache: 'no-store' });
     var d = await res.json();
     var t = d.retCode === 0 && d.result && d.result.list && d.result.list[0];
     if (!t || !(+t.markPrice > 0)) throw new Error('no Bybit price');
+    marketStats[symbol] = { vol24: +t.turnover24h, chg24: +t.price24hPcnt * 100, oi: +t.openInterestValue, src: 'Bybit' };
     return +t.markPrice;
   }
   async function okxMark(symbol) {
     var res = await fetch(OKX_BASE + '/api/v5/public/mark-price?instType=SWAP&instId=' + okxInstId(symbol), { cache: 'no-store' });
     var d = await res.json();
     if (!(d.code === '0' && d.data && d.data[0])) throw new Error('no OKX price');
+    try {
+      var tr = await (await fetch(OKX_BASE + '/api/v5/market/ticker?instId=' + okxInstId(symbol), { cache: 'no-store' })).json();
+      var tk = tr.data && tr.data[0];
+      if (tk) marketStats[symbol] = { vol24: +tk.volCcy24h * +tk.last, chg24: (+tk.last / +tk.open24h - 1) * 100, oi: null, src: 'OKX' };
+    } catch (e) { /* stats are optional */ }
     return +d.data[0].markPx;
+  }
+  function fmtBig(x) {
+    if (!(x > 0)) return '—';
+    return x >= 1e9 ? '$' + (x / 1e9).toFixed(2) + 'B' : x >= 1e6 ? '$' + (x / 1e6).toFixed(1) + 'M' : '$' + Math.round(x / 1e3) + 'k';
   }
   async function fetchMarkPrices(symbols) {
     var out = {};
@@ -683,10 +692,13 @@
             stat('T3', fmtPrice(pos.t3), pos.filled && pos.filled.t3) +
             stat('Risk', fmtMoney(pos.riskAmt)) +
             stat('Margin', fmtMoney(pos.margin)) +
-            // Trading volume: position value now (remaining size x live price) and when opened.
-            stat('Volume now', fmtMoney(pos.qtyRemaining * (mark != null ? mark : pos.entry))) +
-            stat('Opened with', fmtMoney(pos.notional != null ? pos.notional : pos.qtyTotal * pos.entry)) +
-            stat('Size', fmtQty(pos.qtyRemaining) + (pos.qtyTotal && pos.qtyRemaining < pos.qtyTotal ? ' <span style="color:var(--text-tertiary)">(' + Math.round(pos.qtyRemaining / pos.qtyTotal * 100) + '%)</span>' : '')) +
+            // Whole market on the exchange (not this position): 24h volume, 24h change, open interest.
+            (function (m) {
+              if (!m) return stat('24h volume', '—') + stat('24h change', '—') + stat('Open interest', '—');
+              return stat('24h volume', fmtBig(m.vol24)) +
+                stat('24h change', '<span class="' + (m.chg24 >= 0 ? 'up' : 'down') + '">' + (m.chg24 >= 0 ? '+' : '') + m.chg24.toFixed(2) + '%</span>') +
+                stat('Open interest', m.oi ? fmtBig(m.oi) : '—');
+            })(marketStats[pos.symbol]) +
           '</div>' +
           '<div class="posFoot"><span>score ' + (pos.score > 0 ? '+' : '') + pos.score + '</span><span>' + (pos.margin ? Math.round((pos.notional || pos.qtyTotal * pos.entry) / pos.margin) + 'x' : '') + '</span></div>' +
         '</div>'

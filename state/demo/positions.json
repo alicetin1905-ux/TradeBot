@@ -32,8 +32,8 @@
       "t3": "18ce0124-deb2-4969-b898-cdb29e9b4bdf"
     },
     "tickSize": 0.00001,
-    "markPrice": 0.27039,
-    "unrealisedPnl": 128.71621
+    "markPrice": 0.26961,
+    "unrealisedPnl": 126.59227
   },
   "SUIUSDT": {
     "symbol": "SUIUSDT",
@@ -68,8 +68,8 @@
       "t3": "5bd5913a-0fe9-450d-a71c-393334a508c0"
     },
     "tickSize": 0.0001,
-    "markPrice": 1.15864,
-    "unrealisedPnl": 59.7872,
+    "markPrice": 1.1605,
+    "unrealisedPnl": 60.587,
     "lockedT1": true
   },
   "SOLUSDT": {
@@ -105,8 +105,8 @@
       "t3": "74f916e9-5292-46d0-8bfb-8c502e2dc11a"
     },
     "tickSize": 0.01,
-    "markPrice": 121.405,
-    "unrealisedPnl": 9.828
+    "markPrice": 121.135,
+    "unrealisedPnl": 5.292
   },
   "FARTCOINUSDT": {
     "symbol": "FARTCOINUSDT",
@@ -141,7 +141,43 @@
       "t3": "b7652fa6-c9f6-42e9-891c-92f6e8ea510c"
     },
     "tickSize": 0.00001,
-    "markPrice": 0.19165,
-    "unrealisedPnl": -52.74984
+    "markPrice": 0.1909,
+    "unrealisedPnl": -58.49184
+  },
+  "LDOUSDT": {
+    "symbol": "LDOUSDT",
+    "bias": 1,
+    "entry": 0.476,
+    "stop": 0.4444,
+    "initialStop": 0.4444,
+    "t1": 0.5234,
+    "t2": 0.5708,
+    "t3": 0.6182,
+    "qtyTotal": 3164,
+    "qtyRemaining": 3164,
+    "qtyT1": 949.2,
+    "qtyT2": 949.2,
+    "qtyT3": 1265.6,
+    "margin": 150.60639999999998,
+    "notional": 1506.0639999999999,
+    "riskAmt": 99.98239999999988,
+    "filled": {
+      "t1": false,
+      "t2": false,
+      "t3": false
+    },
+    "breakeven": false,
+    "beAfter": "t1",
+    "openedAt": 1790467570630,
+    "score": 59,
+    "orders": {
+      "entry": "44f70866-5a2f-4448-8a98-417e88f0f929",
+      "t1": "af48fd34-74fc-43a6-905d-be651e500c5c",
+      "t2": "a8ec3d50-0a23-4f1b-8852-01ef7fb88f63",
+      "t3": "7c91836b-db44-4d0b-ba9e-caaf2b7e7788"
+    },
+    "tickSize": 0.0001,
+    "markPrice": 0.476,
+    "unrealisedPnl": 0
   }
 }

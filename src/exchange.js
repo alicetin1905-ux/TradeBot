@@ -324,7 +324,8 @@ async function recordFunding(client, st, events, now) {
   if (!acc.fundingSince) acc.fundingSince = now;
   acc.funding = acc.funding || { total: 0, bySymbol: {} };
   let rows;
-  try { rows = await client.getFundingFees(acc.fundingSince - 60000); } catch (err) {
+  try { rows = await client.getFundingFees(acc.fundingSince - 60000); acc.fundingError = null; } catch (err) {
+    acc.fundingError = err.message;
     events.push({ symbol: '-', type: 'info', reason: `funding fees not read (${err.message}) — retrying next sync` });
     return;
   }

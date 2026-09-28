@@ -1,13 +1,8 @@
 {
-  "balance": 2088.21394001,
+  "balance": 2000,
   "startingBalance": 2000,
   "marginPct": 10,
   "marginUsdt": 400,
-  "leverage": 10,
-  "maxOpenPositions": 7,
-  "mode": "demo",
-  "updatedAt": 1790584803083,
-  "exchangeEquity": 2001.15248905,
   "riskUsdt": 100,
   "targetsR": [
     1.5,
@@ -15,6 +10,10 @@
     4.5
   ],
   "entryTf": "240",
+  "leverage": 10,
+  "maxOpenPositions": 7,
+  "mode": "demo",
+  "exchangeEquity": 2001.15248905,
   "settings": {
     "RISK_USDT": 100,
     "MARGIN_USDT": 400,
@@ -107,5 +106,6 @@
     ],
     "STATUS_EVERY_H": 4
   },
-  "settingsErrors": []
+  "settingsErrors": [],
+  "updatedAt": 1790585106423
 }

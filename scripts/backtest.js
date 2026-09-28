@@ -60,7 +60,7 @@ async function fetchHistory(symbol, fromMs) {
   // Newest first, paging back with `after`; once a page adds nothing new,
   // jump straight past what the cache already holds.
   let after = '';
-  for (let page = 0; page < 400; page++) {
+  for (let page = 0; page < 1500; page++) { // up to ~17 years of 1H candles
     const url = `https://www.okx.com/api/v5/market/history-candles?instId=${instId}&bar=1H&limit=100${after ? '&after=' + after : ''}`;
     const d = await (await fetch(url)).json();
     if (d.code !== '0') throw new Error(`${symbol}: ${d.msg}`);
@@ -617,6 +617,18 @@ function analyze(series, symbols, times, start, end) {
   for (const t of T) (months[new Date(t.closedAt).toISOString().slice(0, 7)] = months[new Date(t.closedAt).toISOString().slice(0, 7)] || []).push(t);
   L.push('## Per month', '', '| Month | Trades | Win rate | Net |', '|---|---:|---:|---:|',
     ...Object.entries(months).sort().map(([m, xs]) => `| ${m} | ${xs.length} | ${(xs.filter(t => t.pnl > 1).length / xs.length * 100).toFixed(0)}% | ${$(sum(xs))} |`), '');
+  const years = {};
+  for (const t of T) (years[new Date(t.closedAt).toISOString().slice(0, 4)] = years[new Date(t.closedAt).toISOString().slice(0, 4)] || []).push(t);
+  if (Object.keys(years).length > 1) {
+    let bal = P.STARTING_BALANCE;
+    L.push('## Per year', '', '| Year | Coins traded | Trades | Win rate | Profit factor | Net | Balance at year end |', '|---|---:|---:|---:|---:|---:|---:|');
+    for (const [y, xs] of Object.entries(years).sort()) {
+      const w = xs.filter(t => t.pnl > 0), l = xs.filter(t => t.pnl <= 0);
+      bal += sum(xs);
+      L.push(`| ${y} | ${new Set(xs.map(t => t.symbol)).size} | ${xs.length} | ${(xs.filter(t => t.pnl > 1).length / xs.length * 100).toFixed(0)}% | ${(sum(w) / (-sum(l) || 1)).toFixed(2)} | ${$(sum(xs))} | ${$(bal)} |`);
+    }
+    L.push('');
+  }
   L.push('Picked partly on this same period (coins, targets, filters), so live results will likely be lower.');
   const md = L.join('\n') + '\n';
   console.log(md);

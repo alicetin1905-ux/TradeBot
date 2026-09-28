@@ -224,7 +224,8 @@ function simulate(series, symbols, times, rules) {
     p.pnl += pnl; balance += pnl; p.qtyRemaining -= qty;
     p.exits.push(reason);
     if (p.qtyRemaining <= p.qty * 1e-9) {
-      trades.push({ symbol: p.symbol, bias: p.bias, score: p.score, openedAt: p.openedAt, closedAt: t, pnl: p.pnl, exit: reason, path: p.exits.join(' > ') });
+      trades.push({ symbol: p.symbol, bias: p.bias, score: p.score, openedAt: p.openedAt, closedAt: t, pnl: p.pnl, exit: reason, path: p.exits.join(' > '),
+        stopPct: Math.abs(1 - p.initStop / p.entry), margin: p.margin, notional: p.qty * p.entry });
       delete open[p.symbol];
     }
   }
@@ -280,7 +281,7 @@ function simulate(series, symbols, times, rules) {
     balance -= notional * feeRate;
     open[s] = {
       symbol: s, bias: sig.bias, score: sig.score, entry, ...lv, qty, qtyRemaining: qty, margin,
-      pnl: -notional * feeRate, filled: {}, breakeven: false, openedAt: t, exits: [], atr: sig.atr,
+      pnl: -notional * feeRate, filled: {}, breakeven: false, openedAt: t, exits: [], atr: sig.atr, initStop: lv.stop,
     };
   }
 
@@ -467,6 +468,9 @@ const EXIT_LAB = args.includes('--exit-lab');
 // --risk-grid: risk per trade x position limits at the real account size
 // (config.PORTFOLIO), live rules otherwise. Written to backtest/RISK_GRID.md.
 const RISK_GRID = args.includes('--risk-grid');
+// --lev-grid: leverage 5x..10x on the planned setup ($100 risk, 7 slots,
+// max 4 per direction), with the margin cap fixed or the position cap fixed.
+const LEV_GRID = args.includes('--lev-grid');
 
 async function main() {
   const symbols = SCAN ? [...new Set(['BTCUSDT', ...config.SYMBOLS, ...SCAN])] : COINS ? [...new Set(['BTCUSDT', ...COINS])] : config.SYMBOLS;
@@ -482,7 +486,7 @@ async function main() {
   }
   for (const s of symbols) {
     process.stderr.write(`scoring ${s}…\n`);
-    series[s].sig1 = SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB || RISK_GRID ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
+    series[s].sig1 = SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB || RISK_GRID || LEV_GRID ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
     series[s].sig4 = precompute(s, to4h(series[s].h1), 4, start);
     addFilterInputs(series[s]);
   }
@@ -495,6 +499,7 @@ async function main() {
   if (SCORE_WF) return scoreWalkForward(series, symbols, times, start, now);
   if (EXIT_LAB) return exitLab(series, symbols, times, start, now);
   if (RISK_GRID) return riskGrid(series, symbols, times, start, now);
+  if (LEV_GRID) return levGrid(series, symbols, times, start, now);
   if (COINS) {
     const live = VARIANTS.find(v => v.focus), third = (now - start) / 3;
     const maxOpen = args.includes('--max-open') ? +args[args.indexOf('--max-open') + 1] : undefined;
@@ -704,6 +709,43 @@ function scoreScan(series, symbols, times, start, end) {
   console.log(`\n(full per-score grid for every coin written to backtest/SCORE_SCAN.md)`);
   fs.mkdirSync(OUT, { recursive: true });
   fs.writeFileSync(path.join(OUT, 'SCORE_SCAN.md'), '# Entry-score scan\n\n```\n' + lines.join('\n') + '\n```\n');
+}
+
+function levGrid(series, symbols, times, start, end) {
+  const live = VARIANTS.find(v => v.focus);
+  const P = config.PORTFOLIO;
+  const coins = config.SYMBOLS;
+  const third = (end - start) / 3;
+  const pad = (x, n) => String(x).padStart(n);
+  const plan = { ...live.rules, start: P.STARTING_BALANCE, riskUsd: 100, maxOpen: 7, maxSameDir: 4 };
+  const L = [];
+  L.push(`Leverage grid · planned setup ($100 risk, 7 slots, max 4/direction) · ${coins.length} coins · start ${P.STARTING_BALANCE} USDT · ${new Date(start).toISOString().slice(0, 10)} → ${new Date(end).toISOString().slice(0, 10)}`);
+  L.push('"capped" = trades whose size was cut because the position cap was below $100 / stop distance.');
+  L.push('"stop > liq" = trades whose stop sat beyond the isolated-margin liquidation price (1/lev - 0.5%).', '');
+  const head = 'setup'.padEnd(34) + pad('trades', 7) + pad('net $', 8) + pad('ret', 7) + pad('maxDD', 8) + pad('PF', 6) + pad('avg mgn', 9) + pad('peak mgn', 10) + pad('capped', 8) + pad('stop>liq', 10) + pad('1/3', 7) + pad('2/3', 7) + pad('3/3', 7);
+  for (const [title, capOf] of [['Max margin fixed at $400 (position cap = $400 x lev)', () => 400], ['Max position fixed at $4000 (margin cap = $4000 / lev)', (lev) => 4000 / lev]]) {
+    L.push(title, head);
+    for (const lev of [5, 6, 7, 8, 9, 10]) {
+      const r = simulate(series, coins, times, { ...plan, leverage: lev, margin: capOf(lev) });
+      const T = r.tradeList;
+      const part = [0, 1, 2].map(k => T.filter(t => t.closedAt >= start + k * third && t.closedAt < start + (k + 1) * third).reduce((a, t) => a + t.pnl, 0));
+      const capped = T.filter(t => t.notional < 100 / t.stopPct * 0.98).length;
+      const beyond = T.filter(t => t.stopPct >= 1 / lev - 0.005).length;
+      const avgM = T.reduce((a, t) => a + t.margin, 0) / (T.length || 1);
+      // peak total margin in use at once
+      const ev = [];
+      for (const t of T) { ev.push([t.openedAt, t.margin]); ev.push([t.closedAt, -t.margin]); }
+      ev.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+      let cur = 0, peakM = 0; for (const [, d] of ev) { cur += d; peakM = Math.max(peakM, cur); }
+      L.push(`${lev}x · cap $${capOf(lev).toFixed(0)} margin`.padEnd(34) + pad(r.trades, 7) + pad(r.net.toFixed(0), 8) + pad(r.returnPct.toFixed(0) + '%', 7) + pad(r.maxDDPct.toFixed(1) + '%', 8) +
+        pad(r.profitFactor.toFixed(2), 6) + pad('$' + avgM.toFixed(0), 9) + pad('$' + peakM.toFixed(0), 10) + pad(capped, 8) + pad(beyond, 10) + part.map(x => pad(x.toFixed(0), 7)).join(''));
+    }
+    L.push('');
+  }
+  const out = L.join('\n');
+  console.log(out);
+  fs.mkdirSync(OUT, { recursive: true });
+  fs.writeFileSync(path.join(OUT, 'LEV_GRID.md'), '# Leverage grid\n\n```\n' + out + '\n```\n');
 }
 
 function riskGrid(series, symbols, times, start, end) {

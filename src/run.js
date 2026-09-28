@@ -184,6 +184,7 @@ function exchangeClient() {
 // Remote commands: control/commands.json (committed to the repo, pulled by the
 // Mac before every run and sync) lists one-off actions, e.g.
 //   [{ "id": "2026-09-24-close", "action": "close-all" }]
+//   [{ "id": "2026-09-28-reset", "action": "reset", "clearHistory": true }]
 // Each id is carried out once and remembered in commandsDone. A command that
 // hits an error isn't marked done, so the next sync retries it. Returns true
 // if anything was carried out.
@@ -207,6 +208,23 @@ async function runCommands(client, st, events) {
         tags: ['octagonal_sign'],
       }]);
       if (failed.length) continue;
+    } else if (c.action === 'reset') {
+      // Fresh start: close everything on Bybit, then reset the tracking to
+      // STARTING_BALANCE. { "clearHistory": true } also wipes the trade log
+      // and the Fibonacci shadow trades. Liquidation tracking is kept.
+      const evs = [];
+      await exchange.closeAll({ client, st, events: evs });
+      events.push(...evs);
+      if (evs.some(e => e.type === 'error')) continue; // retried next sync
+      st.account = freshAccount();
+      st.positions = {}; st.closing = {}; st.flipEntries = {}; st.scores = {}; st.usedSignals = {};
+      st.summary = null;
+      if (c.clearHistory) { st.trades = []; st.shadow = shadow.empty(); }
+      await notify.push([{
+        title: `Bot reset to ${P.STARTING_BALANCE} USDT`,
+        message: `All positions closed, tracking restarted${c.clearHistory ? ', trade history cleared' : ''}. Trading continues from the next 4H close.`,
+        tags: ['arrows_counterclockwise'],
+      }]);
     } else {
       events.push({ symbol: '-', type: 'error', reason: `unknown command ${c.action} (${c.id})` });
     }

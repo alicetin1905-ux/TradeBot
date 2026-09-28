@@ -741,7 +741,7 @@ test('per-coin entry score: ENTRY_MIN_SCORE_BY_SYMBOL overrides ENTRY_MIN_SCORE 
   const signals = { WLDUSDT: sig('WLDUSDT', 42), XRPUSDT: sig('XRPUSDT', 42) }; // 42: above WLD's override (40), below the 50 default
   const st = { positions: {}, usedSignals: {}, scores: { WLDUSDT: {}, XRPUSDT: {} } };
   const saved = [config.USE_FIB, config.ENTRY_FRESH_MIN, config.ENTRY_MIN_SCORE_BY_SYMBOL];
-  config.USE_FIB = false; config.ENTRY_FRESH_MIN = 60;
+  config.USE_FIB = false; config.ENTRY_FRESH_MIN = 60; config.ENTRY_MIN_SCORE_BY_SYMBOL = { WLDUSDT: 40 };
   try {
     assert.deepEqual(entryCandidates(signals, st, [], [], now).map(c => c.symbol), ['WLDUSDT']);
     assert.equal(st.scores.XRPUSDT.wait, 'weak');

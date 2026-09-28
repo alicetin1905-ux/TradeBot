@@ -45,13 +45,10 @@ number as a rehearsal of the strategy, not investment advice.
 - **Max 7 open positions** (only as many full-size trades as the balance
   can fund), **at most
   5 in the same direction**, and a new trade needs a score of **at least 50**
-  by default (`ENTRY_MIN_SCORE`; 25 still counts as a flip for exits), with
-  **per-coin overrides** (`ENTRY_MIN_SCORE_BY_SYMBOL`) from
-  `backtest/SCORE_SCAN.md` — the entry-score threshold that was profitable
-  in every one of the last year's three ~4-month periods, per coin, tried
-  alone: WLD 40, ENA 50, KAITO 35, SUI 35, GALA 45, LDO 30, DYDX 55,
-  FARTCOIN 30, XRP 50, BNB 65, ETH 75. BTC, DOGE, SOL and HYPE had no
-  threshold that was clean in every period, so they stay on the 50 default.
+  (`ENTRY_MIN_SCORE`; 25 still counts as a flip for exits). Per-coin
+  overrides are possible (`ENTRY_MIN_SCORE_BY_SYMBOL`) but off: in the
+  walk-forward check (`backtest/SCORE_WF.md`) scores tuned per coin did
+  worse than a flat 50 once all coins share the slots.
   If more coins qualify than there are free slots, the strongest |score|
   gets the slot. A trade never uses more margin than is still free.
 - **4H signals** (`ENTRY_TF: '240'`): entries, flips and levels come from

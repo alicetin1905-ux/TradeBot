@@ -26,14 +26,10 @@ const config = module.exports = {
   // (SCORE_THRESHOLD still decides when a signal counts as flipped — which
   // closes an open trade — and when a used signal has reset.)
   ENTRY_MIN_SCORE: 50,
-  // Per-coin override of ENTRY_MIN_SCORE (backtest/SCORE_SCAN.md: best
-  // threshold per coin, profitable in each of 3 sub-periods over the last
-  // year). Coins not listed use ENTRY_MIN_SCORE (kept at 50: no threshold
-  // was clean across every sub-period for BTC, DOGE, SOL or HYPE).
-  ENTRY_MIN_SCORE_BY_SYMBOL: {
-    WLDUSDT: 40, ENAUSDT: 50, KAITOUSDT: 35, SUIUSDT: 35, GALAUSDT: 45,
-    LDOUSDT: 30, DYDXUSDT: 55, FARTCOINUSDT: 30, XRPUSDT: 50, BNBUSDT: 65, ETHUSDT: 75,
-  },
+  // Per-coin override of ENTRY_MIN_SCORE, e.g. { SUIUSDT: 35 }. Empty: the
+  // walk-forward check (backtest/SCORE_WF.md) found per-coin scores don't
+  // beat a flat 50 once coins share the slots.
+  ENTRY_MIN_SCORE_BY_SYMBOL: {},
 
   // GoldenRatio's own per-coin impulse thresholds (%) — set earlier on the
   // FIBO page itself, reused here so the confluence check agrees with what

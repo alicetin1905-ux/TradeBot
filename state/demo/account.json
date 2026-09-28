@@ -13,9 +13,9 @@
   "leverage": 10,
   "maxOpenPositions": 7,
   "mode": "demo",
-  "exchangeEquity": 2049.93132007,
+  "exchangeEquity": 2047.02945007,
   "settings": {
-    "RISK_PCT": 2.5,
+    "RISK_PCT": 3.75,
     "RISK_USDT": 100,
     "MARGIN_USDT": 400,
     "LEVERAGE": 10,
@@ -63,7 +63,7 @@
     "STATUS_EVERY_H": 4
   },
   "settingsDefaults": {
-    "RISK_PCT": 2.5,
+    "RISK_PCT": 3.75,
     "RISK_USDT": 100,
     "MARGIN_USDT": 400,
     "LEVERAGE": 10,
@@ -111,7 +111,7 @@
     "STATUS_EVERY_H": 4
   },
   "settingsErrors": [],
-  "updatedAt": 1790633177259,
+  "updatedAt": 1790633402914,
   "fundingSince": 1790586370472,
   "funding": {
     "total": 0.08515969,
@@ -120,5 +120,5 @@
     }
   },
   "fundingError": null,
-  "riskPct": 2.5
+  "riskPct": 3.75
 }

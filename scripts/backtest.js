@@ -193,6 +193,9 @@ const BASE_RULES = {
   limit: null,             // e.g. { atr: 0.25, hours: 3 }: limit entry this much better, valid this many hours
   liqTargets: null,        // ['t2'] / ['t3'] / ['t2','t3']: those targets just before the heaviest estimated liq cluster
   split: [0.40, 0.35, 0.25], // share closed at T1 / T2 / T3
+  riskPct: null,           // risk this % of the current balance per trade (instead of riskUsd)
+  ddThrottle: null,        // { at: 0.2, factor: 0.5 }: while equity is >= at below its peak, risk x factor
+  streakPause: null,       // { n: 4, hours: 24 }: after n losing trades in a row, no new entries for hours
   trail: null,             // { after: 't1'|'t2', atr: k }: runner trails k x ATR instead of a fixed T3
   timeStopH: null,         // close at market if T1 hasn't filled after this many hours
   minAdx: null,            // skip entries while the coin's 4H ADX is below this
@@ -208,7 +211,8 @@ function simulate(series, symbols, times, rules) {
   const split = R.split || [0.40, 0.35, 0.25];
   const FEE_TAKER = R.fees ? FEES.taker : 0, FEE_MAKER = R.fees ? FEES.maker : 0;
   const sigKey = R.tf === '4H' ? 'sig4' : 'sig1';
-  let balance = R.start, peak = R.start, maxDD = 0;
+  let balance = R.start, peak = R.start, maxDD = 0, curDD = 0, peakT = times[0], dd = null;
+  let lossStreak = 0, pauseUntil = 0;
   const open = {};      // symbol -> position
   const pending = {};   // symbol -> resting limit entry
   const used = {};      // one trade per signal: symbol -> { bias, reset }
@@ -224,6 +228,8 @@ function simulate(series, symbols, times, rules) {
     p.pnl += pnl; balance += pnl; p.qtyRemaining -= qty;
     p.exits.push(reason);
     if (p.qtyRemaining <= p.qty * 1e-9) {
+      lossStreak = p.pnl < 0 ? lossStreak + 1 : 0;
+      if (R.streakPause && lossStreak >= R.streakPause.n) { pauseUntil = t + R.streakPause.hours * HOUR; lossStreak = 0; }
       trades.push({ symbol: p.symbol, bias: p.bias, score: p.score, openedAt: p.openedAt, closedAt: t, pnl: p.pnl, exit: reason, path: p.exits.join(' > '),
         stopPct: Math.abs(1 - p.initStop / p.entry), margin: p.margin, notional: p.qty * p.entry });
       delete open[p.symbol];
@@ -347,8 +353,14 @@ function simulate(series, symbols, times, rules) {
       const busy = [...Object.values(open), ...Object.values(pending).map(o => o.sig)];
       if (busy.length >= R.maxOpen) break;
       if (busy.filter(p => p.bias === sig.bias).length >= R.maxSameDir) continue;
+      if (t < pauseUntil) break;
       let margin = R.margin;
-      if (R.riskUsd) margin = Math.min(R.riskUsd / Math.abs(1 - sig.ratio.stop), R.margin * R.leverage) / R.leverage;
+      let risk = R.riskPct ? balance * R.riskPct / 100 : R.riskUsd;
+      if (R.ddThrottle && curDD >= R.ddThrottle.at) risk *= R.ddThrottle.factor;
+      if (R.riskUsd || R.riskPct) {
+        if (!(risk > 0)) continue;
+        margin = Math.min(risk / Math.abs(1 - sig.ratio.stop), R.margin * R.leverage) / R.leverage;
+      }
       if (balance - usedMargin() < margin * 0.99) continue; // full-size trades only
       used[s] = { bias: sig.bias, reset: false };
       if (R.limit) {
@@ -364,8 +376,9 @@ function simulate(series, symbols, times, rules) {
       const i = h1idx[p.symbol].get(t);
       if (i != null) eq += (series[p.symbol].h1[i].c - p.entry) * p.bias * p.qtyRemaining;
     }
-    peak = Math.max(peak, eq);
-    maxDD = Math.max(maxDD, (peak - eq) / peak);
+    if (eq > peak) { peak = eq; peakT = t; }
+    curDD = (peak - eq) / peak;
+    if (curDD > maxDD) { maxDD = curDD; dd = { peakT, troughT: t, peak, trough: eq }; }
   }
 
   const wins = trades.filter(x => x.pnl > 0), losses = trades.filter(x => x.pnl <= 0);
@@ -380,7 +393,7 @@ function simulate(series, symbols, times, rules) {
     trades: trades.length, winRate: trades.length ? wins.length / trades.length : 0,
     net: balance - R.start, returnPct: (balance / R.start - 1) * 100, maxDDPct: maxDD * 100,
     profitFactor: gl ? gw / gl : null, avgWin: wins.length ? gw / wins.length : 0, avgLoss: losses.length ? -gl / losses.length : 0,
-    missedLimits, stillOpen: Object.keys(open).length, byExit, bySymbol, tradeList: trades,
+    missedLimits, stillOpen: Object.keys(open).length, byExit, bySymbol, tradeList: trades, dd,
   };
 }
 
@@ -471,6 +484,8 @@ const RISK_GRID = args.includes('--risk-grid');
 // --lev-grid: leverage 5x..10x on the planned setup ($100 risk, 7 slots,
 // max 4 per direction), with the margin cap fixed or the position cap fixed.
 const LEV_GRID = args.includes('--lev-grid');
+// --dd-lab: ways to limit the worst drop on the live setup at real size.
+const DD_LAB = args.includes('--dd-lab');
 
 async function main() {
   const symbols = SCAN ? [...new Set(['BTCUSDT', ...config.SYMBOLS, ...SCAN])] : COINS ? [...new Set(['BTCUSDT', ...COINS])] : config.SYMBOLS;
@@ -486,7 +501,7 @@ async function main() {
   }
   for (const s of symbols) {
     process.stderr.write(`scoring ${s}…\n`);
-    series[s].sig1 = SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB || RISK_GRID || LEV_GRID ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
+    series[s].sig1 = SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB || RISK_GRID || LEV_GRID || DD_LAB ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
     series[s].sig4 = precompute(s, to4h(series[s].h1), 4, start);
     addFilterInputs(series[s]);
   }
@@ -500,6 +515,7 @@ async function main() {
   if (EXIT_LAB) return exitLab(series, symbols, times, start, now);
   if (RISK_GRID) return riskGrid(series, symbols, times, start, now);
   if (LEV_GRID) return levGrid(series, symbols, times, start, now);
+  if (DD_LAB) return ddLab(series, symbols, times, start, now);
   if (COINS) {
     const live = VARIANTS.find(v => v.focus), third = (now - start) / 3;
     const maxOpen = args.includes('--max-open') ? +args[args.indexOf('--max-open') + 1] : undefined;
@@ -709,6 +725,48 @@ function scoreScan(series, symbols, times, start, end) {
   console.log(`\n(full per-score grid for every coin written to backtest/SCORE_SCAN.md)`);
   fs.mkdirSync(OUT, { recursive: true });
   fs.writeFileSync(path.join(OUT, 'SCORE_SCAN.md'), '# Entry-score scan\n\n```\n' + lines.join('\n') + '\n```\n');
+}
+
+function ddLab(series, symbols, times, start, end) {
+  const live = VARIANTS.find(v => v.focus);
+  const P = config.PORTFOLIO;
+  const coins = config.SYMBOLS;
+  const third = (end - start) / 3;
+  const pad = (x, n) => String(x).padStart(n);
+  const d = (t) => new Date(t).toISOString().slice(0, 10);
+  const base = { ...live.rules, start: P.STARTING_BALANCE, margin: P.MARGIN_USDT, leverage: P.LEVERAGE, riskUsd: P.RISK_USDT };
+  const V = [
+    ['live: $100 fixed', {}],
+    ['$75 fixed', { riskUsd: 75 }],
+    ['$50 fixed', { riskUsd: 50 }],
+    ['5% of balance', { riskUsd: null, riskPct: 5 }],
+    ['3.75% of balance', { riskUsd: null, riskPct: 3.75 }],
+    ['2.5% of balance', { riskUsd: null, riskPct: 2.5 }],
+    ['$100, half risk at -15%', { ddThrottle: { at: 0.15, factor: 0.5 } }],
+    ['$100, half risk at -20%', { ddThrottle: { at: 0.2, factor: 0.5 } }],
+    ['$100, half risk at -25%', { ddThrottle: { at: 0.25, factor: 0.5 } }],
+    ['$100, pause at -25%', { ddThrottle: { at: 0.25, factor: 0 } }],
+    ['$100, 4 losses -> 24h pause', { streakPause: { n: 4, hours: 24 } }],
+    ['$100, 5 losses -> 48h pause', { streakPause: { n: 5, hours: 48 } }],
+  ];
+  const L = [];
+  L.push(`Drawdown lab · live setup · ${coins.length} coins · start ${P.STARTING_BALANCE} USDT · ${d(start)} → ${d(end)}`, '');
+  L.push('setup'.padEnd(30) + pad('trades', 7) + pad('net $', 8) + pad('ret', 7) + pad('maxDD', 8) + pad('DD $', 8) + '  worst drop (peak -> low)'.padEnd(42) + pad('PF', 6) + pad('worst mo', 10) + pad('1/3', 7) + pad('2/3', 7) + pad('3/3', 7));
+  for (const [name, extra] of V) {
+    const r = simulate(series, coins, times, { ...base, ...extra });
+    const T = r.tradeList;
+    const part = [0, 1, 2].map(k => T.filter(t => t.closedAt >= start + k * third && t.closedAt < start + (k + 1) * third).reduce((a, t) => a + t.pnl, 0));
+    const months = {};
+    for (const t of T) { const m = new Date(t.closedAt).toISOString().slice(0, 7); months[m] = (months[m] || 0) + t.pnl; }
+    const dd = r.dd;
+    const ddTxt = dd ? `${d(dd.peakT)} -> ${d(dd.troughT)} (${dd.peak.toFixed(0)} -> ${dd.trough.toFixed(0)})` : '-';
+    L.push(name.padEnd(30) + pad(r.trades, 7) + pad(r.net.toFixed(0), 8) + pad(r.returnPct.toFixed(0) + '%', 7) + pad(r.maxDDPct.toFixed(1) + '%', 8) + pad(dd ? (dd.peak - dd.trough).toFixed(0) : '-', 8) +
+      ('  ' + ddTxt).padEnd(42) + pad(r.profitFactor.toFixed(2), 6) + pad(Math.min(...Object.values(months)).toFixed(0), 10) + part.map(x => pad(x.toFixed(0), 7)).join(''));
+  }
+  const out = L.join('\n');
+  console.log(out);
+  fs.mkdirSync(OUT, { recursive: true });
+  fs.writeFileSync(path.join(OUT, 'DD_LAB.md'), '# Drawdown lab\n\n```\n' + out + '\n```\n');
 }
 
 function levGrid(series, symbols, times, start, end) {

@@ -156,7 +156,7 @@ function heaviestClusters(closed, entry) {
 // Supertrend on the last CLOSED 4H candle at that moment.
 function addFilterInputs(ser) {
   const h1 = ser.h1, st1 = I.supertrend(h1, 10, 3).dir;
-  const h4 = to4h(h1), st4 = I.supertrend(h4, 10, 3).dir;
+  const h4 = to4h(h1), st4 = I.supertrend(h4, 10, 3).dir, adx4 = I.adx(h4, 14).adx;
   const idx = new Map(h1.map((c, i) => [c.t, i]));
   let j = -1;
   const st4At = (closeT) => { // last 4H candle closed at or before closeT
@@ -179,6 +179,7 @@ function addFilterInputs(ser) {
     const avg = h4.slice(i - 20, i).reduce((a, c) => a + c.v, 0) / 20;
     rec.vr = avg > 0 ? h4[i].v / avg : null;
     rec.st1 = rec.st4 = st4[i];
+    rec.adx = adx4[i];
   }
 }
 
@@ -192,6 +193,10 @@ const BASE_RULES = {
   limit: null,             // e.g. { atr: 0.25, hours: 3 }: limit entry this much better, valid this many hours
   liqTargets: null,        // ['t2'] / ['t3'] / ['t2','t3']: those targets just before the heaviest estimated liq cluster
   split: [0.40, 0.35, 0.25], // share closed at T1 / T2 / T3
+  trail: null,             // { after: 't1'|'t2', atr: k }: runner trails k x ATR instead of a fixed T3
+  timeStopH: null,         // close at market if T1 hasn't filled after this many hours
+  minAdx: null,            // skip entries while the coin's 4H ADX is below this
+  btcMinAdx: null,         // skip entries while BTC's 4H ADX is below this
   liqFilter: false,
   volMin: null,            // 1H filters: signal-candle volume at least this x its 20-candle average
   st1Agree: false,         //   1H Supertrend must point the trade's way
@@ -227,11 +232,12 @@ function simulate(series, symbols, times, rules) {
   // Replays one 1H candle against an open position's stop and targets.
   function manage(p, c, t) {
     if (p.bias === 1 ? c.l <= p.stop : c.h >= p.stop) {
-      closeFill(p, p.qtyRemaining, p.stop, p.breakeven ? 'breakeven stop' : (p.lockedT1 ? 'T1-lock stop' : 'stop'), FEE_TAKER, t);
+      closeFill(p, p.qtyRemaining, p.stop, p.trailing ? 'trail stop' : p.breakeven ? 'breakeven stop' : (p.lockedT1 ? 'T1-lock stop' : 'stop'), FEE_TAKER, t);
       return;
     }
     for (const k of ['t1', 't2', 't3']) {
       if (p.filled[k]) continue;
+      if (k === 't3' && R.trail) break; // the runner leaves on the trailing stop instead
       if (!(p.bias === 1 ? c.h >= p[k] : c.l <= p[k])) break;
       const q = k === 't3' ? p.qtyRemaining : p.qty * split[k === 't1' ? 0 : 1];
       p.filled[k] = true;
@@ -239,6 +245,14 @@ function simulate(series, symbols, times, rules) {
       if (!open[p.symbol]) return;
       if (k === R.breakevenAfter) { p.stop = p.entry; p.breakeven = true; }
       if (k === 't2' && R.lockT1AfterT2) { p.stop = p.t1; p.lockedT1 = true; p.breakeven = false; }
+    }
+    // Trailing stop for the rest once `after` has filled: best close since
+    // then minus trail.atr x ATR (never loosens). Uses closes, and a new level
+    // only counts from the next candle — conservative.
+    if (R.trail && open[p.symbol] && p.filled[R.trail.after]) {
+      p.ext = p.ext == null ? c.c : (p.bias === 1 ? Math.max(p.ext, c.c) : Math.min(p.ext, c.c));
+      const ts = p.ext - p.bias * R.trail.atr * p.atr;
+      if ((ts - p.stop) * p.bias > 0) { p.stop = ts; p.trailing = true; p.breakeven = false; p.lockedT1 = false; }
     }
   }
 
@@ -266,7 +280,7 @@ function simulate(series, symbols, times, rules) {
     balance -= notional * feeRate;
     open[s] = {
       symbol: s, bias: sig.bias, score: sig.score, entry, ...lv, qty, qtyRemaining: qty, margin,
-      pnl: -notional * feeRate, filled: {}, breakeven: false, openedAt: t, exits: [],
+      pnl: -notional * feeRate, filled: {}, breakeven: false, openedAt: t, exits: [], atr: sig.atr,
     };
   }
 
@@ -289,6 +303,10 @@ function simulate(series, symbols, times, rules) {
       if (i == null || t <= p.openedAt) continue;
       manage(p, series[p.symbol].h1[i], t);
       if (!open[p.symbol]) continue;
+      if (R.timeStopH && !p.filled.t1 && t - p.openedAt >= R.timeStopH * HOUR) {
+        closeFill(p, p.qtyRemaining, series[p.symbol].h1[i].c, 'time stop', FEE_TAKER, t);
+        continue;
+      }
       const sig = series[p.symbol][sigKey].get(t);
       if (sig && sig.bias !== 0 && sig.bias !== p.bias) closeFill(p, p.qtyRemaining, series[p.symbol].h1[i].c, 'signal flip', FEE_TAKER, t);
     }
@@ -310,6 +328,8 @@ function simulate(series, symbols, times, rules) {
       if (!sig || sig.bias === 0 || !sig.ratio || Math.abs(sig.score) < minScore) continue;
       if (used[s] && !used[s].reset && used[s].bias === sig.bias) continue;
       if (!sig.gate.chase || (R.useFib && !sig.gate.fib)) continue;
+      if (R.minAdx && !(sig.adx >= R.minAdx)) continue;
+      if (R.btcMinAdx && !(btc && btc.adx >= R.btcMinAdx)) continue;
       if (R.volMin && !(sig.vr >= R.volMin)) continue;
       if (R.st1Agree && sig.st1 !== sig.bias) continue;
       if (R.st4Agree && sig.st4 !== sig.bias) continue;
@@ -441,6 +461,9 @@ const SCORE_SCAN = args.includes('--score-scan');
 // compares portfolios (flat 50 vs the live per-coin map vs the walk-forward
 // map). Written to backtest/SCORE_WF.md.
 const SCORE_WF = args.includes('--score-wf');
+// --exit-lab: trailing stop, time stop and ADX regime filter on the live
+// portfolio, per period and walk-forward. Written to backtest/EXIT_LAB.md.
+const EXIT_LAB = args.includes('--exit-lab');
 
 async function main() {
   const symbols = SCAN ? [...new Set(['BTCUSDT', ...config.SYMBOLS, ...SCAN])] : COINS ? [...new Set(['BTCUSDT', ...COINS])] : config.SYMBOLS;
@@ -456,7 +479,7 @@ async function main() {
   }
   for (const s of symbols) {
     process.stderr.write(`scoring ${s}…\n`);
-    series[s].sig1 = SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
+    series[s].sig1 = SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
     series[s].sig4 = precompute(s, to4h(series[s].h1), 4, start);
     addFilterInputs(series[s]);
   }
@@ -467,6 +490,7 @@ async function main() {
   if (ANALYZE) return analyze(series, symbols, times, start, now);
   if (SCORE_SCAN) return scoreScan(series, symbols, times, start, now);
   if (SCORE_WF) return scoreWalkForward(series, symbols, times, start, now);
+  if (EXIT_LAB) return exitLab(series, symbols, times, start, now);
   if (COINS) {
     const live = VARIANTS.find(v => v.focus), third = (now - start) / 3;
     const maxOpen = args.includes('--max-open') ? +args[args.indexOf('--max-open') + 1] : undefined;
@@ -676,6 +700,52 @@ function scoreScan(series, symbols, times, start, end) {
   console.log(`\n(full per-score grid for every coin written to backtest/SCORE_SCAN.md)`);
   fs.mkdirSync(OUT, { recursive: true });
   fs.writeFileSync(path.join(OUT, 'SCORE_SCAN.md'), '# Entry-score scan\n\n```\n' + lines.join('\n') + '\n```\n');
+}
+
+function exitLab(series, symbols, times, start, end) {
+  const live = VARIANTS.find(v => v.focus);
+  const coins = config.SYMBOLS;
+  const split = start + (end - start) * 2 / 3;
+  const trainT = times.filter(t => t < split), testT = times.filter(t => t >= split);
+  const third = (end - start) / 3;
+  const pad = (x, n) => String(x).padStart(n);
+  const FAMILIES = {
+    'Trailing stop (replaces fixed T3)': [
+      ['after T2, 2 ATR', { trail: { after: 't2', atr: 2 } }], ['after T2, 3 ATR', { trail: { after: 't2', atr: 3 } }],
+      ['after T2, 4 ATR', { trail: { after: 't2', atr: 4 } }], ['after T1, 2 ATR', { trail: { after: 't1', atr: 2 } }],
+      ['after T1, 3 ATR', { trail: { after: 't1', atr: 3 } }], ['after T1, 4 ATR', { trail: { after: 't1', atr: 4 } }],
+    ],
+    'Time stop (no T1 within N hours)': [
+      ['24h', { timeStopH: 24 }], ['36h', { timeStopH: 36 }], ['48h', { timeStopH: 48 }],
+      ['72h', { timeStopH: 72 }], ['96h', { timeStopH: 96 }],
+    ],
+    'Regime filter (ADX on 4H)': [
+      ['coin ADX >= 15', { minAdx: 15 }], ['coin ADX >= 20', { minAdx: 20 }], ['coin ADX >= 25', { minAdx: 25 }],
+      ['BTC ADX >= 15', { btcMinAdx: 15 }], ['BTC ADX >= 20', { btcMinAdx: 20 }], ['BTC ADX >= 25', { btcMinAdx: 25 }],
+    ],
+  };
+  const run = (T, extra) => simulate(series, coins, T, { ...live.rules, ...extra });
+  const thirds = (r) => [0, 1, 2].map(k => r.tradeList.filter(t => t.closedAt >= start + k * third && t.closedAt < start + (k + 1) * third).reduce((a, t) => a + t.pnl, 0));
+  const head = ''.padEnd(24) + pad('trades', 7) + pad('win', 6) + pad('net $', 8) + pad('maxDD', 8) + pad('PF', 6) + pad('1/3', 8) + pad('2/3', 8) + pad('3/3', 8) + pad('train', 8) + pad('test', 8);
+  const line = (name, r, rt, rs) => name.padEnd(24) + pad(r.trades, 7) + pad((r.winRate * 100).toFixed(0) + '%', 6) + pad(r.net.toFixed(0), 8) + pad(r.maxDDPct.toFixed(1) + '%', 8) + pad(r.profitFactor.toFixed(2), 6) + thirds(r).map(x => pad(x.toFixed(0), 8)).join('') + pad(rt.net.toFixed(0), 8) + pad(rs.net.toFixed(0), 8);
+  const L = [];
+  L.push(`Exit lab · live portfolio (${coins.length} coins, ${live.name.replace(' (live now)', '')}) · ${new Date(start).toISOString().slice(0, 10)} → ${new Date(end).toISOString().slice(0, 10)} · start 1000 USDT, $50 risk`);
+  L.push(`train = first 2/3 (to ${new Date(split).toISOString().slice(0, 10)}), test = last 1/3 — the walk-forward pick uses train only.`, '');
+  const base = { all: run(times, {}), tr: run(trainT, {}), te: run(testT, {}) };
+  L.push(head, line('baseline (live now)', base.all, base.tr, base.te), '');
+  for (const [fam, vars] of Object.entries(FAMILIES)) {
+    L.push(fam);
+    const res = vars.map(([name, extra]) => ({ name, all: run(times, extra), tr: run(trainT, extra), te: run(testT, extra) }));
+    for (const r of res) L.push(line('  ' + r.name, r.all, r.tr, r.te));
+    const pick = [...res].sort((a, b) => b.tr.net - a.tr.net)[0];
+    const beats = pick.tr.net > base.tr.net;
+    L.push(`  walk-forward: train pick "${pick.name}" (train ${pick.tr.net.toFixed(0)} vs baseline ${base.tr.net.toFixed(0)})` +
+      (beats ? ` → test ${pick.te.net.toFixed(0)} vs baseline ${base.te.net.toFixed(0)} (${pick.te.net >= base.te.net ? 'holds up' : 'does NOT hold up'})` : ' → nothing beat the baseline on train'), '');
+  }
+  const out = L.join('\n');
+  console.log(out);
+  fs.mkdirSync(OUT, { recursive: true });
+  fs.writeFileSync(path.join(OUT, 'EXIT_LAB.md'), '# Exit lab: trailing stop, time stop, regime filter\n\n```\n' + out + '\n```\n');
 }
 
 function scoreWalkForward(series, symbols, times, start, end) {

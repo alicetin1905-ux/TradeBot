@@ -306,7 +306,8 @@ function simulate(series, symbols, times, rules) {
     for (const s of symbols) {
       if (open[s] || pending[s]) continue;
       const sig = series[s][sigKey].get(t);
-      if (!sig || sig.bias === 0 || !sig.ratio || Math.abs(sig.score) < R.minScore) continue;
+      const minScore = (R.minScoreBySymbol && R.minScoreBySymbol[s] != null) ? R.minScoreBySymbol[s] : R.minScore;
+      if (!sig || sig.bias === 0 || !sig.ratio || Math.abs(sig.score) < minScore) continue;
       if (used[s] && !used[s].reset && used[s].bias === sig.bias) continue;
       if (!sig.gate.chase || (R.useFib && !sig.gate.fib)) continue;
       if (R.volMin && !(sig.vr >= R.volMin)) continue;
@@ -435,6 +436,11 @@ const ANALYZE = args.includes('--analyze');
 // (each coin traded on its own, live rules otherwise) and report the best
 // one per coin; also written to backtest/SCORE_SCAN.md.
 const SCORE_SCAN = args.includes('--score-scan');
+// --score-wf: walk-forward check of per-coin entry scores. Picks each coin's
+// score on the first 2/3 of the period only, tests it on the last 1/3, and
+// compares portfolios (flat 50 vs the live per-coin map vs the walk-forward
+// map). Written to backtest/SCORE_WF.md.
+const SCORE_WF = args.includes('--score-wf');
 
 async function main() {
   const symbols = SCAN ? [...new Set(['BTCUSDT', ...config.SYMBOLS, ...SCAN])] : COINS ? [...new Set(['BTCUSDT', ...COINS])] : config.SYMBOLS;
@@ -450,7 +456,7 @@ async function main() {
   }
   for (const s of symbols) {
     process.stderr.write(`scoring ${s}…\n`);
-    series[s].sig1 = SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
+    series[s].sig1 = SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
     series[s].sig4 = precompute(s, to4h(series[s].h1), 4, start);
     addFilterInputs(series[s]);
   }
@@ -460,6 +466,7 @@ async function main() {
   if (TP_GRID) return tpGrid(series, symbols, times, start, now);
   if (ANALYZE) return analyze(series, symbols, times, start, now);
   if (SCORE_SCAN) return scoreScan(series, symbols, times, start, now);
+  if (SCORE_WF) return scoreWalkForward(series, symbols, times, start, now);
   if (COINS) {
     const live = VARIANTS.find(v => v.focus), third = (now - start) / 3;
     const maxOpen = args.includes('--max-open') ? +args[args.indexOf('--max-open') + 1] : undefined;
@@ -669,6 +676,54 @@ function scoreScan(series, symbols, times, start, end) {
   console.log(`\n(full per-score grid for every coin written to backtest/SCORE_SCAN.md)`);
   fs.mkdirSync(OUT, { recursive: true });
   fs.writeFileSync(path.join(OUT, 'SCORE_SCAN.md'), '# Entry-score scan\n\n```\n' + lines.join('\n') + '\n```\n');
+}
+
+function scoreWalkForward(series, symbols, times, start, end) {
+  const live = VARIANTS.find(v => v.focus);
+  const GRID = [30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80];
+  const split = start + (end - start) * 2 / 3;
+  const trainT = times.filter(t => t < split), testT = times.filter(t => t >= split);
+  const coins = config.SYMBOLS;
+  const pad = (x, n) => String(x).padStart(n);
+  const L = [];
+  L.push(`Walk-forward entry-score check · live rules · train ${new Date(start).toISOString().slice(0, 10)} → ${new Date(split).toISOString().slice(0, 10)} · test ${new Date(split).toISOString().slice(0, 10)} → ${new Date(end).toISOString().slice(0, 10)}`, '');
+  L.push('Per coin, traded alone. "train pick" = score chosen on the train window only (best average of it and its two', 'neighbouring scores, >= 10 trades; falls back to 50 if nothing makes money). Test columns: net $ on the unseen last third.', '');
+  L.push('coin'.padEnd(10) + pad('live', 6) + pad('train', 7) + pad('test@50', 9) + pad('test@live', 11) + pad('test@train', 12) + pad('full-year best', 16));
+  const wfMap = {};
+  const liveMap = config.ENTRY_MIN_SCORE_BY_SYMBOL || {};
+  const tot = { t50: 0, tLive: 0, tTrain: 0 };
+  for (const s of coins) {
+    const run = (T, minScore) => simulate(series, [s], T, { ...live.rules, maxOpen: 1, minScore });
+    const train = GRID.map(g => { const r = run(trainT, g); return { g, net: r.net, trades: r.trades }; });
+    const smooth = train.map((x, i) => {
+      const nb = [train[i - 1], x, train[i + 1]].filter(Boolean);
+      return { g: x.g, avg: nb.reduce((a, y) => a + y.net, 0) / nb.length, trades: x.trades };
+    }).filter(x => x.trades >= 10).sort((a, b) => b.avg - a.avg);
+    const pick = smooth.length && smooth[0].avg > 0 ? smooth[0].g : 50;
+    wfMap[s] = pick;
+    const liveScore = liveMap[s] != null ? liveMap[s] : config.ENTRY_MIN_SCORE;
+    const t50 = run(testT, 50).net, tLive = run(testT, liveScore).net, tTrain = run(testT, pick).net;
+    tot.t50 += t50; tot.tLive += tLive; tot.tTrain += tTrain;
+    const full = GRID.map(g => ({ g, net: run(times, g).net })).sort((a, b) => b.net - a.net)[0];
+    L.push(s.replace('USDT', '').padEnd(10) + pad(liveScore, 6) + pad(pick, 7) + pad(t50.toFixed(0), 9) + pad(tLive.toFixed(0), 11) + pad(tTrain.toFixed(0), 12) + pad(full.g + ' (' + full.net.toFixed(0) + ')', 16));
+  }
+  L.push('TOTAL'.padEnd(10) + pad('', 6) + pad('', 7) + pad(tot.t50.toFixed(0), 9) + pad(tot.tLive.toFixed(0), 11) + pad(tot.tTrain.toFixed(0), 12), '');
+  L.push('Portfolio (all coins together, live slots and BTC filter):', '');
+  const port = (T, extra) => simulate(series, coins, T, { ...live.rules, ...extra });
+  const row = (name, r) => name.padEnd(34) + pad(r.trades, 7) + pad((r.winRate * 100).toFixed(0) + '%', 6) + pad(r.net.toFixed(0), 8) + pad(r.maxDDPct.toFixed(1) + '%', 8) + pad(r.profitFactor.toFixed(2), 6);
+  L.push(''.padEnd(34) + pad('trades', 7) + pad('win', 6) + pad('net $', 8) + pad('maxDD', 8) + pad('PF', 6));
+  L.push('Test window only (never seen by the train pick):');
+  L.push(row('  flat 50', port(testT, { minScore: 50 })));
+  L.push(row('  live per-coin map', port(testT, { minScoreBySymbol: liveMap })));
+  L.push(row('  walk-forward map', port(testT, { minScoreBySymbol: wfMap })));
+  L.push('Whole period:');
+  L.push(row('  flat 50', port(times, { minScore: 50 })));
+  L.push(row('  live per-coin map (in-sample)', port(times, { minScoreBySymbol: liveMap })));
+  L.push('', 'Walk-forward map: ' + Object.entries(wfMap).map(([k, v]) => k.replace('USDT', '') + ' ' + v).join(', '));
+  const out = L.join('\n');
+  console.log(out);
+  fs.mkdirSync(OUT, { recursive: true });
+  fs.writeFileSync(path.join(OUT, 'SCORE_WF.md'), '# Entry-score walk-forward check\n\n```\n' + out + '\n```\n');
 }
 
 if (require.main === module) main().catch((e) => { console.error(e); process.exit(1); });

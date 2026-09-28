@@ -36,5 +36,42 @@
     "unrealisedPnl": 106.1713,
     "lockedT1": true,
     "closedDetectedAt": 1790498101450
+  },
+  "KAITOUSDT": {
+    "symbol": "KAITOUSDT",
+    "bias": 1,
+    "entry": 0.3611,
+    "stop": 0.3449,
+    "initialStop": 0.3449,
+    "t1": 0.3855,
+    "t2": 0.4098,
+    "t3": 0.4342,
+    "qtyTotal": 6157,
+    "qtyRemaining": 6157,
+    "qtyT1": 1847,
+    "qtyT2": 1847,
+    "qtyT3": 2463,
+    "margin": 222.32927,
+    "notional": 2223.2927,
+    "riskAmt": 99.74339999999995,
+    "filled": {
+      "t1": false,
+      "t2": false,
+      "t3": false
+    },
+    "breakeven": false,
+    "beAfter": "t1",
+    "openedAt": 1790510771419,
+    "score": 55,
+    "orders": {
+      "entry": "a9b1e4e9-9a06-47a2-b456-82648704a900",
+      "t1": "1b7688db-95d3-4be8-840a-111da123d1f6",
+      "t2": "37ebc4aa-e3c9-4878-b0d8-503aff5efef5",
+      "t3": "7fe93206-5a94-494a-8f01-41c195c6ecfa"
+    },
+    "tickSize": 0.0001,
+    "markPrice": 0.3528,
+    "unrealisedPnl": -51.1031,
+    "closedDetectedAt": 1790563801950
   }
 }

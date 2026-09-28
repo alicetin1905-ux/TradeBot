@@ -569,7 +569,7 @@ async function main() {
 function analyze(series, symbols, times, start, end) {
   const live = VARIANTS.find(v => v.focus);
   const P = config.PORTFOLIO;
-  const rules = { ...live.rules, start: P.STARTING_BALANCE, riskUsd: P.RISK_USDT, margin: P.MARGIN_USDT, leverage: P.LEVERAGE };
+  const rules = { ...live.rules, start: P.STARTING_BALANCE, riskUsd: P.RISK_PCT != null ? null : P.RISK_USDT, riskPct: P.RISK_PCT, margin: P.MARGIN_USDT, leverage: P.LEVERAGE, maxSameDir: P.MAX_SAME_DIRECTION, maxOpen: P.MAX_OPEN_POSITIONS };
   const r = simulate(series, symbols, times, rules);
   const T = [...r.tradeList].sort((a, b) => a.closedAt - b.closedAt);
   const $ = (x) => (x < 0 ? '-$' : '$') + Math.abs(x).toLocaleString('en-US', { maximumFractionDigits: 0 });
@@ -581,7 +581,7 @@ function analyze(series, symbols, times, start, end) {
   const gw = sum(wins), gl = -sum(losses);
   const reached = (k) => T.filter(t => t.path.includes(k)).length;
   const L = [];
-  L.push(`# Live setup analysis`, '', `${new Date(start).toISOString().slice(0, 10)} → ${new Date(end).toISOString().slice(0, 10)} · ${symbols.length} coins · start ${P.STARTING_BALANCE} USDT · $${P.RISK_USDT} risk (max $${P.MARGIN_USDT} margin, ${P.LEVERAGE}x) · ${rules.maxOpen} slots, ${rules.maxSameDir} per direction · targets ${rules.targetsR.join(' / ')}R, closing ${rules.split.map(x => Math.round(x * 100)).join(' / ')}% · BTC filter ${rules.btcFilter ? 'on' : 'off'} · fees included`, '');
+  L.push(`# Live setup analysis`, '', `${new Date(start).toISOString().slice(0, 10)} → ${new Date(end).toISOString().slice(0, 10)} · ${symbols.length} coins · start ${P.STARTING_BALANCE} USDT · ${P.RISK_PCT != null ? P.RISK_PCT + '% of balance' : '$' + P.RISK_USDT} risk (max $${P.MARGIN_USDT} margin, ${P.LEVERAGE}x) · ${rules.maxOpen} slots, ${rules.maxSameDir} per direction · targets ${rules.targetsR.join(' / ')}R, closing ${rules.split.map(x => Math.round(x * 100)).join(' / ')}% · BTC filter ${rules.btcFilter ? 'on' : 'off'} · fees included`, '');
   L.push('## Overall', '', '| | |', '|---|---:|',
     `| Start → end | ${$(P.STARTING_BALANCE)} → ${$(P.STARTING_BALANCE + r.net)} (${r.returnPct >= 0 ? '+' : ''}${r.returnPct.toFixed(0)}%) |`,
     `| Trades | ${T.length} (${(T.length / ((end - start) / (30 * 24 * HOUR))).toFixed(0)} per month) |`,

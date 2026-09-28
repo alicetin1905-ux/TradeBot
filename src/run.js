@@ -64,7 +64,7 @@ function writeJson(name, data) {
   fs.writeFileSync(path.join(DIR, name + '.json'), JSON.stringify(data, null, name === 'liqlog' ? 0 : 2) + '\n');
 }
 function freshAccount() {
-  return { fundingSince: Date.now(), funding: { total: 0, bySymbol: {} }, balance: P.STARTING_BALANCE, startingBalance: P.STARTING_BALANCE, marginPct: P.MARGIN_PCT, marginUsdt: P.MARGIN_USDT, riskUsdt: P.RISK_USDT, targetsR: config.TARGETS_R, entryTf: config.ENTRY_TF, leverage: P.LEVERAGE, maxOpenPositions: P.MAX_OPEN_POSITIONS, mode: MODE };
+  return { fundingSince: Date.now(), funding: { total: 0, bySymbol: {} }, balance: P.STARTING_BALANCE, startingBalance: P.STARTING_BALANCE, marginPct: P.MARGIN_PCT, marginUsdt: P.MARGIN_USDT, riskUsdt: P.RISK_USDT, riskPct: P.RISK_PCT, targetsR: config.TARGETS_R, entryTf: config.ENTRY_TF, leverage: P.LEVERAGE, maxOpenPositions: P.MAX_OPEN_POSITIONS, mode: MODE };
 }
 function loadState() {
   return {
@@ -84,10 +84,10 @@ function loadState() {
 }
 function saveState(st) {
   // Settings are re-stamped every run so the dashboard always shows the live rules.
-  delete st.account.riskPct; // pre-MARGIN_PCT field
   st.account.marginPct = P.MARGIN_PCT;
   st.account.marginUsdt = P.MARGIN_USDT;
   st.account.riskUsdt = P.RISK_USDT;
+  st.account.riskPct = P.RISK_PCT;
   st.account.targetsR = config.TARGETS_R;
   st.account.entryTf = config.ENTRY_TF;
   // Effective adjustable settings (config.js + control/settings.json) for the dashboard.

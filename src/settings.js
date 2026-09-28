@@ -27,6 +27,7 @@ const bool = (v) => (typeof v === 'boolean' ? { value: v } : { error: 'must be t
 // Each field: where it lives in config, how it's checked, and a label.
 const FIELDS = {
   // Money
+  RISK_PCT: { at: ['PORTFOLIO', 'RISK_PCT'], check: num(0.1, 20, { nullable: true }), label: 'Loss at the stop per trade (% of balance, overrides the $ amount; null = use $)' },
   RISK_USDT: { at: ['PORTFOLIO', 'RISK_USDT'], check: num(1, 500, { nullable: true }), label: 'Loss at the stop per trade (USDT, null = always full margin)' },
   MARGIN_USDT: { at: ['PORTFOLIO', 'MARGIN_USDT'], check: num(10, 1000), label: 'Max margin per trade (USDT)' },
   LEVERAGE: { at: ['PORTFOLIO', 'LEVERAGE'], check: num(1, 25, { int: true }), label: 'Leverage' },

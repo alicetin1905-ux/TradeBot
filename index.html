@@ -411,16 +411,20 @@
     var tf = account.entryTf === '240' ? '4H' : account.entryTf === '60' ? '1H' : account.entryTf;
     els.rules.innerHTML =
       (tf ? '<span class="chip">Signals <b>' + tf + '</b></span>' : '') +
-      (account.riskUsdt != null
+      (account.riskPct != null
+        ? '<span class="chip">Risk <b>' + account.riskPct + '%</b> of balance (' + fmtMoney(account.balance * account.riskPct / 100) + ') / trade</span>' +
+          (account.marginUsdt != null ? '<span class="chip">Max margin <b>' + fmtMoney(account.marginUsdt) + '</b> (' + fmtMoney(account.marginUsdt * (account.leverage || 1)) + ' position)</span>' : '')
+        : '') +
+      (account.riskPct == null && account.riskUsdt != null
         ? '<span class="chip">Risk <b>' + fmtMoney(account.riskUsdt) + '</b> / trade</span>' +
           (account.marginUsdt != null ? '<span class="chip">Max margin <b>' + fmtMoney(account.marginUsdt) + '</b> (' + fmtMoney(account.marginUsdt * (account.leverage || 1)) + ' position)</span>' : '')
         : '') +
       (account.targetsR ? '<span class="chip">Targets <b>' + account.targetsR.join(' / ') + 'R</b></span>' : '') +
-      (account.riskUsdt != null ? '' : account.marginUsdt != null
+      (account.riskUsdt != null || account.riskPct != null ? '' : account.marginUsdt != null
         ? '<span class="chip">Margin <b>' + fmtMoney(account.marginUsdt) + '</b> / trade</span>'
         : '<span class="chip">Margin <b>' + (account.marginPct != null ? account.marginPct : '—') + '%</b> of balance / trade</span>') +
       '<span class="chip">Leverage <b>' + (account.leverage != null ? account.leverage : '—') + 'x</b></span>' +
-      (account.riskUsdt == null && account.leverage != null && (account.marginUsdt != null || account.marginPct != null)
+      (account.riskUsdt == null && account.riskPct == null && account.leverage != null && (account.marginUsdt != null || account.marginPct != null)
         ? '<span class="chip">Position value <b>' + fmtMoney((account.marginUsdt != null ? account.marginUsdt : account.balance * account.marginPct / 100) * account.leverage) + '</b> / trade</span>' : '') +
       '<span class="chip">Max <b>' + max + '</b> open positions</span>';
     var bars = '';
@@ -464,7 +468,8 @@
   // everything, so this is only for a friendlier form.
   var SETTINGS_EDIT_URL = 'https://github.com/alicetin1905-ux/TradeBot/edit/main/control/settings.json';
   var SETTING_FIELDS = [
-    { g: 'Money', k: 'RISK_USDT', label: 'Loss at stop per trade ($)', t: 'num', min: 1, max: 500, nullable: true },
+    { g: 'Money', k: 'RISK_PCT', label: 'Loss at stop per trade (% of balance)', t: 'num', min: 0.1, max: 20, nullable: true },
+    { g: 'Money', k: 'RISK_USDT', label: 'Loss at stop per trade ($, used when % is empty)', t: 'num', min: 1, max: 500, nullable: true },
     { g: 'Money', k: 'MARGIN_USDT', label: 'Max margin per trade ($)', t: 'num', min: 10, max: 1000 },
     { g: 'Money', k: 'LEVERAGE', label: 'Leverage (x)', t: 'num', min: 1, max: 25, int: true },
     { g: 'Money', k: 'MAX_OPEN_POSITIONS', label: 'Max open positions', t: 'num', min: 1, max: 8, int: true },
@@ -488,13 +493,14 @@
   var settingsState = { editing: false, account: null };
 
   function fmtSetting(f, v) {
-    if (v == null) return f.k === 'RISK_USDT' ? 'off (full margin)' : f.k === 'ENTRY_FRESH_MIN' ? 'any time' : 'no limit';
+    if (v == null) return f.k === 'RISK_PCT' ? 'off (use $)' : f.k === 'RISK_USDT' ? 'off (full margin)' : f.k === 'ENTRY_FRESH_MIN' ? 'any time' : 'no limit';
     if (f.t === 'bool') return v ? 'on' : 'off';
     if (f.t === 'enum') { var o = f.opts.filter(function (x) { return x[0] === v; })[0]; return o ? o[1] : String(v); }
     if (f.k === 'TARGETS_R') return v.join(' / ') + 'R';
     if (f.k === 'TARGET_SPLIT') return v.map(function (x) { return Math.round(x * 100) + '%'; }).join(' / ');
     if (f.t === 'coins') return v.length === SYMBOLS.length ? 'all ' + v.length : v.map(function (s) { return s.replace('USDT', ''); }).join(', ');
     if (f.k === 'RISK_USDT' || f.k === 'MARGIN_USDT') return '$' + v;
+    if (f.k === 'RISK_PCT') return v + '%';
     if (f.k === 'LEVERAGE') return v + 'x';
     if (f.k === 'STOP_ATR' || f.k === 'MAX_CHASE_ATR') return v + ' ATR';
     return String(v);

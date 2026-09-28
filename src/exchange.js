@@ -43,10 +43,18 @@ function sizingBase(st, wallet) { return Math.max(0, Math.min(st.account.balance
 // of the (allocation-capped) balance. With RISK_USDT and a stop distance
 // (fraction of entry), the position is sized so the stop loses RISK_USDT,
 // never more than the cap.
+// The loss at the stop for a new trade: RISK_PCT % of the (allocation-capped)
+// balance when set, else the fixed RISK_USDT; null = no risk sizing.
+function riskPerTrade(base) {
+  if (P.RISK_PCT != null) return base * P.RISK_PCT / 100;
+  return P.RISK_USDT;
+}
+
 function marginPerTrade(base, stopDist = null) {
   const cap = P.MARGIN_USDT != null ? P.MARGIN_USDT : base * P.MARGIN_PCT / 100;
-  if (P.RISK_USDT == null || !(stopDist > 0)) return cap;
-  return Math.min(P.RISK_USDT / stopDist, cap * P.LEVERAGE) / P.LEVERAGE;
+  const risk = riskPerTrade(base);
+  if (risk == null || !(stopDist > 0)) return cap;
+  return Math.min(risk / stopDist, cap * P.LEVERAGE) / P.LEVERAGE;
 }
 
 function usedMargin(positions) {
@@ -378,4 +386,4 @@ async function closeAll({ client, st, events, now = Date.now() }) {
   }
 }
 
-module.exports = { runExchange, closeAll, splitTargets, sizingBase, usedMargin, marginPerTrade };
+module.exports = { runExchange, closeAll, splitTargets, sizingBase, usedMargin, marginPerTrade, riskPerTrade };

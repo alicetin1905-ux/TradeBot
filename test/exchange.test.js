@@ -18,6 +18,7 @@ config.PORTFOLIO.MARGIN_USDT = null;
 config.PORTFOLIO.MAX_SAME_DIRECTION = null;
 config.PORTFOLIO.MAX_OPEN_POSITIONS = 4;
 config.PORTFOLIO.RISK_USDT = null;
+config.PORTFOLIO.RISK_PCT = null;
 config.TARGETS_R = null;
 config.LOCK_T1_AFTER_T2 = false;
 
@@ -749,4 +750,21 @@ test('per-coin entry score: ENTRY_MIN_SCORE_BY_SYMBOL overrides ENTRY_MIN_SCORE 
     st.scores = { WLDUSDT: {}, XRPUSDT: {} };
     assert.deepEqual(entryCandidates(signals, st, [], [], now).map(c => c.symbol), []); // both fall back to the 50 default
   } finally { [config.USE_FIB, config.ENTRY_FRESH_MIN, config.ENTRY_MIN_SCORE_BY_SYMBOL] = saved; }
+});
+
+test('RISK_PCT sizing: the stop loses RISK_PCT % of the balance and follows the balance', async () => {
+  const { client } = fakeBybit({ equity: 50000, marks });
+  const st = freshState();
+  st.account.balance = 2000;
+  Object.assign(config.PORTFOLIO, { MARGIN_USDT: 400, RISK_USDT: 100, RISK_PCT: 2.5 });
+  try {
+    assert.equal(exchange.riskPerTrade(2000), 50);             // % wins over the fixed $100
+    await exchange.runExchange({ client, st, signals: {}, candidates: [candidate('XRPUSDT', 1, 80, 2.5, 0.05)], events: [] });
+    const x = st.positions.XRPUSDT;
+    assert.equal(x.qtyTotal, 400);                              // $50 / 5% = $1000 position
+    assert.ok(Math.abs(x.riskAmt - 50) < 1e-6);
+    st.account.balance = 1200;                                  // after losses the risk shrinks with it
+    await exchange.runExchange({ client, st, signals: {}, candidates: [candidate('SOLUSDT', 1, 80, 200, 0.05)], events: [] });
+    assert.ok(Math.abs(st.positions.SOLUSDT.riskAmt - 30) < 1e-6); // 2.5% of 1200
+  } finally { Object.assign(config.PORTFOLIO, { MARGIN_USDT: null, RISK_USDT: null, RISK_PCT: null }); }
 });

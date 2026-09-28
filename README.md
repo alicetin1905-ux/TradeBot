@@ -36,13 +36,13 @@ number as a rehearsal of the strategy, not investment advice.
 ## Rules (`config.js` → `PORTFOLIO`)
 
 - **One shared 2000 USDT balance** for all fifteen coins.
-- **2.5% of the balance at risk per trade** (`RISK_PCT`): each position is
-  sized so hitting its stop loses 2.5% of the bot's balance — $50 on 2000
+- **3.75% of the balance at risk per trade** (`RISK_PCT`): each position is
+  sized so hitting its stop loses 3.75% of the bot's balance — $75 on 2000
   USDT, more as the account grows, less after losses. Capped at **400 USDT
   margin / 4000 USDT position** (`MARGIN_USDT`). `RISK_PCT: null` switches
-  to a fixed dollar amount (`RISK_USDT`). Backtest (`backtest/DD_LAB.md`):
-  2.5% gave more profit than a fixed $100 (+732% vs +562% over a year) with
-  a much smaller worst drop (28% vs 45%).
+  to a fixed dollar amount (`RISK_USDT`). Backtest from 12 start dates
+  (`backtest/RISK_STARTS.md`): typically about the same 4-month profit as a
+  fixed $100 (+237% vs +217%) with smaller drops (36% vs 44% typical).
 - **Max 7 open positions** (only as many full-size trades as the balance
   can fund), **at most
   4 in the same direction**, and a new trade needs a score of **at least 50**
@@ -161,7 +161,7 @@ window. Limit entries and breakeven-after-T2 didn't help.
 - **Funding fees:** every funding payment on the bot's coins (Bybit
   transaction log) is added to the bot's balance — paid is negative — and
   shown on the dashboard in total and per open position.
-- **Sizing:** 2.5% of the balance at the stop (max 400 USDT margin at 10x), capped by the bot's **allocation**. The allocation
+- **Sizing:** 3.75% of the balance at the stop (max 400 USDT margin at 10x), capped by the bot's **allocation**. The allocation
   starts at 2000 USDT and moves with realized P&L (from Bybit's closed-P&L
   records, net of fees), so a demo wallet with more USDT still trades like
   a 2000 USDT account. Never more margin than Bybit says is free.

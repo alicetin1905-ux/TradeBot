@@ -756,7 +756,16 @@ function riskGrid(series, symbols, times, start, end) {
   const pad = (x, n) => String(x).padStart(n);
   const base = { ...live.rules, start: P.STARTING_BALANCE, margin: P.MARGIN_USDT, leverage: P.LEVERAGE };
   const combos = [];
-  for (const risk of [50, 75, 100]) {
+  const risks = args.includes('--risk') ? String(args[args.indexOf('--risk') + 1]).split(',').map(Number) : [50, 75, 100];
+  for (const risk of risks) {
+    if (args.includes('--slots')) {
+      // --slots 4,5,6,...: total slots, each with max 4 per direction (or all of them if fewer)
+      for (const tot of String(args[args.indexOf('--slots') + 1]).split(',').map(Number)) {
+        const dir = Math.min(4, tot);
+        combos.push({ name: `$${risk} risk · ${tot} slots · max ${dir}/direction`, rules: { riskUsd: risk, maxOpen: tot, maxSameDir: dir } });
+      }
+      continue;
+    }
     for (const dir of [3, 4, 5]) combos.push({ name: `$${risk} risk · 7 slots · max ${dir}/direction`, rules: { riskUsd: risk, maxOpen: 7, maxSameDir: dir } });
     for (const tot of [3, 4]) combos.push({ name: `$${risk} risk · ${tot} slots total`, rules: { riskUsd: risk, maxOpen: tot, maxSameDir: tot } });
   }
@@ -776,7 +785,7 @@ function riskGrid(series, symbols, times, start, end) {
   const out = L.join('\n');
   console.log(out);
   fs.mkdirSync(OUT, { recursive: true });
-  fs.writeFileSync(path.join(OUT, 'RISK_GRID.md'), '# Risk and slot grid\n\n```\n' + out + '\n```\n');
+  fs.writeFileSync(path.join(OUT, args.includes('--slots') ? 'SLOT_GRID.md' : 'RISK_GRID.md'), '# ' + (args.includes('--slots') ? 'Total slot grid' : 'Risk and slot grid') + '\n\n```\n' + out + '\n```\n');
 }
 
 function exitLab(series, symbols, times, start, end) {

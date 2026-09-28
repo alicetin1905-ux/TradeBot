@@ -464,6 +464,9 @@ const SCORE_WF = args.includes('--score-wf');
 // --exit-lab: trailing stop, time stop and ADX regime filter on the live
 // portfolio, per period and walk-forward. Written to backtest/EXIT_LAB.md.
 const EXIT_LAB = args.includes('--exit-lab');
+// --risk-grid: risk per trade x position limits at the real account size
+// (config.PORTFOLIO), live rules otherwise. Written to backtest/RISK_GRID.md.
+const RISK_GRID = args.includes('--risk-grid');
 
 async function main() {
   const symbols = SCAN ? [...new Set(['BTCUSDT', ...config.SYMBOLS, ...SCAN])] : COINS ? [...new Set(['BTCUSDT', ...COINS])] : config.SYMBOLS;
@@ -479,7 +482,7 @@ async function main() {
   }
   for (const s of symbols) {
     process.stderr.write(`scoring ${s}…\n`);
-    series[s].sig1 = SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
+    series[s].sig1 = SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB || RISK_GRID ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
     series[s].sig4 = precompute(s, to4h(series[s].h1), 4, start);
     addFilterInputs(series[s]);
   }
@@ -491,6 +494,7 @@ async function main() {
   if (SCORE_SCAN) return scoreScan(series, symbols, times, start, now);
   if (SCORE_WF) return scoreWalkForward(series, symbols, times, start, now);
   if (EXIT_LAB) return exitLab(series, symbols, times, start, now);
+  if (RISK_GRID) return riskGrid(series, symbols, times, start, now);
   if (COINS) {
     const live = VARIANTS.find(v => v.focus), third = (now - start) / 3;
     const maxOpen = args.includes('--max-open') ? +args[args.indexOf('--max-open') + 1] : undefined;
@@ -700,6 +704,37 @@ function scoreScan(series, symbols, times, start, end) {
   console.log(`\n(full per-score grid for every coin written to backtest/SCORE_SCAN.md)`);
   fs.mkdirSync(OUT, { recursive: true });
   fs.writeFileSync(path.join(OUT, 'SCORE_SCAN.md'), '# Entry-score scan\n\n```\n' + lines.join('\n') + '\n```\n');
+}
+
+function riskGrid(series, symbols, times, start, end) {
+  const live = VARIANTS.find(v => v.focus);
+  const P = config.PORTFOLIO;
+  const coins = config.SYMBOLS;
+  const third = (end - start) / 3;
+  const pad = (x, n) => String(x).padStart(n);
+  const base = { ...live.rules, start: P.STARTING_BALANCE, margin: P.MARGIN_USDT, leverage: P.LEVERAGE };
+  const combos = [];
+  for (const risk of [50, 75, 100]) {
+    for (const dir of [3, 4, 5]) combos.push({ name: `$${risk} risk · 7 slots · max ${dir}/direction`, rules: { riskUsd: risk, maxOpen: 7, maxSameDir: dir } });
+    for (const tot of [3, 4]) combos.push({ name: `$${risk} risk · ${tot} slots total`, rules: { riskUsd: risk, maxOpen: tot, maxSameDir: tot } });
+  }
+  const L = [];
+  L.push(`Risk & slot grid · ${coins.length} coins · start ${P.STARTING_BALANCE} USDT · max $${P.MARGIN_USDT} margin, ${P.LEVERAGE}x · ${new Date(start).toISOString().slice(0, 10)} → ${new Date(end).toISOString().slice(0, 10)}`, '');
+  L.push('setup'.padEnd(36) + pad('trades', 7) + pad('win', 6) + pad('net $', 8) + pad('ret', 7) + pad('maxDD', 8) + pad('PF', 6) + pad('worst mo', 10) + pad('1/3', 8) + pad('2/3', 8) + pad('3/3', 8));
+  for (const c of combos) {
+    const r = simulate(series, coins, times, { ...base, ...c.rules });
+    const part = [0, 1, 2].map(k => r.tradeList.filter(t => t.closedAt >= start + k * third && t.closedAt < start + (k + 1) * third).reduce((a, t) => a + t.pnl, 0));
+    const months = {};
+    for (const t of r.tradeList) { const m = new Date(t.closedAt).toISOString().slice(0, 7); months[m] = (months[m] || 0) + t.pnl; }
+    const worst = Math.min(...Object.values(months));
+    const live_ = c.rules.riskUsd === P.RISK_USDT && c.rules.maxOpen === P.MAX_OPEN_POSITIONS && c.rules.maxSameDir === P.MAX_SAME_DIRECTION;
+    L.push((c.name + (live_ ? ' (live)' : '')).padEnd(36) + pad(r.trades, 7) + pad((r.winRate * 100).toFixed(0) + '%', 6) + pad(r.net.toFixed(0), 8) + pad(r.returnPct.toFixed(0) + '%', 7) +
+      pad(r.maxDDPct.toFixed(1) + '%', 8) + pad(r.profitFactor.toFixed(2), 6) + pad(worst.toFixed(0), 10) + part.map(x => pad(x.toFixed(0), 8)).join(''));
+  }
+  const out = L.join('\n');
+  console.log(out);
+  fs.mkdirSync(OUT, { recursive: true });
+  fs.writeFileSync(path.join(OUT, 'RISK_GRID.md'), '# Risk and slot grid\n\n```\n' + out + '\n```\n');
 }
 
 function exitLab(series, symbols, times, start, end) {

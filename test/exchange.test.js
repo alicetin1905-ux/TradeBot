@@ -730,3 +730,23 @@ test('funding fees: booked once into the balance, per coin and on the open posit
   await exchange.runExchange({ client, st, signals: {}, candidates: [], events });
   assert.ok(events.some(e => /funding fees not read/.test(e.reason)));
 });
+
+test('per-coin entry score: ENTRY_MIN_SCORE_BY_SYMBOL overrides ENTRY_MIN_SCORE for listed coins only', () => {
+  const { entryCandidates } = require('../src/run');
+  const now = Date.now();
+  const sig = (symbol, score) => ({
+    symbol, data: { candles: { [config.ENTRY_TF]: [] } },
+    analysis: { bias: score > 0 ? 1 : -1, score, price: 100, closedAt: now - 4 * 3600000 - 60000, atr: 2, plan: { entry: 100, stop: 97 } },
+  });
+  const signals = { WLDUSDT: sig('WLDUSDT', 42), XRPUSDT: sig('XRPUSDT', 42) }; // 42: above WLD's override (40), below the 50 default
+  const st = { positions: {}, usedSignals: {}, scores: { WLDUSDT: {}, XRPUSDT: {} } };
+  const saved = [config.USE_FIB, config.ENTRY_FRESH_MIN, config.ENTRY_MIN_SCORE_BY_SYMBOL];
+  config.USE_FIB = false; config.ENTRY_FRESH_MIN = 60;
+  try {
+    assert.deepEqual(entryCandidates(signals, st, [], [], now).map(c => c.symbol), ['WLDUSDT']);
+    assert.equal(st.scores.XRPUSDT.wait, 'weak');
+    config.ENTRY_MIN_SCORE_BY_SYMBOL = {};
+    st.scores = { WLDUSDT: {}, XRPUSDT: {} };
+    assert.deepEqual(entryCandidates(signals, st, [], [], now).map(c => c.symbol), []); // both fall back to the 50 default
+  } finally { [config.USE_FIB, config.ENTRY_FRESH_MIN, config.ENTRY_MIN_SCORE_BY_SYMBOL] = saved; }
+});

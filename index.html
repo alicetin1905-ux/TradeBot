@@ -358,7 +358,7 @@
 
   // One card per coin: its live score and how close it is to an entry, or
   // the position it holds. There are no per-coin balances in this account.
-  function renderCoins(positions, scores, markPrices) {
+  function renderCoins(positions, scores, markPrices, account) {
     els.coinGrid.innerHTML = SYMBOLS.map(function (s) {
       var pos = positions[s.id];
       var sc = scores[s.id];
@@ -376,13 +376,15 @@
             ' · T3 ' + fmtPrice(pos.t3) +
           '</div>';
       } else if (sc) {
-        var pct = Math.max(0, Math.min(100, Math.round((Math.abs(sc.score) / SCORE_THRESHOLD) * 100)));
+        var byCoin = account && account.settings && account.settings.ENTRY_MIN_SCORE_BY_SYMBOL;
+        var thresh = (byCoin && byCoin[s.id]) || SCORE_THRESHOLD;
+        var pct = Math.max(0, Math.min(100, Math.round((Math.abs(sc.score) / thresh) * 100)));
         var dirWord = sc.score > 0 ? 'long' : sc.score < 0 ? 'short' : '—';
         extraHtml =
           '<div class="pnl flat">no position</div>' +
           '<div class="proximity">' +
             '<div class="proximityTrack"><div class="proximityFill" style="width:' + pct + '%"></div></div>' +
-            '<div class="proximityLabel">' + (sc.wait === 'weak' ? pct + '% to entry (needs ' + SCORE_THRESHOLD + ')'
+            '<div class="proximityLabel">' + (sc.wait === 'weak' ? pct + '% to entry (needs ' + thresh + ')'
               : sc.wait === 'used' ? 'already traded this signal · waits for a reset'
               : sc.wait === 'fib' ? 'score ready · waiting on Fibonacci check'
               : sc.wait === 'chase' ? 'score ready · price ran too far from the entry'
@@ -1028,7 +1030,7 @@
 
       renderRules(account, openSymbols.length);
       renderSettings(account);
-      renderCoins(positions, scores, markPrices);
+      renderCoins(positions, scores, markPrices, account);
       renderOpenPositions(positions, markPrices);
       renderPerformance(trades, started);
       renderShadow(shadowState);

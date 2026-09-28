@@ -140,9 +140,10 @@ function entryCandidates(signals, st, events, blocked = [], now = Date.now()) {
       events.push({ symbol, type: 'flat', reason: analysis.bias === 0 ? 'score inside the stand-aside band' : 'no plan', score: analysis.score });
       continue;
     }
-    if (Math.abs(analysis.score) < config.ENTRY_MIN_SCORE) {
+    const minScore = (config.ENTRY_MIN_SCORE_BY_SYMBOL && config.ENTRY_MIN_SCORE_BY_SYMBOL[symbol]) ?? config.ENTRY_MIN_SCORE;
+    if (Math.abs(analysis.score) < minScore) {
       if (st.scores[symbol]) st.scores[symbol].wait = 'weak';
-      events.push({ symbol, type: 'hold', reason: `score ${analysis.score} is below the entry minimum of ${config.ENTRY_MIN_SCORE}`, score: analysis.score });
+      events.push({ symbol, type: 'hold', reason: `score ${analysis.score} is below the entry minimum of ${minScore}`, score: analysis.score });
       continue;
     }
     if (strategy.signalUsed(st.usedSignals, symbol, analysis.bias)) {

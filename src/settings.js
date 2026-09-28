@@ -42,7 +42,8 @@ const FIELDS = {
   FLIP_EXIT: { at: ['FLIP_EXIT'], check: bool, label: 'Close when the score flips against the trade' },
   // Strategy
   ENTRY_TF: { at: ['ENTRY_TF'], check: oneOf('60', '240'), label: 'Signal timeframe ("60" = 1H, "240" = 4H)' },
-  ENTRY_MIN_SCORE: { at: ['ENTRY_MIN_SCORE'], check: num(25, 100, { int: true }), label: 'Min |score| to enter' },
+  ENTRY_MIN_SCORE: { at: ['ENTRY_MIN_SCORE'], check: num(25, 100, { int: true }), label: 'Min |score| to enter (default for coins with no per-coin override)' },
+  ENTRY_MIN_SCORE_BY_SYMBOL: { at: ['ENTRY_MIN_SCORE_BY_SYMBOL'], check: byCoinScores, label: 'Per-coin min |score| overrides' },
   USE_FIB: { at: ['USE_FIB'], check: bool, label: 'Fibonacci check on' },
   BTC_FILTER: { at: ['BTC_FILTER'], check: bool, label: 'No altcoin trades against BTC\'s signal' },
   MAX_CHASE_ATR: { at: ['MAX_CHASE_ATR'], check: num(0.1, 5), label: 'Max distance from the flip entry (x ATR)' },
@@ -51,6 +52,17 @@ const FIELDS = {
   // Alerts
   STATUS_EVERY_H: { at: ['NOTIFY', 'STATUS_EVERY_H'], check: num(1, 24, { int: true }), label: 'Status push every N hours' },
 };
+
+function byCoinScores(v) {
+  if (v === null) return { value: {} };
+  if (typeof v !== 'object' || Array.isArray(v)) return { error: 'must be an object of SYMBOL: score' };
+  const out = {};
+  for (const [k, n] of Object.entries(v)) {
+    if (typeof n !== 'number' || !Number.isInteger(n) || n < 25 || n > 100) return { error: `${k}: must be a whole number between 25 and 100` };
+    out[k] = n;
+  }
+  return { value: out };
+}
 
 function targets(v) {
   if (!Array.isArray(v) || v.length !== 3 || !v.every(x => typeof x === 'number' && x >= 0.25 && x <= 20)) {

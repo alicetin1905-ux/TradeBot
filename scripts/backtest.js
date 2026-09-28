@@ -431,6 +431,10 @@ const TP_GRID = args.includes('--tp-grid');
 // --analyze: the live setup at the real account size (2000 USDT, $100 risk,
 // $400 max margin, config.SYMBOLS) in detail; also written to backtest/ANALYSIS.md.
 const ANALYZE = args.includes('--analyze');
+// --score-scan: for every live coin, try a grid of entry-score thresholds
+// (each coin traded on its own, live rules otherwise) and report the best
+// one per coin; also written to backtest/SCORE_SCAN.md.
+const SCORE_SCAN = args.includes('--score-scan');
 
 async function main() {
   const symbols = SCAN ? [...new Set(['BTCUSDT', ...config.SYMBOLS, ...SCAN])] : COINS ? [...new Set(['BTCUSDT', ...COINS])] : config.SYMBOLS;
@@ -446,7 +450,7 @@ async function main() {
   }
   for (const s of symbols) {
     process.stderr.write(`scoring ${s}…\n`);
-    series[s].sig1 = SCAN || COINS || TP_GRID || ANALYZE ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
+    series[s].sig1 = SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
     series[s].sig4 = precompute(s, to4h(series[s].h1), 4, start);
     addFilterInputs(series[s]);
   }
@@ -455,6 +459,7 @@ async function main() {
   if (SCAN) return scan(series, symbols, times, start, now);
   if (TP_GRID) return tpGrid(series, symbols, times, start, now);
   if (ANALYZE) return analyze(series, symbols, times, start, now);
+  if (SCORE_SCAN) return scoreScan(series, symbols, times, start, now);
   if (COINS) {
     const live = VARIANTS.find(v => v.focus), third = (now - start) / 3;
     const maxOpen = args.includes('--max-open') ? +args[args.indexOf('--max-open') + 1] : undefined;
@@ -610,6 +615,60 @@ function scan(series, symbols, times, start, end) {
       pad(r.pf == null ? '—' : r.pf.toFixed(2), 6) + pad(r.dd.toFixed(1), 8) + r.part.map(x => pad(x.toFixed(0), 9)).join(''));
   }
   console.log('\n* = not traded now');
+}
+
+// For each coin (traded alone, live rules otherwise), tries entry-score
+// thresholds 30..85 and reports the best one: highest net among thresholds
+// with at least MIN_TRADES trades that were profitable in all three equal
+// sub-periods ("robust"); if none qualifies, the highest net of any
+// threshold with enough trades ("no robust choice — most profitable shown").
+function scoreScan(series, symbols, times, start, end) {
+  const live = VARIANTS.find(v => v.focus);
+  const GRID = [30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85];
+  const MIN_TRADES = 15;
+  const third = (end - start) / 3;
+  const pad = (x, n) => String(x).padStart(n);
+  const coinRows = [];
+  const detail = [];
+  for (const s of symbols) {
+    if (s === 'BTCUSDT' && !config.SYMBOLS.includes('BTCUSDT')) continue; // BTC-for-filter only
+    const tries = GRID.map((minScore) => {
+      const r = simulate(series, [s], times, { ...live.rules, maxOpen: 1, minScore });
+      const part = [0, 1, 2].map(k => r.tradeList.filter(t => t.closedAt >= start + k * third && t.closedAt < start + (k + 1) * third).reduce((a, t) => a + t.pnl, 0));
+      return { minScore, trades: r.trades, win: r.winRate * 100, net: r.net, pf: r.profitFactor, dd: r.maxDDPct, part, robust: r.trades >= MIN_TRADES && part.every(x => x > 0) };
+    });
+    const eligible = tries.filter(t => t.trades >= MIN_TRADES);
+    const robust = tries.filter(t => t.robust).sort((a, b) => b.net - a.net);
+    const best = robust[0] || eligible.slice().sort((a, b) => b.net - a.net)[0] || tries[tries.length - 1];
+    coinRows.push({ s, best, hasRobust: robust.length > 0, live: config.SYMBOLS.includes(s), liveScore: config.ENTRY_MIN_SCORE });
+    detail.push({ s, tries });
+  }
+  coinRows.sort((a, b) => b.best.net - a.best.net);
+
+  const lines = [];
+  lines.push(`Score scan, live rules (${live.name.replace(' (live now)', '')}), one coin at a time, ${new Date(start).toISOString().slice(0, 10)} → ${new Date(end).toISOString().slice(0, 10)}`);
+  lines.push(`Grid tried: ${GRID.join(', ')}. "Robust" = >= ${MIN_TRADES} trades and profitable in each of the 3 sub-periods. Current live entry score: ${config.ENTRY_MIN_SCORE} for all coins.`, '');
+  lines.push('coin'.padEnd(10) + pad('best', 6) + pad('trades', 7) + pad('win%', 6) + pad('net $', 8) + pad('PF', 6) + pad('maxDD%', 8) + pad('1/3', 8) + pad('2/3', 8) + pad('3/3', 8) + '  robust?');
+  for (const r of coinRows) {
+    const b = r.best;
+    lines.push((r.s.replace('USDT', '') + (r.live ? '' : ' *')).padEnd(10) + pad(b.minScore, 6) + pad(b.trades, 7) + pad(b.win.toFixed(0), 6) + pad(b.net.toFixed(0), 8) +
+      pad(b.pf == null ? '—' : b.pf.toFixed(2), 6) + pad(b.dd.toFixed(1), 8) + b.part.map(x => pad(x.toFixed(0), 8)).join('') + '  ' + (r.hasRobust ? 'yes' : 'no robust choice — most profitable shown'));
+  }
+  lines.push('', '* = not currently traded live', '');
+  lines.push('## Full grid per coin', '');
+  for (const d of detail) {
+    lines.push(`### ${d.s.replace('USDT', '')}`, '');
+    lines.push('score'.padEnd(7) + pad('trades', 7) + pad('win%', 6) + pad('net $', 8) + pad('PF', 6) + pad('maxDD%', 8) + pad('1/3', 8) + pad('2/3', 8) + pad('3/3', 8));
+    for (const t of d.tries) {
+      lines.push(String(t.minScore).padEnd(7) + pad(t.trades, 7) + pad(t.win.toFixed(0), 6) + pad(t.net.toFixed(0), 8) +
+        pad(t.pf == null ? '—' : t.pf.toFixed(2), 6) + pad(t.dd.toFixed(1), 8) + t.part.map(x => pad(x.toFixed(0), 8)).join('') + (t.robust ? '  *' : ''));
+    }
+    lines.push('');
+  }
+  console.log(lines.slice(0, lines.indexOf('## Full grid per coin')).join('\n'));
+  console.log(`\n(full per-score grid for every coin written to backtest/SCORE_SCAN.md)`);
+  fs.mkdirSync(OUT, { recursive: true });
+  fs.writeFileSync(path.join(OUT, 'SCORE_SCAN.md'), '# Entry-score scan\n\n```\n' + lines.join('\n') + '\n```\n');
 }
 
 if (require.main === module) main().catch((e) => { console.error(e); process.exit(1); });

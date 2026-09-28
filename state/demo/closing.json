@@ -73,5 +73,42 @@
     "markPrice": 0.3528,
     "unrealisedPnl": -51.1031,
     "closedDetectedAt": 1790563801950
+  },
+  "FARTCOINUSDT": {
+    "symbol": "FARTCOINUSDT",
+    "bias": 1,
+    "entry": 0.19854,
+    "stop": 0.18548,
+    "initialStop": 0.18548,
+    "t1": 0.21813,
+    "t2": 0.23772,
+    "t3": 0.25731,
+    "qtyTotal": 7656,
+    "qtyRemaining": 7656,
+    "qtyT1": 2296,
+    "qtyT2": 2296,
+    "qtyT3": 3064,
+    "margin": 152.002224,
+    "notional": 1520.02224,
+    "riskAmt": 99.98735999999991,
+    "filled": {
+      "t1": false,
+      "t2": false,
+      "t3": false
+    },
+    "breakeven": false,
+    "beAfter": "t1",
+    "openedAt": 1790438771354,
+    "score": 71,
+    "orders": {
+      "entry": "552c89ba-9740-44f3-9902-8d6398398c17",
+      "t1": "d9d65f47-8236-46b6-97c9-b0ab9c5dcd61",
+      "t2": "9221d168-0641-4c97-a253-8edd4254a84d",
+      "t3": "b7652fa6-c9f6-42e9-891c-92f6e8ea510c"
+    },
+    "tickSize": 0.00001,
+    "markPrice": 0.18734,
+    "unrealisedPnl": -85.7472,
+    "closedDetectedAt": 1790565302075
   }
 }

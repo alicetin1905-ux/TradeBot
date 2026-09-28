@@ -1,5 +1,5 @@
 {
-  "balance": 2000,
+  "balance": 2000.04278476,
   "startingBalance": 2000,
   "marginPct": 10,
   "marginUsdt": 400,
@@ -13,7 +13,7 @@
   "leverage": 10,
   "maxOpenPositions": 7,
   "mode": "demo",
-  "exchangeEquity": 2034.01315038,
+  "exchangeEquity": 2030.84860514,
   "settings": {
     "RISK_USDT": 100,
     "MARGIN_USDT": 400,
@@ -107,11 +107,13 @@
     "STATUS_EVERY_H": 4
   },
   "settingsErrors": [],
-  "updatedAt": 1790607978856,
+  "updatedAt": 1790611503247,
   "fundingSince": 1790586370472,
   "funding": {
-    "total": 0,
-    "bySymbol": {}
+    "total": 0.04278476,
+    "bySymbol": {
+      "FARTCOINUSDT": 0.04278476
+    }
   },
   "fundingError": null
 }

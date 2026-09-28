@@ -486,6 +486,9 @@ const RISK_GRID = args.includes('--risk-grid');
 const LEV_GRID = args.includes('--lev-grid');
 // --dd-lab: ways to limit the worst drop on the live setup at real size.
 const DD_LAB = args.includes('--dd-lab');
+// --risk-starts: fixed-$ vs %-of-balance risk from 12 different start dates
+// (4-month windows, 20 days apart) plus a margin-cap check. backtest/RISK_STARTS.md.
+const RISK_STARTS = args.includes('--risk-starts');
 
 async function main() {
   const symbols = SCAN ? [...new Set(['BTCUSDT', ...config.SYMBOLS, ...SCAN])] : COINS ? [...new Set(['BTCUSDT', ...COINS])] : config.SYMBOLS;
@@ -501,7 +504,7 @@ async function main() {
   }
   for (const s of symbols) {
     process.stderr.write(`scoring ${s}…\n`);
-    series[s].sig1 = SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB || RISK_GRID || LEV_GRID || DD_LAB ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
+    series[s].sig1 = SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB || RISK_GRID || LEV_GRID || DD_LAB || RISK_STARTS ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
     series[s].sig4 = precompute(s, to4h(series[s].h1), 4, start);
     addFilterInputs(series[s]);
   }
@@ -516,6 +519,7 @@ async function main() {
   if (RISK_GRID) return riskGrid(series, symbols, times, start, now);
   if (LEV_GRID) return levGrid(series, symbols, times, start, now);
   if (DD_LAB) return ddLab(series, symbols, times, start, now);
+  if (RISK_STARTS) return riskStarts(series, symbols, times, start, now);
   if (COINS) {
     const live = VARIANTS.find(v => v.focus), third = (now - start) / 3;
     const maxOpen = args.includes('--max-open') ? +args[args.indexOf('--max-open') + 1] : undefined;
@@ -725,6 +729,48 @@ function scoreScan(series, symbols, times, start, end) {
   console.log(`\n(full per-score grid for every coin written to backtest/SCORE_SCAN.md)`);
   fs.mkdirSync(OUT, { recursive: true });
   fs.writeFileSync(path.join(OUT, 'SCORE_SCAN.md'), '# Entry-score scan\n\n```\n' + lines.join('\n') + '\n```\n');
+}
+
+function riskStarts(series, symbols, times, start, end) {
+  const live = VARIANTS.find(v => v.focus);
+  const P = config.PORTFOLIO;
+  const coins = config.SYMBOLS;
+  const pad = (x, n) => String(x).padStart(n);
+  const d = (t) => new Date(t).toISOString().slice(0, 10);
+  const base = { ...live.rules, start: P.STARTING_BALANCE, margin: P.MARGIN_USDT, leverage: P.LEVERAGE, maxOpen: P.MAX_OPEN_POSITIONS, maxSameDir: P.MAX_SAME_DIRECTION };
+  const V = [['$50 fixed', { riskUsd: 50 }], ['$100 fixed', { riskUsd: 100 }], ['2.5% of balance', { riskUsd: null, riskPct: 2.5 }], ['3.75% of balance', { riskUsd: null, riskPct: 3.75 }]];
+  const DAY = 24 * HOUR, WIN = 120 * DAY;
+  const L = [];
+  L.push(`Risk sizing from 12 start dates · live setup · ${coins.length} coins · start ${P.STARTING_BALANCE} USDT each time · 120-day windows starting 20 days apart`, '');
+  L.push('window'.padEnd(26) + V.map(([n]) => pad(n + ' ret', 20) + pad('maxDD', 8)).join(''));
+  const agg = V.map(() => ({ rets: [], dds: [] }));
+  for (let k = 0; k < 12; k++) {
+    const ws = start + k * 20 * DAY, we = ws + WIN;
+    if (we > end) break;
+    const T = times.filter(t => t >= ws && t < we);
+    const cells = V.map(([, extra], i) => {
+      const r = simulate(series, coins, T, { ...base, ...extra });
+      agg[i].rets.push(r.returnPct); agg[i].dds.push(r.maxDDPct);
+      return pad(r.returnPct.toFixed(0) + '%', 20) + pad(r.maxDDPct.toFixed(1) + '%', 8);
+    });
+    L.push(`${d(ws)} → ${d(we)}`.padEnd(26) + cells.join(''));
+  }
+  const med = (xs) => { const a = [...xs].sort((x, y) => x - y); return a[Math.floor(a.length / 2)]; };
+  L.push('', 'summary'.padEnd(26) + V.map(([n]) => pad(n, 28)).join(''));
+  L.push('median return'.padEnd(26) + agg.map(a => pad(med(a.rets).toFixed(0) + '%', 28)).join(''));
+  L.push('worst return'.padEnd(26) + agg.map(a => pad(Math.min(...a.rets).toFixed(0) + '%', 28)).join(''));
+  L.push('median worst drop'.padEnd(26) + agg.map(a => pad(med(a.dds).toFixed(1) + '%', 28)).join(''));
+  L.push('largest worst drop'.padEnd(26) + agg.map(a => pad(Math.max(...a.dds).toFixed(1) + '%', 28)).join(''));
+  L.push('', 'Margin cap with 2.5% of balance, whole year:');
+  for (const cap of [400, 600, 800, 1200]) {
+    const r = simulate(series, coins, times, { ...base, riskUsd: null, riskPct: 2.5, margin: cap });
+    const cut = r.tradeList.filter(t => t.margin >= cap * 0.999).length;
+    L.push(`  max margin $${cap} (position $${cap * P.LEVERAGE})`.padEnd(40) + pad(r.returnPct.toFixed(0) + '%', 8) + pad(r.maxDDPct.toFixed(1) + '%', 8) + `   trades at the cap: ${cut} of ${r.trades}`);
+  }
+  const out = L.join('\n');
+  console.log(out);
+  fs.mkdirSync(OUT, { recursive: true });
+  fs.writeFileSync(path.join(OUT, 'RISK_STARTS.md'), '# Risk sizing from different start dates\n\n```\n' + out + '\n```\n');
 }
 
 function ddLab(series, symbols, times, start, end) {

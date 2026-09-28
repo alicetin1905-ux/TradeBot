@@ -175,6 +175,25 @@ function createClient({ apiKey, apiSecret, env = 'demo', fetchImpl = fetch }) {
     },
 
     // Realized P&L records (net of fees) for closes since startTime (ms).
+    // Funding payments on USDT perps since startTime (transaction log, type
+    // SETTLEMENT). amount = the wallet change: > 0 received, < 0 paid. The log only goes back
+    // 7 days per query, which the 5-minute sync easily keeps up with.
+    async getFundingFees(startTime) {
+      const out = [];
+      let cursor = '';
+      for (let page = 0; page < 10; page++) {
+        const params = { accountType: 'UNIFIED', category: 'linear', type: 'SETTLEMENT', startTime: String(Math.max(startTime, Date.now() - 7 * 86400000 + 60000)), limit: '50' };
+        if (cursor) params.cursor = cursor;
+        const r = await request('GET', '/v5/account/transaction-log', params);
+        for (const x of r.list || []) {
+          out.push({ id: x.id, symbol: x.symbol, amount: num(x.change !== undefined && x.change !== '' ? x.change : x.funding), at: num(x.transactionTime) });
+        }
+        cursor = r.nextPageCursor;
+        if (!cursor || !(r.list || []).length) break;
+      }
+      return out;
+    },
+
     async getClosedPnl(symbol, startTime) {
       const r = await request('GET', '/v5/position/closed-pnl', { category: 'linear', symbol, startTime: String(startTime), limit: '100' });
       return (r.list || []).map(x => ({

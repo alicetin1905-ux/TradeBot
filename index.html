@@ -700,7 +700,7 @@
                 stat('Open interest', m.oi ? fmtBig(m.oi) : '—');
             })(marketStats[pos.symbol]) +
           '</div>' +
-          '<div class="posFoot"><span>score ' + (pos.score > 0 ? '+' : '') + pos.score + '</span><span>' + (pos.margin ? Math.round((pos.notional || pos.qtyTotal * pos.entry) / pos.margin) + 'x' : '') + '</span></div>' +
+          '<div class="posFoot"><span>score ' + (pos.score > 0 ? '+' : '') + pos.score + (pos.funding ? ' · funding <span class="' + pnlClass(pos.funding) + '">' + fmtSigned(pos.funding) + '</span>' : '') + '</span><span>' + (pos.margin ? Math.round((pos.notional || pos.qtyTotal * pos.entry) / pos.margin) + 'x' : '') + '</span></div>' +
         '</div>'
       );
     }).join('') + '</div>';
@@ -1074,6 +1074,7 @@
       els.totalBreakdown.textContent =
         'balance ' + fmtMoney(balance) +
         (openSymbols.length ? ' · unrealized ' + fmtSigned(unrealized) + (unrealizedKnown < openSymbols.length ? ' (' + (openSymbols.length - unrealizedKnown) + ' mark price unavailable)' : '') : '') +
+        (account.funding && account.funding.total ? ' · funding ' + fmtSigned(account.funding.total) : '') +
         ' · margin used ' + fmtMoney(marginUsed) + ' · free ' + fmtMoney(Math.max(0, balance - marginUsed)) +
         ' · ' + openSymbols.length + '/' + (account.maxOpenPositions || 4) + ' slots';
       els.startedValue.textContent = fmtMoney(started);

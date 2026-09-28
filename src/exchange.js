@@ -314,10 +314,40 @@ async function openEntries({ client, st, exPos, wallet, candidates, events, halt
   }
 }
 
+// Funding fees: every funding payment on the bot's coins since the account
+// (re)started is added to the balance (paid = negative) and tallied in
+// account.funding { total, bySymbol } and on the open position. Tracking
+// only; a failed lookup is retried next sync.
+async function recordFunding(client, st, events, now) {
+  if (!client.getFundingFees) return;
+  const acc = st.account;
+  if (!acc.fundingSince) acc.fundingSince = now;
+  acc.funding = acc.funding || { total: 0, bySymbol: {} };
+  let rows;
+  try { rows = await client.getFundingFees(acc.fundingSince - 60000); } catch (err) {
+    events.push({ symbol: '-', type: 'info', reason: `funding fees not read (${err.message}) — retrying next sync` });
+    return;
+  }
+  const seen = new Set(st.seenOrderIds);
+  const coins = config.ALL_SYMBOLS || config.SYMBOLS;
+  for (const r of rows.sort((a, b) => a.at - b.at)) {
+    const key = 'funding:' + r.id;
+    if (!r.id || seen.has(key) || r.at < acc.fundingSince || !coins.includes(r.symbol) || !r.amount) continue;
+    seen.add(key);
+    st.seenOrderIds.push(key);
+    acc.balance += r.amount;
+    acc.funding.total += r.amount;
+    acc.funding.bySymbol[r.symbol] = (acc.funding.bySymbol[r.symbol] || 0) + r.amount;
+    const pos = st.positions[r.symbol];
+    if (pos) pos.funding = (pos.funding || 0) + r.amount;
+  }
+}
+
 async function runExchange({ client, st, signals, candidates, events, halt = false, now = Date.now() }) {
   const wallet = await client.getWallet();
   const exPos = await client.getPositions();
   await reconcile({ client, st, exPos, signals, events, now });
+  await recordFunding(client, st, events, now);
   await openEntries({ client, st, exPos, wallet, candidates, events, halt, now });
   st.account.exchangeEquity = wallet.equity;
 }

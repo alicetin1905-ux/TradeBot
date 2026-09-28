@@ -154,6 +154,9 @@ window. Limit entries and breakeven-after-T2 didn't help.
   prices differ slightly). Instrument rules and mark prices come from
   Bybit's public mainnet API (`api.bybit.com`, no key sent); orders go to
   `api-demo`.
+- **Funding fees:** every funding payment on the bot's coins (Bybit
+  transaction log) is added to the bot's balance — paid is negative — and
+  shown on the dashboard in total and per open position.
 - **Sizing:** 100 USDT at the stop (max 400 USDT margin at 10x), capped by the bot's **allocation**. The allocation
   starts at 2000 USDT and moves with realized P&L (from Bybit's closed-P&L
   records, net of fees), so a demo wallet with more USDT still trades like

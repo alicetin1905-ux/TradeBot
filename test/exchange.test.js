@@ -704,3 +704,29 @@ test('LOCK_T1_AFTER_T2: after T2 fills the exchange stop moves up to T1; a stop 
     assert.ok(st.trades.at(-1).pnl > 0);
   } finally { config.LOCK_T1_AFTER_T2 = false; }
 });
+
+test('funding fees: booked once into the balance, per coin and on the open position; other coins ignored', async () => {
+  const { client } = fakeBybit({ marks });
+  const st = freshState();
+  const t0 = Date.now() - 3600000;
+  st.account.fundingSince = t0;
+  await exchange.runExchange({ client, st, signals: {}, candidates: [candidate('XRPUSDT', 1, 80, 2.5, 0.02)], events: [] });
+  const rows = [
+    { id: 'f1', symbol: 'XRPUSDT', amount: -1.25, at: t0 + 1000 },
+    { id: 'f2', symbol: 'XRPUSDT', amount: 0.4, at: t0 + 2000 },
+    { id: 'f3', symbol: 'PEPEUSDT', amount: -9, at: t0 + 3000 },     // not a bot coin
+    { id: 'f4', symbol: 'XRPUSDT', amount: -5, at: t0 - 120000 },    // before the account started
+  ];
+  client.getFundingFees = async () => rows;
+  const bal = st.account.balance;
+  await exchange.runExchange({ client, st, signals: {}, candidates: [], events: [] });
+  await exchange.runExchange({ client, st, signals: {}, candidates: [], events: [] }); // no double counting
+  assert.ok(Math.abs(st.account.balance - (bal - 0.85)) < 1e-9);
+  assert.ok(Math.abs(st.account.funding.total + 0.85) < 1e-9);
+  assert.ok(Math.abs(st.account.funding.bySymbol.XRPUSDT + 0.85) < 1e-9);
+  assert.ok(Math.abs(st.positions.XRPUSDT.funding + 0.85) < 1e-9);
+  client.getFundingFees = async () => { throw new Error('boom'); };
+  const events = [];
+  await exchange.runExchange({ client, st, signals: {}, candidates: [], events });
+  assert.ok(events.some(e => /funding fees not read/.test(e.reason)));
+});

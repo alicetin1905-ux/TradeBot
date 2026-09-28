@@ -64,7 +64,7 @@ function writeJson(name, data) {
   fs.writeFileSync(path.join(DIR, name + '.json'), JSON.stringify(data, null, name === 'liqlog' ? 0 : 2) + '\n');
 }
 function freshAccount() {
-  return { balance: P.STARTING_BALANCE, startingBalance: P.STARTING_BALANCE, marginPct: P.MARGIN_PCT, marginUsdt: P.MARGIN_USDT, riskUsdt: P.RISK_USDT, targetsR: config.TARGETS_R, entryTf: config.ENTRY_TF, leverage: P.LEVERAGE, maxOpenPositions: P.MAX_OPEN_POSITIONS, mode: MODE };
+  return { fundingSince: Date.now(), funding: { total: 0, bySymbol: {} }, balance: P.STARTING_BALANCE, startingBalance: P.STARTING_BALANCE, marginPct: P.MARGIN_PCT, marginUsdt: P.MARGIN_USDT, riskUsdt: P.RISK_USDT, targetsR: config.TARGETS_R, entryTf: config.ENTRY_TF, leverage: P.LEVERAGE, maxOpenPositions: P.MAX_OPEN_POSITIONS, mode: MODE };
 }
 function loadState() {
   return {

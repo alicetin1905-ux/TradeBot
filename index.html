@@ -164,13 +164,6 @@
     font-family:var(--mono); font-size:10.5px; padding:6px 10px; border-radius:8px; cursor:pointer;
     flex:0 0 auto;
   }
-  .liqRow{ display:grid; grid-template-columns:44px 1fr 62px 62px; gap:8px; align-items:center; padding:5px 0; font-size:11.5px; border-bottom:1px solid var(--border); }
-  .liqRow:last-of-type{ border-bottom:0; }
-  .liqRow .n{ font-family:var(--mono); text-align:right; }
-  .liqRow.head{ font-size:9.5px; letter-spacing:0.08em; text-transform:uppercase; color:var(--text-tertiary); }
-  .liqBar{ height:6px; border-radius:3px; background:var(--panel2); overflow:hidden; display:flex; }
-  .liqBar .l{ background:var(--down); } .liqBar .s{ background:var(--up); }
-  .liqStats{ margin-top:12px; padding-top:10px; border-top:1px solid var(--border); font-size:11.5px; line-height:1.7; }
   .setGroup{ margin-bottom:12px; }
   .setGroup:last-child{ margin-bottom:0; }
   .setGroup .gt{ font-size:9.5px; letter-spacing:0.12em; text-transform:uppercase; color:var(--text-tertiary); margin-bottom:4px; }
@@ -268,12 +261,6 @@
 <h2>Per coin</h2>
 <div class="statCard" id="coinStatsCard"><div class="empty">Loading…</div></div>
 
-<h2>Fibonacci check — blocked trades</h2>
-<div class="statCard" id="shadowCard"><div class="empty">Loading…</div></div>
-
-<h2>Real liquidations — tracking only</h2>
-<div class="statCard" id="liqCard"><div class="empty">Loading…</div></div>
-
 <h2>Recent trades</h2>
 <div class="tradesCard" id="tradeLog"><div class="empty">Loading…</div></div>
 
@@ -334,14 +321,12 @@
     openPositions: document.getElementById('openPositions'),
     tradeLog: document.getElementById('tradeLog'),
     perfCard: document.getElementById('perfCard'),
-    shadowCard: document.getElementById('shadowCard'),
     coinStatsCard: document.getElementById('coinStatsCard'),
     lastUpdated: document.getElementById('lastUpdated'),
     refreshBtn: document.getElementById('refreshBtn'),
     alertsToggle: document.getElementById('alertsToggle'),
     alertsHint: document.getElementById('alertsHint'),
     settingsCard: document.getElementById('settingsCard'),
-    liqCard: document.getElementById('liqCard'),
   };
 
   function fmtMoney(x) {
@@ -496,36 +481,6 @@
     els.slotBar.innerHTML = bars;
   }
 
-  /* ---------------- real liquidations (state/demo/liqlog.json) ---------------- */
-  function fmtUsdShort(x) {
-    if (!x) return '$0';
-    return x >= 1e6 ? '$' + (x / 1e6).toFixed(1) + 'M' : x >= 1e3 ? '$' + Math.round(x / 1e3) + 'k' : '$' + Math.round(x);
-  }
-  function renderLiq(log) {
-    if (!log || !log.hours) { els.liqCard.innerHTML = '<div class="empty">Starts with the next hourly run.</div>'; return; }
-    var from = Date.now() - 4 * 3600000;
-    var html = '<div class="liqRow head"><span>Coin</span><span>last 4h: longs vs shorts liquidated</span><span class="n">longs</span><span class="n">shorts</span></div>';
-    SYMBOLS.forEach(function (s) {
-      var b = log.hours[s.id] || {}, l = 0, sh = 0;
-      Object.keys(b).forEach(function (h) { if (+h + 3600000 > from) { l += b[h][0]; sh += b[h][1]; } });
-      var tot = l + sh, lp = tot ? l / tot * 100 : 0;
-      html += '<div class="liqRow"><span><b>' + s.label + '</b></span><span class="liqBar">' +
-        (tot ? '<span class="l" style="width:' + lp + '%"></span><span class="s" style="width:' + (100 - lp) + '%"></span>' : '') +
-        '</span><span class="n down">' + fmtUsdShort(l) + '</span><span class="n up">' + fmtUsdShort(sh) + '</span></div>';
-    });
-    var st = log.stats;
-    var line = function (label, g) {
-      if (!g || !g.n) return '<div>' + label + ': <span style="color:var(--text-tertiary)">no cases yet</span></div>';
-      return '<div>' + label + ' (' + g.n + '×): next 24h avg <b class="' + (g.avg24 >= 0 ? 'up' : 'down') + '">' + (g.avg24 >= 0 ? '+' : '') + g.avg24.toFixed(2) + '%</b>, up ' + g.up24 + '% of the time</div>';
-    };
-    html += '<div class="liqStats">' +
-      line('After a big long flush', st && st.longFlush) +
-      line('After a big short squeeze', st && st.shortSqueeze) +
-      line('Normal', st && st.normal) +
-      '<div class="setNote" style="margin-top:6px">' + (st ? st.samples : 0) + ' complete samples' + (st && st.pending ? ', ' + st.pending + ' waiting for their 24h' : '') +
-      '. Real OKX liquidations, collected hourly. Big = 2× the coin\'s usual 4h amount, ≥ 70% one side. Tracking only — it doesn\'t change any trade. Worth a look after a few weeks (30+ cases per group).</div></div>';
-    els.liqCard.innerHTML = html;
-  }
 
   /* ---------------- settings (control/settings.json) ---------------- */
   // Mirrors src/settings.js FIELDS: same keys and limits. The bot re-checks
@@ -838,33 +793,6 @@
     return points;
   }
 
-  // What the trades the Fibonacci check blocked would have done (state/demo/
-  // shadow.json, simulated by src/shadow.js with the real exit rules). A
-  // positive total means the check cost money by blocking them.
-  function renderShadow(sh) {
-    if (!sh) { els.shadowCard.innerHTML = '<div class="empty">No data yet — starts with the next hourly run.</div>'; return; }
-    var closed = sh.closed || [], open = Object.values(sh.open || {});
-    var wins = closed.filter(function (t) { return t.pnl > 0.005; });
-    var losses = closed.filter(function (t) { return t.pnl < -0.005; });
-    var total = closed.reduce(function (a, t) { return a + t.pnl; }, 0);
-    var verdict = !closed.length ? 'Nothing blocked has finished yet.'
-      : total > 0 ? 'So far the check <b class="down">cost</b> ' + fmtMoney(total) + ' by blocking these.'
-        : total < 0 ? 'So far the check <b class="up">saved</b> ' + fmtMoney(-total) + ' by blocking these.'
-          : 'So far the blocked trades came out even.';
-    var recent = closed.slice(-5).reverse().map(function (t) {
-      var label = (SYMBOLS.find(function (x) { return x.id === t.symbol; }) || { label: t.symbol }).label;
-      return '<div class="trade"><span class="sym">' + label + '</span><span class="reason">' + (t.bias === 1 ? 'long' : 'short') +
-        ' · blocked by ' + (t.blockedBy || 'fib') + ' move · ' + t.exitReason + '</span><span class="pnl ' + pnlClass(t.pnl) + '">' + fmtSigned(t.pnl) + '</span></div>';
-    }).join('');
-    els.shadowCard.innerHTML =
-      '<div class="statGrid">' +
-        '<div class="stat"><div class="k">Would-be P&amp;L</div><div class="v ' + pnlClass(total) + '">' + (closed.length ? fmtSigned(total) : '—') + '</div></div>' +
-        '<div class="stat"><div class="k">Blocked trades</div><div class="v">' + closed.length + '</div><div class="v2">' + wins.length + 'W / ' + losses.length + 'L</div></div>' +
-        '<div class="stat"><div class="k">Still running</div><div class="v">' + open.length + '</div><div class="v2">' + (open.map(function (p) { return p.symbol.replace('USDT', ''); }).join(', ') || '—') + '</div></div>' +
-      '</div>' +
-      '<div class="chartWrap"><div class="chartLabel">' + verdict + '</div>' + (recent ? '<div class="tradesCard">' + recent + '</div>' : '') + '</div>';
-  }
-
   // Closed trades per coin (T1/T2/T3 fills of one trade count once), best
   // total first, so it's easy to see which coins earn their slot.
   function renderCoinStats(trades) {
@@ -1086,12 +1014,10 @@
       var results = await Promise.all([
         fetchJson('account'), fetchJson('positions'), fetchJson('trades'),
         fetchJson('scores').catch(function () { return {}; }),
-        fetchJson('shadow').catch(function () { return null; }),
-        fetchJson('liqlog').catch(function () { return null; }),
         fetchJson('flipEntries').catch(function () { return {}; }),
       ]);
-      var account = results[0], positions = results[1], trades = results[2], scores = results[3], shadowState = results[4], liqLog = results[5];
-      sigData = { flips: results[6] || {}, scores: scores || {}, chase: (account.settings && account.settings.MAX_CHASE_ATR) || 1 };
+      var account = results[0], positions = results[1], trades = results[2], scores = results[3];
+      sigData = { flips: results[4] || {}, scores: scores || {}, chase: (account.settings && account.settings.MAX_CHASE_ATR) || 1 };
 
       var openSymbols = Object.keys(positions);
       var markPrices = openSymbols.length ? await fetchMarkPrices(openSymbols) : {};
@@ -1106,8 +1032,6 @@
       renderCoins(positions, scores, markPrices, account);
       renderOpenPositions(positions, markPrices);
       renderPerformance(trades, started);
-      renderShadow(shadowState);
-      renderLiq(liqLog);
       renderCoinStats(trades);
       renderTrades(trades);
       if (watch.on) checkNewEntries(positions);

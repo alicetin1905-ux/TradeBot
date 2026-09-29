@@ -68,6 +68,8 @@
   }
   .coin .sym{ font-weight:700; font-size:13px; letter-spacing:0.02em; }
   .coin .bal{ font-family:var(--mono); font-size:17px; margin-top:6px; }
+  .coin .sigLine{ margin-top:6px; font-family:var(--mono); font-size:10px; color:var(--text-secondary); line-height:1.5; }
+  .coin .sigLine:empty{ display:none; }
   .coin.ringLong{ box-shadow:0 0 0 2px var(--up); }
   .coin.ringShort{ box-shadow:0 0 0 2px var(--down); }
   .coin .px{ position:absolute; top:12px; right:12px; text-align:right; font-family:var(--mono); font-size:11px; line-height:1.35; }
@@ -381,9 +383,31 @@
     return '<b class="' + cls + '">' + fmtPrice(p.last) + '</b>' +
       (p.chg == null ? '' : '<span class="' + pnlClass(p.chg) + '">' + (p.chg > 0 ? '+' : '') + p.chg.toFixed(2) + '%</span>');
   }
+  // Signal price: where the score flipped into its current long/short
+  // (flipEntries.json). The bot only enters while price is within
+  // MAX_CHASE_ATR x ATR of it.
+  var sigData = { flips: {}, scores: {}, chase: 1 };
+  function sigHtml(sym) {
+    var f = sigData.flips[sym + ':' + ENTRY_TF], sc = sigData.scores[sym];
+    if (!f || !sc || f.bias !== sc.bias) return '';
+    var p = livePx[sym], now = p && p.last;
+    var dir = f.bias === 1 ? 'long' : 'short';
+    var html = 'signal ' + dir + ' @ ' + fmtPrice(f.price);
+    if (now) {
+      var pct = (now / f.price - 1) * 100;
+      html += ' · now ' + (pct > 0 ? '+' : '') + pct.toFixed(2) + '%';
+      if (sc.atr) {
+        var ok = Math.abs(now - f.price) <= sigData.chase * sc.atr;
+        html += ' · <b class="' + (ok ? 'up' : 'down') + '">' + (ok ? 'in entry range' : 'too far') + '</b>';
+      }
+    }
+    return html;
+  }
   function paintPrices() {
     var els2 = document.querySelectorAll('[data-px]');
     for (var i = 0; i < els2.length; i++) els2[i].innerHTML = pxHtml(els2[i].getAttribute('data-px'));
+    var els3 = document.querySelectorAll('[data-sig]');
+    for (var j = 0; j < els3.length; j++) els3[j].innerHTML = sigHtml(els3[j].getAttribute('data-sig'));
   }
 
   // Green ring at +entry score or stronger (long), red at -entry score or stronger (short).
@@ -429,7 +453,8 @@
               : sc.wait === 'stale' ? 'score ready · enters only right after a 4H close'
               : sc.wait === 'btc' ? 'score ready · BTC points the other way'
               : pct + '% to entry') + ' · ' + dirWord + '</div>' +
-          '</div>';
+          '</div>' +
+          '<div class="sigLine" data-sig="' + s.id + '">' + sigHtml(s.id) + '</div>';
       } else {
         extraHtml = '<div class="noPos">no score yet — waits for the next hourly run</div>';
       }
@@ -1063,8 +1088,10 @@
         fetchJson('scores').catch(function () { return {}; }),
         fetchJson('shadow').catch(function () { return null; }),
         fetchJson('liqlog').catch(function () { return null; }),
+        fetchJson('flipEntries').catch(function () { return {}; }),
       ]);
       var account = results[0], positions = results[1], trades = results[2], scores = results[3], shadowState = results[4], liqLog = results[5];
+      sigData = { flips: results[6] || {}, scores: scores || {}, chase: (account.settings && account.settings.MAX_CHASE_ATR) || 1 };
 
       var openSymbols = Object.keys(positions);
       var markPrices = openSymbols.length ? await fetchMarkPrices(openSymbols) : {};

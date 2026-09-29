@@ -127,7 +127,8 @@ async function scoreAll(st, events) {
         leverage: P.LEVERAGE, scoreThreshold: config.SCORE_THRESHOLD,
       });
       if (!analysis) { events.push({ symbol, type: 'skip', reason: 'not enough candle history yet' }); continue; }
-      st.scores[symbol] = { score: analysis.score, bias: analysis.bias, at: Date.now(), src: data.source || 'okx' };
+      // atr: the dashboard shows whether price is still within MAX_CHASE_ATR of the signal price
+      st.scores[symbol] = { score: analysis.score, bias: analysis.bias, at: Date.now(), src: data.source || 'okx', atr: +analysis.atr.toPrecision(6) };
       if (data.source && data.source !== 'bybit') console.log(`${symbol}: market data from ${data.source}${data.note ? ` (Bybit candles failed: ${data.note})` : ''}`);
       signals[symbol] = { symbol, data, analysis };
     } catch (err) {

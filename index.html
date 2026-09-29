@@ -68,6 +68,10 @@
   }
   .coin .sym{ font-weight:700; font-size:13px; letter-spacing:0.02em; }
   .coin .bal{ font-family:var(--mono); font-size:17px; margin-top:6px; }
+  .coin .px{ position:absolute; top:12px; right:12px; text-align:right; font-family:var(--mono); font-size:11px; line-height:1.35; }
+  .coin .px b{ font-weight:600; color:var(--text); transition:color .6s; }
+  .coin .px b.tickUp{ color:var(--up); } .coin .px b.tickDown{ color:var(--down); }
+  .coin .px span{ display:block; font-size:10px; }
   .coin .pnl{ font-family:var(--mono); font-size:11px; margin-top:2px; }
   .coin .pos{
     margin-top:8px; padding-top:8px; border-top:1px solid var(--border);
@@ -301,7 +305,6 @@
     { id: 'NEARUSDT', label: 'NEAR' },
     { id: 'XLMUSDT', label: 'XLM' },
     { id: 'BLURUSDT', label: 'BLUR' },
-    { id: 'AVAXUSDT', label: 'AVAX' },
     { id: 'SANDUSDT', label: 'SAND' },
     { id: 'AXSUSDT', label: 'AXS' },
     { id: 'ZILUSDT', label: 'ZIL' },
@@ -367,6 +370,20 @@
     return res.json();
   }
 
+  // Live price + 24h change for a coin tile (from the Bybit ticker stream).
+  var livePx = {}; // symbol -> { last, prev, chg }
+  function pxHtml(sym) {
+    var p = livePx[sym];
+    if (!p || p.last == null) return '';
+    var cls = p.prev == null || p.last === p.prev ? '' : p.last > p.prev ? 'tickUp' : 'tickDown';
+    return '<b class="' + cls + '">' + fmtPrice(p.last) + '</b>' +
+      (p.chg == null ? '' : '<span class="' + pnlClass(p.chg) + '">' + (p.chg > 0 ? '+' : '') + p.chg.toFixed(2) + '%</span>');
+  }
+  function paintPrices() {
+    var els2 = document.querySelectorAll('[data-px]');
+    for (var i = 0; i < els2.length; i++) els2[i].innerHTML = pxHtml(els2[i].getAttribute('data-px'));
+  }
+
   // One card per coin: its live score and how close it is to an entry, or
   // the position it holds. There are no per-coin balances in this account.
   function renderCoins(positions, scores, markPrices, account) {
@@ -409,6 +426,7 @@
       var scoreTxt = sc ? (sc.score > 0 ? '+' : '') + sc.score : '—';
       return (
         '<div class="coin' + (pos ? ' inPos' : '') + '">' +
+          '<div class="px" data-px="' + s.id + '">' + pxHtml(s.id) + '</div>' +
           '<div class="sym">' + s.label + '</div>' +
           '<div class="bal">score ' + scoreTxt + '</div>' +
           extraHtml +
@@ -1043,7 +1061,7 @@
       lastMarkPrices = markPrices;
       live.account = account; live.positions = positions;
       renderTotals(account, positions, markPrices);
-      liveSubscribe(openSymbols);
+      liveSubscribe(liveSymbols(positions));
       var started = account.startingBalance;
 
       renderRules(account, openSymbols.length);
@@ -1108,6 +1126,13 @@
   var live = { account: null, positions: null, ws: null, subs: '', dirty: false, ok: false, retry: null };
   var WS_URL = 'wss://stream.bybit.com/v5/public/linear';
 
+  // Every coin tile plus any open position (a coin taken off the list can still hold one).
+  function liveSymbols(positions) {
+    var out = SYMBOLS.map(function (s) { return s.id; });
+    Object.keys(positions || {}).forEach(function (s) { if (out.indexOf(s) < 0) out.push(s); });
+    return out;
+  }
+
   function liveSubscribe(symbols) {
     var key = symbols.slice().sort().join(',');
     if (key === live.subs && live.ws && live.ws.readyState <= 1) return;
@@ -1121,7 +1146,10 @@
     live.ws = ws;
     var ping;
     ws.onopen = function () {
-      ws.send(JSON.stringify({ op: 'subscribe', args: symbols.map(function (s) { return 'tickers.' + s; }) }));
+      // at most 10 topics per subscribe request
+      for (var i = 0; i < symbols.length; i += 10) {
+        ws.send(JSON.stringify({ op: 'subscribe', args: symbols.slice(i, i + 10).map(function (s) { return 'tickers.' + s; }) }));
+      }
       ping = setInterval(function () { try { ws.send('{"op":"ping"}'); } catch (e) {} }, 20000);
     };
     ws.onmessage = function (ev) {
@@ -1134,16 +1162,19 @@
       if (d.price24hPcnt != null) st.chg24 = +d.price24hPcnt * 100;
       if (d.openInterestValue != null) st.oi = +d.openInterestValue;
       st.src = 'Bybit';
-      if (d.markPrice != null && +d.markPrice > 0) lastMarkPrices[sym] = +d.markPrice;
+      if (d.markPrice != null && +d.markPrice > 0 && live.positions && live.positions[sym]) lastMarkPrices[sym] = +d.markPrice;
+      var px = livePx[sym] || (livePx[sym] = {});
+      if (d.lastPrice != null && +d.lastPrice > 0) { px.prev = px.last; px.last = +d.lastPrice; live.pxDirty = true; }
+      if (d.price24hPcnt != null) { px.chg = +d.price24hPcnt * 100; live.pxDirty = true; }
       if (!live.ok) { live.ok = true; setLiveDot(true); }
-      live.dirty = true;
+      if (live.positions && live.positions[sym]) live.dirty = true;
     };
     ws.onclose = function () {
       clearInterval(ping);
       live.ok = false; setLiveDot(false);
       if (live.ws !== ws) return;
       live.ws = null; live.subs = '';
-      if (!document.hidden) live.retry = setTimeout(function () { if (live.positions) liveSubscribe(Object.keys(live.positions)); }, 3000);
+      if (!document.hidden) live.retry = setTimeout(function () { liveSubscribe(liveSymbols(live.positions)); }, 3000);
     };
     ws.onerror = function () { try { ws.close(); } catch (e) {} };
   }
@@ -1155,6 +1186,7 @@
 
   // Redraw from the stream at most once a second.
   setInterval(function () {
+    if (live.pxDirty) { live.pxDirty = false; paintPrices(); }
     if (!live.dirty || !live.account || !live.positions) return;
     live.dirty = false;
     renderTotals(live.account, live.positions, lastMarkPrices);

@@ -362,7 +362,13 @@ function simulate(series, symbols, times, rules) {
       if (open[s] || pending[s]) continue;
       const sig = series[s][sigKey].get(t);
       const minScore = (R.minScoreBySymbol && R.minScoreBySymbol[s] != null) ? R.minScoreBySymbol[s] : R.minScore;
-      if (!sig || sig.bias === 0 || !sig.ratio || Math.abs(sig.score) < minScore) continue;
+      if (!sig || sig.bias === 0 || !sig.ratio) continue;
+      if (R.entryFn) {
+        // score momentum: the score in the trade's direction now and 1 / 2 signal candles ago
+        const step = R.tf === '4H' ? 4 * HOUR : HOUR, b = sig.bias;
+        const p1 = series[s][sigKey].get(t - step), p2 = series[s][sigKey].get(t - 2 * step);
+        if (!p1 || !p2 || !R.entryFn(sig.score * b, p1.score * b, p2.score * b)) continue;
+      } else if (Math.abs(sig.score) < minScore) continue;
       if (used[s] && !used[s].reset && used[s].bias === sig.bias) continue;
       if (!sig.gate.chase || (R.useFib && !sig.gate.fib)) continue;
       if (R.minAdx && !(sig.adx >= R.minAdx)) continue;
@@ -536,6 +542,9 @@ const TF_COMPARE = args.includes('--tf-compare');
 // compounding. Picks the threshold on 2020-2023 and shows it on 2024-2026.
 // Writes backtest/score-lab-<tag>.json (merged by --score-lab-report).
 const SCORE_LAB = args.includes('--score-lab');
+// --score-mom: entries on score momentum (the score rising candle to candle)
+// vs the fixed min-score rule. Written to backtest/SCORE_MOM.md.
+const SCORE_MOM = args.includes('--score-mom');
 const LAB_MODE = args.includes('--mode') ? args[args.indexOf('--mode') + 1] : 'classic';
 const LAB_MTF = args.includes('--mtf');
 const LAB_TAG = args.includes('--tag') ? args[args.indexOf('--tag') + 1] : LAB_MODE + (LAB_MTF ? '-mtf' : '');
@@ -566,7 +575,7 @@ async function main() {
   }
   for (const s of symbols) {
     process.stderr.write(`scoring ${s}…\n`);
-    series[s].sig1 = SCORE_LAB ? new Map() : TF_COMPARE ? precompute(s, series[s].h1, 1, start) : SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB || RISK_GRID || LEV_GRID || DD_LAB || RISK_STARTS || COIN_WF ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
+    series[s].sig1 = SCORE_LAB ? new Map() : TF_COMPARE ? precompute(s, series[s].h1, 1, start) : SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB || RISK_GRID || LEV_GRID || DD_LAB || RISK_STARTS || COIN_WF || SCORE_MOM ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
     series[s].sig4 = SCORE_LAB ? precompute(s, to4h(series[s].h1), 4, start, { h1: series[s].h1, mode: LAB_MODE, mtfTrim: LAB_MTF }) : precompute(s, to4h(series[s].h1), 4, start);
     addFilterInputs(series[s]);
   }
@@ -582,6 +591,7 @@ async function main() {
   if (LEV_GRID) return levGrid(series, symbols, times, start, now);
   if (DD_LAB) return ddLab(series, symbols, times, start, now);
   if (RISK_STARTS) return riskStarts(series, symbols, times, start, now);
+  if (SCORE_MOM) return scoreMom(series, symbols, times, start, now);
   if (SCORE_LAB) return scoreLab(series, symbols, times, start, now);
   if (TF_COMPARE) return tfCompare(series, symbols, times, start, now);
   if (COIN_WF && CANDIDATES.length) return coinCandidates(series, symbols.filter(s => CANDIDATES.includes(s) && !config.SYMBOLS.includes(s)), times, start, now);
@@ -950,6 +960,51 @@ function coinCandidates(series, cands, times, start, end) {
   console.log(out);
   fs.mkdirSync(OUT, { recursive: true });
   fs.writeFileSync(path.join(OUT, 'COIN_CANDIDATES.md'), '# Candidate coins\n\n```\n' + out + '\n```\n');
+}
+
+function scoreMom(series, symbols, times, start, end) {
+  const live = VARIANTS.find(v => v.focus);
+  const P = config.PORTFOLIO;
+  const coins = config.SYMBOLS;
+  const pad = (x, n) => String(x).padStart(n);
+  const base = { ...live.rules, start: P.STARTING_BALANCE, margin: P.MARGIN_USDT, leverage: P.LEVERAGE, maxOpen: P.MAX_OPEN_POSITIONS, maxSameDir: P.MAX_SAME_DIRECTION };
+  // s0 / s1 / s2: score in the trade's direction now, 1 and 2 candles ago
+  const V = [
+    ['A  now: |score| >= 50', null],
+    ['B  rose >= 10 over 2 candles, still rising, >= 30', (s0, s1, s2) => s0 >= 30 && s0 - s2 >= 10 && s0 > s1],
+    ['B2 same, >= 40', (s0, s1, s2) => s0 >= 40 && s0 - s2 >= 10 && s0 > s1],
+    ['C  rose >= 10 on each of 2 candles, >= 40', (s0, s1, s2) => s0 >= 40 && s0 - s1 >= 10 && s1 - s2 >= 10],
+    ['D  >= 50 and still rising', (s0, s1) => s0 >= 50 && s0 > s1],
+    ['D2 >= 50 and not falling', (s0, s1) => s0 >= 50 && s0 >= s1],
+    ['D3 >= 50 and rose >= 10 over 2 candles', (s0, s1, s2) => s0 >= 50 && s0 - s2 >= 10],
+    ['E  >= 35 and jumped >= 15 in 1 candle', (s0, s1) => s0 >= 35 && s0 - s1 >= 15],
+    ['F  >= 50, or >= 35 and jumped >= 15', (s0, s1) => s0 >= 50 || (s0 >= 35 && s0 - s1 >= 15)],
+  ];
+  const y0 = new Date(start).getUTCFullYear(), y1 = new Date(end).getUTCFullYear();
+  const years = []; for (let y = y0; y <= y1; y++) years.push(y);
+  const yearTimes = Object.fromEntries(years.map(y => [y, times.filter(t => new Date(t).getUTCFullYear() === y)]));
+  const pf = (r) => { let w = 0, l = 0; for (const t of r.tradeList) { if (t.pnl > 0) w += t.pnl; else l -= t.pnl; } return l ? w / l : 0; };
+  const L = [];
+  L.push(`Score-momentum entries · ${coins.length} coins · ${new Date(start).toISOString().slice(0, 10)} → ${new Date(end).toISOString().slice(0, 10)} · 4H, live rules otherwise (chase limit, Fibonacci, BTC filter, one trade per signal)`, '');
+  L.push('Per year: fresh 2000 USDT, $100 fixed risk — net $ (worst drop). Compound: 2000 USDT, ' + P.RISK_PCT + '% risk, whole period.', '');
+  L.push('entry rule'.padEnd(46) + years.map(y => pad(y, 14)).join('') + pad('20-23', 8) + pad('24-26', 8) + pad('yrs+', 6) + '  | compound end $ / PF / worst drop / trades / win%');
+  for (const [name, fn] of V) {
+    process.stderr.write(`${name}\n`);
+    let tr = 0, te = 0, w = 0;
+    const cells = years.map(y => {
+      const r = simulate(series, coins, yearTimes[y], { ...base, entryFn: fn, riskUsd: 100, riskPct: null });
+      if (y <= 2023) tr += r.net; else te += r.net;
+      if (r.net > 0) w++;
+      return pad(`${r.net.toFixed(0)} (${r.maxDDPct.toFixed(0)}%)`, 14);
+    });
+    const c = simulate(series, coins, times, { ...base, entryFn: fn, riskUsd: null, riskPct: P.RISK_PCT });
+    L.push(name.padEnd(46) + cells.join('') + pad(tr.toFixed(0), 8) + pad(te.toFixed(0), 8) + pad(`${w}/${years.length}`, 6) +
+      `  | ${Math.round(P.STARTING_BALANCE + c.net).toLocaleString('en-US')} / ${pf(c).toFixed(2)} / ${c.maxDDPct.toFixed(1)}% / ${c.trades} / ${(c.winRate * 100).toFixed(0)}%`);
+  }
+  const out = L.join('\n');
+  console.log(out);
+  fs.mkdirSync(OUT, { recursive: true });
+  fs.writeFileSync(path.join(OUT, 'SCORE_MOM.md'), '# Score-momentum entries\n\n```\n' + out + '\n```\n');
 }
 
 function scoreLab(series, symbols, times, start, end) {

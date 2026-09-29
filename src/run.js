@@ -107,8 +107,14 @@ function saveState(st) {
 // { symbol: { symbol, data, analysis } } for the ones with enough history.
 async function scoreAll(st, events) {
   const signals = {};
-  // BTC is always scored when the BTC filter is on, even if it isn't traded.
-  const toScore = config.BTC_FILTER && !config.SYMBOLS.includes('BTCUSDT') ? [...config.SYMBOLS, 'BTCUSDT'] : config.SYMBOLS;
+  // BTC is always scored when the BTC filter is on, even if it isn't traded;
+  // so is any coin still holding a position (or shadow trade) after it was
+  // taken off the list, so its flip exit keeps working until it closes.
+  const toScore = [...new Set([
+    ...config.SYMBOLS,
+    ...(config.BTC_FILTER ? ['BTCUSDT'] : []),
+    ...Object.keys(st.positions), ...Object.keys((st.shadow && st.shadow.open) || {}),
+  ])].filter(s => config.SYMBOLS.includes(s) || config.ALL_SYMBOLS.includes(s));
   for (const symbol of toScore) {
     try {
       const data = await marketData.loadSymbolData(symbol, config.MTF_TFS, config.ENTRY_TF);

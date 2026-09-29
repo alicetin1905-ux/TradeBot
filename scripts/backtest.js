@@ -499,6 +499,10 @@ const COIN_WF = args.includes('--coin-wf');
 // --candidates A,B,...: with --coin-wf, also test these coins (not traded now)
 // per year, and whether adding them to the live list helps (walk-forward).
 // Written to backtest/COIN_CANDIDATES.md.
+// --tf-compare: 1H vs 4H signals on the live setup and coins, compounding
+// (live % risk) and per year ($100 fixed, fresh start each year).
+// Written to backtest/TF_COMPARE.md.
+const TF_COMPARE = args.includes('--tf-compare');
 const CANDIDATES = args.includes('--candidates') ? String(args[args.indexOf('--candidates') + 1] || '').split(',').filter(Boolean).map(x => x.toUpperCase().replace(/USDT$/, '') + 'USDT') : [];
 
 async function main() {
@@ -519,7 +523,7 @@ async function main() {
   }
   for (const s of symbols) {
     process.stderr.write(`scoring ${s}…\n`);
-    series[s].sig1 = SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB || RISK_GRID || LEV_GRID || DD_LAB || RISK_STARTS || COIN_WF ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
+    series[s].sig1 = TF_COMPARE ? precompute(s, series[s].h1, 1, start) : SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB || RISK_GRID || LEV_GRID || DD_LAB || RISK_STARTS || COIN_WF ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
     series[s].sig4 = precompute(s, to4h(series[s].h1), 4, start);
     addFilterInputs(series[s]);
   }
@@ -535,6 +539,7 @@ async function main() {
   if (LEV_GRID) return levGrid(series, symbols, times, start, now);
   if (DD_LAB) return ddLab(series, symbols, times, start, now);
   if (RISK_STARTS) return riskStarts(series, symbols, times, start, now);
+  if (TF_COMPARE) return tfCompare(series, symbols, times, start, now);
   if (COIN_WF && CANDIDATES.length) return coinCandidates(series, symbols.filter(s => CANDIDATES.includes(s) && !config.SYMBOLS.includes(s)), times, start, now);
   if (COIN_WF) return coinWalkForward(series, symbols, times, start, now);
   if (COINS) {
@@ -901,6 +906,51 @@ function coinCandidates(series, cands, times, start, end) {
   console.log(out);
   fs.mkdirSync(OUT, { recursive: true });
   fs.writeFileSync(path.join(OUT, 'COIN_CANDIDATES.md'), '# Candidate coins\n\n```\n' + out + '\n```\n');
+}
+
+function tfCompare(series, symbols, times, start, end) {
+  const live = VARIANTS.find(v => v.focus);
+  const P = config.PORTFOLIO;
+  const coins = config.SYMBOLS;
+  const pad = (x, n) => String(x).padStart(n);
+  const base = { ...live.rules, start: P.STARTING_BALANCE, margin: P.MARGIN_USDT, leverage: P.LEVERAGE, maxOpen: P.MAX_OPEN_POSITIONS, maxSameDir: P.MAX_SAME_DIRECTION };
+  const V = [
+    ['4H signals (live)', { tf: '4H' }],
+    ['1H signals, same rules', { tf: '1H' }],
+    ['1H + 4H Supertrend agrees', { tf: '1H', st4Agree: true }],
+    ['1H + 4H Supertrend + volume >= 1.2x', { tf: '1H', st4Agree: true, volMin: 1.2 }],
+    ['1H + 1H & 4H Supertrend + volume >= 1.2x', { tf: '1H', st1Agree: true, st4Agree: true, volMin: 1.2 }],
+  ];
+  const y0 = new Date(start).getUTCFullYear(), y1 = new Date(end).getUTCFullYear();
+  const years = []; for (let y = y0; y <= y1; y++) years.push(y);
+  const yearTimes = (y) => times.filter(t => new Date(t).getUTCFullYear() === y);
+  const pf = (r) => { let w = 0, l = 0; for (const t of r.tradeList) { if (t.pnl > 0) w += t.pnl; else l -= t.pnl; } return l ? w / l : 0; };
+  const L = [];
+  L.push(`1H vs 4H signals · ${coins.length} coins · ${new Date(start).toISOString().slice(0, 10)} → ${new Date(end).toISOString().slice(0, 10)} · live rules (targets ${base.targetsR.join('/')}R, ${base.maxOpen} slots, ${base.maxSameDir} per direction, BTC filter, fees)`, '');
+  L.push(`A) Compounding: start ${P.STARTING_BALANCE} USDT, ${P.RISK_PCT}% of balance risk, max $${P.MARGIN_USDT} margin x${P.LEVERAGE}`, '');
+  L.push('variant'.padEnd(44) + pad('trades', 8) + pad('win%', 6) + pad('end $', 11) + pad('PF', 6) + pad('worst drop', 12));
+  for (const [name, extra] of V) {
+    process.stderr.write(`compound ${name}\n`);
+    const r = simulate(series, coins, times, { ...base, ...extra, riskUsd: null, riskPct: P.RISK_PCT });
+    L.push(name.padEnd(44) + pad(r.trades, 8) + pad((r.winRate * 100).toFixed(0), 6) + pad(Math.round(P.STARTING_BALANCE + r.net).toLocaleString('en-US'), 11) + pad(pf(r).toFixed(2), 6) + pad(r.maxDDPct.toFixed(1) + '%', 12));
+  }
+  L.push('', `B) Per year: fresh ${P.STARTING_BALANCE} USDT each year, $100 fixed risk — net $ (worst drop)`, '');
+  L.push('variant'.padEnd(44) + years.map(y => pad(y, 15)).join('') + pad('total', 9) + pad('years +', 9));
+  for (const [name, extra] of V) {
+    process.stderr.write(`years ${name}\n`);
+    let tot = 0, w = 0;
+    const cells = years.map(y => {
+      const r = simulate(series, coins, yearTimes(y), { ...base, ...extra, riskUsd: 100, riskPct: null });
+      tot += r.net; if (r.net > 0) w++;
+      return pad(`${r.net.toFixed(0)} (${r.maxDDPct.toFixed(0)}%)`, 15);
+    });
+    L.push(name.padEnd(44) + cells.join('') + pad(tot.toFixed(0), 9) + pad(`${w}/${years.length}`, 9));
+  }
+  L.push('', 'Same coins, targets, stops and filters for every row; only the signal candle changes. Coins, targets and filters were tuned on 4H.');
+  const out = L.join('\n');
+  console.log(out);
+  fs.mkdirSync(OUT, { recursive: true });
+  fs.writeFileSync(path.join(OUT, 'TF_COMPARE.md'), '# 1H vs 4H signals\n\n```\n' + out + '\n```\n');
 }
 
 function riskStarts(series, symbols, times, start, end) {

@@ -25,6 +25,13 @@ const config = module.exports = {
   // Multi-timeframe alignment check, same set ATLAS's own panel uses.
   MTF_TFS: ['30', '60', '240', 'D'],
 
+  // How the score is computed (src/atlasScore.js): 'classic' (flat sum of
+  // -1/0/+1 votes) or 'graded' (ATLAS's newer strength-weighted group blend);
+  // MTF_TRIM shrinks it up to 35% when higher timeframes disagree. The 2020-26
+  // score lab (backtest/SCORE_LAB.md) found neither better than classic.
+  SCORE_MODE: 'classic',
+  MTF_TRIM: false,
+
   // ATLAS's bias threshold: |score| below this is "stand aside".
   SCORE_THRESHOLD: 25,
   // A new trade needs a stronger score than that: |score| of at least this.

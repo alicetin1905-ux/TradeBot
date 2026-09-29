@@ -85,6 +85,19 @@ async function fetchHistory(symbol, fromMs) {
   return rows;
 }
 
+// UTC daily candles from 1H candles; incomplete days are dropped.
+function to1d(h1) {
+  const out = [];
+  for (let i = 0; i + 23 < h1.length; i++) {
+    const c = h1[i];
+    if (c.t % (24 * HOUR) !== 0 || h1[i + 23].t !== c.t + 23 * HOUR) continue;
+    const g = h1.slice(i, i + 24);
+    out.push({ t: c.t, o: g[0].o, h: Math.max(...g.map(x => x.h)), l: Math.min(...g.map(x => x.l)), c: g[23].c, v: g.reduce((a, x) => a + x.v, 0) });
+    i += 23;
+  }
+  return out;
+}
+
 // UTC-aligned 4H candles from 1H candles; incomplete buckets are dropped.
 function to4h(h1) {
   const out = [];
@@ -104,18 +117,32 @@ function to4h(h1) {
 // over to its fill price the same way). Keyed by the 1H time at which the
 // signal becomes actionable: the open time of the last 1H candle inside the
 // signal candle (for 1H signals, the candle itself).
-function precompute(symbol, candles, tfHours, fromMs) {
+// opts (score lab): { h1, mode, mtfTrim } — with h1, the daily candles
+// (daily pivot) and, for mtfTrim, the 1H/4H/1D alignment are rebuilt as they
+// stood at each signal close; mode: 'classic' | 'graded' (src/atlasScore.js).
+function precompute(symbol, candles, tfHours, fromMs, opts = {}) {
   const flipStore = {};
   const out = new Map();
+  const h1 = opts.h1, d1 = h1 ? to1d(h1) : null;
+  const h1i = h1 ? new Map(h1.map((c, j) => [c.t, j])) : null;
+  let dj = -1;
   for (let i = 221; i < candles.length - 1; i++) {
     const closed = candles.slice(Math.max(0, i - LOOKBACK + 1), i + 1);
     const withForming = closed.concat([candles[i + 1]]); // analyse() drops the last (forming) bar
+    const cs = { [config.ENTRY_TF]: withForming };
+    if (h1) {
+      const closeT = candles[i].t + tfHours * HOUR;
+      while (dj + 1 < d1.length && d1[dj + 1].t + 24 * HOUR <= closeT) dj++;
+      if (dj >= 1) { const dc = d1.slice(Math.max(0, dj - LOOKBACK + 1), dj + 1); cs.D = dc.concat([dc[dc.length - 1]]); }
+      const hj = h1i.get(closeT - HOUR);
+      if (opts.mtfTrim && hj != null) { const hc = h1.slice(Math.max(0, hj - LOOKBACK + 1), hj + 1); cs['60'] = hc.concat([hc[hc.length - 1]]); }
+    }
     let analysis;
     try {
       analysis = atlasScore.analyse({
-        symbol, candles: { [config.ENTRY_TF]: withForming }, ticker: null, oi: [], ratio: null, book: null, tape: null,
-        entryTf: config.ENTRY_TF, mtfTfs: [], flipStore, account: 1000, riskPct: 10, leverage: 10,
-        scoreThreshold: config.SCORE_THRESHOLD,
+        symbol, candles: cs, ticker: null, oi: [], ratio: null, book: null, tape: null,
+        entryTf: config.ENTRY_TF, mtfTfs: opts.mtfTrim ? ['60', '240', 'D'] : [], flipStore, account: 1000, riskPct: 10, leverage: 10,
+        scoreThreshold: config.SCORE_THRESHOLD, scoreMode: opts.mode || 'classic', mtfTrim: !!opts.mtfTrim,
       });
     } catch (err) { continue; } // e.g. flat, no-trade candles in a coin's first days (indicators return null)
     if (!analysis) continue;
@@ -503,9 +530,25 @@ const COIN_WF = args.includes('--coin-wf');
 // (live % risk) and per year ($100 fixed, fresh start each year).
 // Written to backtest/TF_COMPARE.md.
 const TF_COMPARE = args.includes('--tf-compare');
+// --score-lab --mode classic|graded [--mtf] [--tag name]: one way of
+// computing the score (daily pivot included, as live), entry thresholds 30-70
+// on the live setup: per year ($100 fixed, fresh start each year) and
+// compounding. Picks the threshold on 2020-2023 and shows it on 2024-2026.
+// Writes backtest/score-lab-<tag>.json (merged by --score-lab-report).
+const SCORE_LAB = args.includes('--score-lab');
+const LAB_MODE = args.includes('--mode') ? args[args.indexOf('--mode') + 1] : 'classic';
+const LAB_MTF = args.includes('--mtf');
+const LAB_TAG = args.includes('--tag') ? args[args.indexOf('--tag') + 1] : LAB_MODE + (LAB_MTF ? '-mtf' : '');
 const CANDIDATES = args.includes('--candidates') ? String(args[args.indexOf('--candidates') + 1] || '').split(',').filter(Boolean).map(x => x.toUpperCase().replace(/USDT$/, '') + 'USDT') : [];
 
 async function main() {
+  if (args.includes('--score-lab-report')) {
+    const files = fs.readdirSync(OUT).filter(f => /^score-lab-.*\.json$/.test(f)).sort();
+    const out = scoreLabText(files.map(f => JSON.parse(fs.readFileSync(path.join(OUT, f), 'utf8'))));
+    console.log(out);
+    fs.writeFileSync(path.join(OUT, 'SCORE_LAB.md'), '# Score computation lab\n\nPer year: fresh 2000 USDT each year, $100 fixed risk — net $ (worst drop). Compound: 2000 USDT, live % risk, whole period. Live rules otherwise (4H, targets 1.5/3/4.5R, 7 slots, BTC filter, fees). Price/volume signals only (no funding, OI, book, tape).\n\n```\n' + out + '\n```\n');
+    return;
+  }
   const symbols = SCAN ? [...new Set(['BTCUSDT', ...config.SYMBOLS, ...SCAN])] : COINS ? [...new Set(['BTCUSDT', ...COINS])] : [...new Set([...config.SYMBOLS, ...CANDIDATES])];
   const now = Date.now() - END_AGO * 24 * HOUR;
   const start = now - DAYS * 24 * HOUR;
@@ -523,8 +566,8 @@ async function main() {
   }
   for (const s of symbols) {
     process.stderr.write(`scoring ${s}…\n`);
-    series[s].sig1 = TF_COMPARE ? precompute(s, series[s].h1, 1, start) : SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB || RISK_GRID || LEV_GRID || DD_LAB || RISK_STARTS || COIN_WF ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
-    series[s].sig4 = precompute(s, to4h(series[s].h1), 4, start);
+    series[s].sig1 = SCORE_LAB ? new Map() : TF_COMPARE ? precompute(s, series[s].h1, 1, start) : SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB || RISK_GRID || LEV_GRID || DD_LAB || RISK_STARTS || COIN_WF ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
+    series[s].sig4 = SCORE_LAB ? precompute(s, to4h(series[s].h1), 4, start, { h1: series[s].h1, mode: LAB_MODE, mtfTrim: LAB_MTF }) : precompute(s, to4h(series[s].h1), 4, start);
     addFilterInputs(series[s]);
   }
   const times = [...new Set(symbols.flatMap(s => series[s].h1.map(c => c.t)))].filter(t => t >= start && t <= now).sort((a, b) => a - b);
@@ -539,6 +582,7 @@ async function main() {
   if (LEV_GRID) return levGrid(series, symbols, times, start, now);
   if (DD_LAB) return ddLab(series, symbols, times, start, now);
   if (RISK_STARTS) return riskStarts(series, symbols, times, start, now);
+  if (SCORE_LAB) return scoreLab(series, symbols, times, start, now);
   if (TF_COMPARE) return tfCompare(series, symbols, times, start, now);
   if (COIN_WF && CANDIDATES.length) return coinCandidates(series, symbols.filter(s => CANDIDATES.includes(s) && !config.SYMBOLS.includes(s)), times, start, now);
   if (COIN_WF) return coinWalkForward(series, symbols, times, start, now);
@@ -906,6 +950,55 @@ function coinCandidates(series, cands, times, start, end) {
   console.log(out);
   fs.mkdirSync(OUT, { recursive: true });
   fs.writeFileSync(path.join(OUT, 'COIN_CANDIDATES.md'), '# Candidate coins\n\n```\n' + out + '\n```\n');
+}
+
+function scoreLab(series, symbols, times, start, end) {
+  const live = VARIANTS.find(v => v.focus);
+  const P = config.PORTFOLIO;
+  const coins = config.SYMBOLS;
+  const base = { ...live.rules, start: P.STARTING_BALANCE, margin: P.MARGIN_USDT, leverage: P.LEVERAGE, maxOpen: P.MAX_OPEN_POSITIONS, maxSameDir: P.MAX_SAME_DIRECTION };
+  const y0 = new Date(start).getUTCFullYear(), y1 = new Date(end).getUTCFullYear();
+  const years = []; for (let y = y0; y <= y1; y++) years.push(y);
+  const yearTimes = Object.fromEntries(years.map(y => [y, times.filter(t => new Date(t).getUTCFullYear() === y)]));
+  const pf = (r) => { let w = 0, l = 0; for (const t of r.tradeList) { if (t.pnl > 0) w += t.pnl; else l -= t.pnl; } return l ? w / l : 0; };
+  // how often the score is strong: share of 4H candles with |score| >= x
+  const all = coins.flatMap(s => [...series[s].sig4.values()].map(r => Math.abs(r.score)));
+  const dist = Object.fromEntries([30, 40, 50, 60, 70].map(x => [x, all.filter(v => v >= x).length / all.length]));
+  const rows = [];
+  for (let th = 30; th <= 70; th += 5) {
+    process.stderr.write(`threshold ${th}\n`);
+    const per = {};
+    for (const y of years) {
+      const r = simulate(series, coins, yearTimes[y], { ...base, minScore: th, riskUsd: 100, riskPct: null });
+      per[y] = { net: Math.round(r.net), dd: +r.maxDDPct.toFixed(1), trades: r.trades, pf: +pf(r).toFixed(2) };
+    }
+    const c = simulate(series, coins, times, { ...base, minScore: th, riskUsd: null, riskPct: P.RISK_PCT });
+    rows.push({ th, per, compound: { end: Math.round(P.STARTING_BALANCE + c.net), dd: +c.maxDDPct.toFixed(1), trades: c.trades, pf: +pf(c).toFixed(2), win: Math.round(c.winRate * 100) } });
+  }
+  const res = { tag: LAB_TAG, mode: LAB_MODE, mtf: LAB_MTF, years, dist, rows, period: [start, end] };
+  fs.mkdirSync(OUT, { recursive: true });
+  fs.writeFileSync(path.join(OUT, `score-lab-${LAB_TAG}.json`), JSON.stringify(res, null, 1) + '\n');
+  console.log(scoreLabText([res]));
+}
+
+// Merges score-lab-*.json into backtest/SCORE_LAB.md.
+function scoreLabText(results) {
+  const pad = (x, n) => String(x).padStart(n);
+  const TRAIN = (y) => y <= 2023;
+  const L = [];
+  for (const res of results) {
+    const years = res.years;
+    L.push(`== ${res.tag}: score ${res.mode}${res.mtf ? ' + trim when 1H/4H/1D disagree' : ''} · 4H candles with |score| >= 30/40/50/60/70: ${Object.values(res.dist).map(x => Math.round(x * 100) + '%').join(' / ')}`, '');
+    L.push('min score' + years.map(y => pad(y, 14)).join('') + pad('train 20-23', 13) + pad('test 24-26', 12) + pad('years +', 9) + '   | compound: end $ / PF / worst drop / trades');
+    for (const r of res.rows) {
+      const tr = years.filter(TRAIN).reduce((a, y) => a + r.per[y].net, 0), te = years.filter(y => !TRAIN(y)).reduce((a, y) => a + r.per[y].net, 0);
+      L.push(pad(r.th, 9) + years.map(y => pad(`${r.per[y].net} (${Math.round(r.per[y].dd)}%)`, 14)).join('') + pad(tr, 13) + pad(te, 12) + pad(`${years.filter(y => r.per[y].net > 0).length}/${years.length}`, 9) +
+        `   | ${r.compound.end.toLocaleString('en-US')} / ${r.compound.pf} / ${r.compound.dd}% / ${r.compound.trades}`);
+    }
+    const best = res.rows.slice().sort((a, b) => years.filter(TRAIN).reduce((s, y) => s + b.per[y].net, 0) - years.filter(TRAIN).reduce((s, y) => s + a.per[y].net, 0))[0];
+    L.push('', `picked on 2020-2023: min score ${best.th} -> 2024-2026: ${years.filter(y => !TRAIN(y)).reduce((a, y) => a + best.per[y].net, 0)}`, '');
+  }
+  return L.join('\n');
 }
 
 function tfCompare(series, symbols, times, start, end) {

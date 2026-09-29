@@ -68,6 +68,8 @@
   }
   .coin .sym{ font-weight:700; font-size:13px; letter-spacing:0.02em; }
   .coin .bal{ font-family:var(--mono); font-size:17px; margin-top:6px; }
+  .coin.ringLong{ box-shadow:0 0 0 2px var(--up); }
+  .coin.ringShort{ box-shadow:0 0 0 2px var(--down); }
   .coin .px{ position:absolute; top:12px; right:12px; text-align:right; font-family:var(--mono); font-size:11px; line-height:1.35; }
   .coin .px b{ font-weight:600; color:var(--text); transition:color .6s; }
   .coin .px b.tickUp{ color:var(--up); } .coin .px b.tickDown{ color:var(--down); }
@@ -384,6 +386,14 @@
     for (var i = 0; i < els2.length; i++) els2[i].innerHTML = pxHtml(els2[i].getAttribute('data-px'));
   }
 
+  // Green ring at +entry score or stronger (long), red at -entry score or stronger (short).
+  function ringClass(sc, sym, account) {
+    if (!sc) return '';
+    var byCoin = account && account.settings && account.settings.ENTRY_MIN_SCORE_BY_SYMBOL;
+    var need = (byCoin && byCoin[sym]) || (account && account.settings && account.settings.ENTRY_MIN_SCORE) || SCORE_THRESHOLD;
+    return sc.score >= need ? ' ringLong' : sc.score <= -need ? ' ringShort' : '';
+  }
+
   // One card per coin: its live score and how close it is to an entry, or
   // the position it holds. There are no per-coin balances in this account.
   function renderCoins(positions, scores, markPrices, account) {
@@ -425,7 +435,7 @@
       }
       var scoreTxt = sc ? (sc.score > 0 ? '+' : '') + sc.score : '—';
       return (
-        '<div class="coin' + (pos ? ' inPos' : '') + '">' +
+        '<div class="coin' + (pos ? ' inPos' : '') + ringClass(sc, s.id, account) + '">' +
           '<div class="px" data-px="' + s.id + '">' + pxHtml(s.id) + '</div>' +
           '<div class="sym">' + s.label + '</div>' +
           '<div class="bal">score ' + scoreTxt + '</div>' +

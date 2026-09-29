@@ -489,6 +489,10 @@ const DD_LAB = args.includes('--dd-lab');
 // --risk-starts: fixed-$ vs %-of-balance risk from 12 different start dates
 // (4-month windows, 20 days apart) plus a margin-cap check. backtest/RISK_STARTS.md.
 const RISK_STARTS = args.includes('--risk-starts');
+// --coin-wf: per-coin results per calendar year, and a walk-forward test of
+// picking coins by their past record. Fixed $ risk so years compare fairly.
+// Written to backtest/COIN_WF.md.
+const COIN_WF = args.includes('--coin-wf');
 
 async function main() {
   const symbols = SCAN ? [...new Set(['BTCUSDT', ...config.SYMBOLS, ...SCAN])] : COINS ? [...new Set(['BTCUSDT', ...COINS])] : config.SYMBOLS;
@@ -504,7 +508,7 @@ async function main() {
   }
   for (const s of symbols) {
     process.stderr.write(`scoring ${s}…\n`);
-    series[s].sig1 = SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB || RISK_GRID || LEV_GRID || DD_LAB || RISK_STARTS ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
+    series[s].sig1 = SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB || RISK_GRID || LEV_GRID || DD_LAB || RISK_STARTS || COIN_WF ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
     series[s].sig4 = precompute(s, to4h(series[s].h1), 4, start);
     addFilterInputs(series[s]);
   }
@@ -520,6 +524,7 @@ async function main() {
   if (LEV_GRID) return levGrid(series, symbols, times, start, now);
   if (DD_LAB) return ddLab(series, symbols, times, start, now);
   if (RISK_STARTS) return riskStarts(series, symbols, times, start, now);
+  if (COIN_WF) return coinWalkForward(series, symbols, times, start, now);
   if (COINS) {
     const live = VARIANTS.find(v => v.focus), third = (now - start) / 3;
     const maxOpen = args.includes('--max-open') ? +args[args.indexOf('--max-open') + 1] : undefined;
@@ -741,6 +746,62 @@ function scoreScan(series, symbols, times, start, end) {
   console.log(`\n(full per-score grid for every coin written to backtest/SCORE_SCAN.md)`);
   fs.mkdirSync(OUT, { recursive: true });
   fs.writeFileSync(path.join(OUT, 'SCORE_SCAN.md'), '# Entry-score scan\n\n```\n' + lines.join('\n') + '\n```\n');
+}
+
+function coinWalkForward(series, symbols, times, start, end) {
+  const live = VARIANTS.find(v => v.focus);
+  const P = config.PORTFOLIO;
+  const coins = config.SYMBOLS;
+  const pad = (x, n) => String(x).padStart(n);
+  const base = { ...live.rules, start: P.STARTING_BALANCE, margin: P.MARGIN_USDT, leverage: P.LEVERAGE, maxOpen: P.MAX_OPEN_POSITIONS, maxSameDir: P.MAX_SAME_DIRECTION, riskUsd: 100, riskPct: null };
+  const y0 = new Date(start).getUTCFullYear(), y1 = new Date(end).getUTCFullYear();
+  const years = [];
+  for (let y = y0; y <= y1; y++) years.push(y);
+  const yearTimes = (y) => times.filter(t => new Date(t).getUTCFullYear() === y);
+  const listed = (s, y) => series[s].h1.length && new Date(series[s].h1[0].t).getUTCFullYear() < y; // traded the whole year
+  const L = [];
+  L.push(`Coin selection · live rules, $100 fixed risk, fresh 2000 USDT each year · ${new Date(start).toISOString().slice(0, 10)} → ${new Date(end).toISOString().slice(0, 10)}`, '');
+  // 1) each coin alone, per year
+  const solo = {};
+  L.push('1) Each coin traded alone — net $ per year (blank = not listed yet / partial first year skipped)', '');
+  L.push('coin'.padEnd(10) + years.map(y => pad(y, 8)).join('') + pad('years +', 9) + pad('total', 9) + pad('PF', 6));
+  for (const s of coins) {
+    solo[s] = {};
+    let w = 0, n = 0, tot = 0, gw = 0, gl = 0;
+    for (const y of years) {
+      if (!listed(s, y)) continue;
+      const r = simulate(series, [s], yearTimes(y), { ...base, maxOpen: 1 });
+      solo[s][y] = r.net; n++; if (r.net > 0) w++; tot += r.net;
+      for (const t of r.tradeList) { if (t.pnl > 0) gw += t.pnl; else gl -= t.pnl; }
+    }
+    L.push(s.replace('USDT', '').padEnd(10) + years.map(y => pad(solo[s][y] == null ? '' : solo[s][y].toFixed(0), 8)).join('') + pad(`${w}/${n}`, 9) + pad(tot.toFixed(0), 9) + pad(gl ? (gw / gl).toFixed(2) : '-', 6));
+  }
+  // 2) walk-forward selection vs all coins, portfolio per year
+  L.push('', '2) Portfolio per year: all coins vs coins picked by their record in the years before', '');
+  const strategies = {
+    'all coins': () => true,
+    'past record > 0 (new coins in)': (s, y) => { const past = years.filter(p => p < y && solo[s][p] != null); return !past.length || past.reduce((a, p) => a + solo[s][p], 0) > 0; },
+    'past record > 0 (new coins out)': (s, y) => { const past = years.filter(p => p < y && solo[s][p] != null); return past.length > 0 && past.reduce((a, p) => a + solo[s][p], 0) > 0; },
+    'last year > 0 (new coins in)': (s, y) => solo[s][y - 1] == null || solo[s][y - 1] > 0,
+  };
+  const head = 'selection'.padEnd(34) + years.slice(1).map(y => pad(y, 8)).join('') + pad('total', 9) + pad('avg DD', 8);
+  L.push(head);
+  for (const [name, pick] of Object.entries(strategies)) {
+    let tot = 0, dds = [];
+    const cells = years.slice(1).map((y) => {
+      const list = coins.filter(s => series[s].h1.length && new Date(series[s].h1[0].t).getUTCFullYear() <= y && pick(s, y));
+      if (!list.length) return pad('-', 8);
+      const r = simulate(series, list, yearTimes(y), base);
+      tot += r.net; dds.push(r.maxDDPct);
+      return pad(r.net.toFixed(0), 8);
+    });
+    L.push(name.padEnd(34) + cells.join('') + pad(tot.toFixed(0), 9) + pad((dds.reduce((a, x) => a + x, 0) / dds.length).toFixed(1) + '%', 8));
+  }
+  L.push('', 'Selections only use results from earlier years (walk-forward). BTC is always loaded for the BTC filter.');
+  const out = L.join('\n');
+  console.log(out);
+  fs.mkdirSync(OUT, { recursive: true });
+  fs.writeFileSync(path.join(OUT, 'COIN_WF.md'), '# Coin selection, walk-forward\n\n```\n' + out + '\n```\n');
 }
 
 function riskStarts(series, symbols, times, start, end) {

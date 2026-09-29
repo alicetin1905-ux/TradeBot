@@ -1,9 +1,15 @@
 {
-  "balance": 1887.0674274500002,
+  "fundingSince": 1790691607598,
+  "funding": {
+    "total": 0,
+    "bySymbol": {}
+  },
+  "balance": 2000,
   "startingBalance": 2000,
   "marginPct": 10,
   "marginUsdt": 400,
   "riskUsdt": 100,
+  "riskPct": 3.75,
   "targetsR": [
     1.5,
     3,
@@ -13,7 +19,8 @@
   "leverage": 10,
   "maxOpenPositions": 7,
   "mode": "demo",
-  "exchangeEquity": 1851.52779752,
+  "fundingError": null,
+  "exchangeEquity": 1853.83252897,
   "settings": {
     "RISK_PCT": 3.75,
     "RISK_USDT": 100,
@@ -39,6 +46,7 @@
     "ENTRY_TF": "240",
     "ENTRY_MIN_SCORE": 50,
     "ENTRY_MIN_SCORE_BY_SYMBOL": {},
+    "MARKET_DATA": "bybit",
     "USE_FIB": true,
     "BTC_FILTER": true,
     "MAX_CHASE_ATR": 1,
@@ -97,6 +105,7 @@
     "ENTRY_TF": "240",
     "ENTRY_MIN_SCORE": 50,
     "ENTRY_MIN_SCORE_BY_SYMBOL": {},
+    "MARKET_DATA": "bybit",
     "USE_FIB": true,
     "BTC_FILTER": true,
     "MAX_CHASE_ATR": 1,
@@ -131,16 +140,5 @@
     "STATUS_EVERY_H": 4
   },
   "settingsErrors": [],
-  "updatedAt": 1790690789186,
-  "fundingSince": 1790586370472,
-  "funding": {
-    "total": 0.34443187999999997,
-    "bySymbol": {
-      "FARTCOINUSDT": 0.21284704999999998,
-      "KAITOUSDT": 0.07349585,
-      "BNBUSDT": 0.05808898
-    }
-  },
-  "fundingError": null,
-  "riskPct": 3.75
+  "updatedAt": 1790691608469
 }

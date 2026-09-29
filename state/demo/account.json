@@ -20,7 +20,7 @@
   "maxOpenPositions": 7,
   "mode": "demo",
   "fundingError": null,
-  "exchangeEquity": 2001.11347447,
+  "exchangeEquity": 2009.92447447,
   "settings": {
     "RISK_PCT": 3.75,
     "RISK_USDT": 100,
@@ -35,9 +35,9 @@
       4.5
     ],
     "TARGET_SPLIT": [
+      0.2,
       0.3,
-      0.3,
-      0.4
+      0.5
     ],
     "STOP_ATR": 1.5,
     "BREAKEVEN_AFTER": "t1",
@@ -140,5 +140,5 @@
     "STATUS_EVERY_H": 4
   },
   "settingsErrors": [],
-  "updatedAt": 1790701588435
+  "updatedAt": 1790704803942
 }

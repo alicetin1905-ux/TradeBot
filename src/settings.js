@@ -45,6 +45,7 @@ const FIELDS = {
   ENTRY_TF: { at: ['ENTRY_TF'], check: oneOf('60', '240'), label: 'Signal timeframe ("60" = 1H, "240" = 4H)' },
   ENTRY_MIN_SCORE: { at: ['ENTRY_MIN_SCORE'], check: num(25, 100, { int: true }), label: 'Min |score| to enter (default for coins with no per-coin override)' },
   ENTRY_MIN_SCORE_BY_SYMBOL: { at: ['ENTRY_MIN_SCORE_BY_SYMBOL'], check: byCoinScores, label: 'Per-coin min |score| overrides' },
+  MARKET_DATA: { at: ['MARKET_DATA'], check: oneOf('bybit', 'okx'), label: 'Price data for the score ("bybit" = where it trades, OKX as fallback; "okx")' },
   USE_FIB: { at: ['USE_FIB'], check: bool, label: 'Fibonacci check on' },
   BTC_FILTER: { at: ['BTC_FILTER'], check: bool, label: 'No altcoin trades against BTC\'s signal' },
   MAX_CHASE_ATR: { at: ['MAX_CHASE_ATR'], check: num(0.1, 5), label: 'Max distance from the flip entry (x ATR)' },

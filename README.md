@@ -28,7 +28,8 @@ BLUR, SAND, AXS, ZIL, TRX, CHZ and POPCAT perps on **Bybit Demo Trading** (mainn
 
 ## Demo funds only
 
-The bot reads signals from OKX's public market data and places real orders
+The bot reads signals from Bybit's public market data (OKX as a fallback,
+`MARKET_DATA` setting) and places real orders
 on a **Bybit Demo Trading** account (`api-demo.bybit.com`) — demo funds, not
 real money. There is no real-money mode in this build: the Bybit client only
 knows the Demo Trading environment and refuses anything else. Treat every
@@ -154,9 +155,12 @@ window. Limit entries and breakeven-after-T2 didn't help.
   same request, then three reduce-only limit orders for T1/T2/T3
   (40/35/25%). Stops and targets live on Bybit, so they keep working if the
   machine running the bot is off.
-- **Levels:** the strategy reads OKX mainnet candles; its stop/targets are
-  carried over as % distances from Bybit's actual fill price (Bybit and OKX
-  prices differ slightly). Instrument rules and mark prices come from
+- **Levels:** the strategy reads Bybit mainnet candles and flow data
+  (`src/bybitMarket.js`: 400 closed candles per timeframe, like the backtest;
+  if Bybit fails, the candles come from OKX as one set and each flow feed
+  falls back on its own — the run log says so and `scores.json` records the
+  source). Its stop/targets are carried over as % distances from Bybit's
+  actual fill price. The backtest and liquidation tracking still use OKX. Instrument rules and mark prices come from
   Bybit's public mainnet API (`api.bybit.com`, no key sent); orders go to
   `api-demo`.
 - **Funding fees:** every funding payment on the bot's coins (Bybit

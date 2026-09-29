@@ -17,6 +17,11 @@ const config = module.exports = {
   // standing an hour or more later isn't chased. null = any time.
   ENTRY_FRESH_MIN: 60,
 
+  // Where the score's candles and flow data come from: 'bybit' (the exchange
+  // the bot trades on, OKX as fallback) or 'okx'. Liquidation tracking and the
+  // backtest always use OKX.
+  MARKET_DATA: 'bybit',
+
   // Multi-timeframe alignment check, same set ATLAS's own panel uses.
   MTF_TFS: ['30', '60', '240', 'D'],
 

@@ -27,7 +27,9 @@
 const fs = require('fs');
 const path = require('path');
 const config = require('../config');
-const marketData = require('./okx');
+// Candles and flow data for the score: Bybit (where the bot trades) by
+// default, falling back to OKX per feed; MARKET_DATA "okx" = OKX only.
+const marketData = config.MARKET_DATA === 'okx' ? require('./okx') : require('./bybitMarket');
 const atlasScore = require('./atlasScore');
 const strategy = require('./strategy');
 const exchange = require('./exchange');
@@ -125,7 +127,8 @@ async function scoreAll(st, events) {
         leverage: P.LEVERAGE, scoreThreshold: config.SCORE_THRESHOLD,
       });
       if (!analysis) { events.push({ symbol, type: 'skip', reason: 'not enough candle history yet' }); continue; }
-      st.scores[symbol] = { score: analysis.score, bias: analysis.bias, at: Date.now() };
+      st.scores[symbol] = { score: analysis.score, bias: analysis.bias, at: Date.now(), src: data.source || 'okx' };
+      if (data.source && data.source !== 'bybit') console.log(`${symbol}: market data from ${data.source}${data.note ? ` (Bybit candles failed: ${data.note})` : ''}`);
       signals[symbol] = { symbol, data, analysis };
     } catch (err) {
       events.push({ symbol, type: 'error', reason: err.message });

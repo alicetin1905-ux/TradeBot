@@ -768,3 +768,76 @@ test('RISK_PCT sizing: the stop loses RISK_PCT % of the balance and follows the 
     assert.ok(Math.abs(st.positions.SOLUSDT.riskAmt - 30) < 1e-6); // 2.5% of 1200
   } finally { Object.assign(config.PORTFOLIO, { MARGIN_USDT: null, RISK_USDT: null, RISK_PCT: null }); }
 });
+
+// Bybit / OKX market-data stand-in: answers by URL, `down` makes Bybit fail.
+function fakeMarket({ down = [] } = {}) {
+  const calls = [];
+  const ok = (result) => ({ status: 200, text: async () => JSON.stringify({ retCode: 0, result }) });
+  const okxOk = (data) => ({ json: async () => ({ code: '0', data }) });
+  const fn = async (url) => {
+    calls.push(url);
+    const u = new URL(url);
+    if (u.host === 'api.bybit.com') {
+      const p = u.pathname.split('/').pop();
+      if (down.includes(p) || down.includes('all')) return { status: 403, text: async () => '<html>blocked</html>' };
+      const n = +u.searchParams.get('limit');
+      if (p === 'kline') return ok({ list: Array.from({ length: n }, (_, i) => [String(1e12 - i * 3600000), '10', '11', '9', '10.5', '100', '1000']) });
+      if (p === 'tickers') return ok({ list: [{ fundingRate: '0.0001' }] });
+      if (p === 'open-interest') return ok({ list: [{ openInterest: '2', timestamp: '2' }, { openInterest: '1', timestamp: '1' }] });
+      if (p === 'account-ratio') return ok({ list: [{ buyRatio: '0.6', sellRatio: '0.4' }] });
+      if (p === 'orderbook') return ok({ b: [['10', '5']], a: [['10.1', '3']] });
+      if (p === 'recent-trade') return ok({ list: [{ side: 'Buy', size: '2' }, { side: 'Sell', size: '1' }] });
+    }
+    if (u.pathname.endsWith('/market/candles')) return okxOk(Array.from({ length: 300 }, (_, i) => [String(1e12 - i * 3600000), '20', '21', '19', '20', 'x', '50', 'x', '1']));
+    if (u.pathname.endsWith('/funding-rate')) return okxOk([{ fundingRate: '0.0002' }]);
+    return okxOk([]);
+  };
+  return { fn, calls };
+}
+
+test('market data: Bybit candles and flow in the shape analyse() expects', async () => {
+  const bm = require('../src/bybitMarket');
+  const m = fakeMarket();
+  const saved = global.fetch; global.fetch = m.fn;
+  try {
+    const d = await bm.loadSymbolData('SOLUSDT', ['30', '60', '240', 'D'], '240');
+    assert.equal(d.source, 'bybit');
+    assert.equal(d.candles['240'].length, 401);                          // 400 closed + the forming one, like the backtest
+    assert.ok(d.candles['240'][0].t < d.candles['240'][400].t);          // oldest first
+    assert.deepEqual(d.candles['240'][0], { t: 1e12 - 400 * 3600000, o: 10, h: 11, l: 9, c: 10.5, v: 100 });
+    assert.equal(d.ticker.fundingRate, '0.0001');
+    assert.deepEqual(d.oi.map(x => x.openInterest), ['1', '2']);         // oldest first
+    assert.deepEqual(d.ratio, { buyRatio: '0.6', sellRatio: '0.4' });
+    assert.deepEqual(d.book, { b: [['10', '5']], a: [['10.1', '3']] });
+    assert.deepEqual(d.tape, [{ S: 'Buy', v: '2' }, { S: 'Sell', v: '1' }]);
+    assert.ok(m.calls.every(u => u.includes('category=linear') || !u.includes('bybit')));
+  } finally { global.fetch = saved; }
+});
+
+test('market data: falls back to OKX — whole candle set, or one flow feed at a time', async () => {
+  const bm = require('../src/bybitMarket');
+  const saved = global.fetch;
+  try {
+    let m = fakeMarket({ down: ['kline'] }); global.fetch = m.fn;
+    let d = await bm.loadSymbolData('SOLUSDT', ['60'], '240');
+    assert.equal(d.source, 'okx');
+    assert.equal(d.candles['60'][0].c, 20);                              // every timeframe from OKX, none mixed
+    assert.equal(d.candles['240'][0].c, 20);
+    assert.match(d.note, /HTTP 403/);
+    assert.equal(d.ticker.fundingRate, '0.0001');                        // flow still from Bybit
+    m = fakeMarket({ down: ['tickers'] }); global.fetch = m.fn;
+    d = await bm.loadSymbolData('SOLUSDT', ['60'], '240');
+    assert.equal(d.source, 'bybit+okx');
+    assert.equal(d.candles['60'][0].c, 10.5);
+    assert.equal(d.ticker.fundingRate, '0.0002');                        // OKX funding
+  } finally { global.fetch = saved; }
+});
+
+test('MARKET_DATA setting: only "bybit" or "okx"', () => {
+  const settings = require('../src/settings');
+  const cfg = JSON.parse(JSON.stringify({ MARKET_DATA: 'bybit', PORTFOLIO: {}, EXECUTION: {}, NOTIFY: {} }));
+  for (const [k, f] of Object.entries(settings.FIELDS)) if (k !== 'MARKET_DATA') { let o = cfg; for (const x of f.at.slice(0, -1)) o = o[x] = o[x] || {}; }
+  assert.deepEqual(settings.apply(cfg, { MARKET_DATA: 'okx' }).applied, { MARKET_DATA: 'okx' });
+  assert.equal(cfg.MARKET_DATA, 'okx');
+  assert.equal(settings.apply(cfg, { MARKET_DATA: 'binance' }).errors.length, 1);
+});

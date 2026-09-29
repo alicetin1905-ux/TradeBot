@@ -494,6 +494,7 @@
     { g: 'Take profit / stop loss', k: 'FLIP_EXIT', label: 'Close on score flip', t: 'bool' },
     { g: 'Strategy', k: 'ENTRY_TF', label: 'Signal timeframe', t: 'enum', opts: [['240', '4H'], ['60', '1H']] },
     { g: 'Strategy', k: 'ENTRY_MIN_SCORE', label: 'Min score to enter', t: 'num', min: 25, max: 100, int: true },
+    { g: 'Strategy', k: 'MARKET_DATA', label: 'Price data for the score', t: 'enum', opts: [['bybit', 'Bybit (OKX fallback)'], ['okx', 'OKX']] },
     { g: 'Strategy', k: 'USE_FIB', label: 'Fibonacci check', t: 'bool' },
     { g: 'Strategy', k: 'BTC_FILTER', label: 'BTC filter (no alt trades against BTC)', t: 'bool' },
     { g: 'Strategy', k: 'MAX_CHASE_ATR', label: 'Max chase (x ATR)', t: 'num', min: 0.1, max: 5 },

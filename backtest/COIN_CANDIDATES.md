@@ -43,7 +43,7 @@ CHZ                           1947    -880    1602     771     166      4/5     
 CFX                            866    -776    2011     189     895      4/5     3187  1.20    319
 MINA                          1162    -304     159    1100     687      4/5     2803  1.16    320
 IMX                            894     634     431     424     -99      4/5     2283  1.13    323
-ENS                            737   -1921     812     807     432      4/5      868  1.05    312
+ENS                            737   -1921     812     807     332      4/5      767  1.05    313
 BCH            476    1780     100    -238     465    -840     837      5/7     2581  1.11    469
 ADA                   1052    2649     624    -174     -54      81      4/6     4178  1.21    383
 ALGO                   -46     856     566    1730    1004    -114      4/6     3995  1.20    382
@@ -125,9 +125,21 @@ live 15                                     3127    3689   -1939    6327    2915
 live 15 + all candidates                    7356   -1383   -1955   -2026    1318    1614     4924   82.5%  1.04
 live 15 + candidates, past record good      5494    -438    -609    2696   -1974    1401     6570   84.6%  1.05
 live 14 (no BTC) + past record good         5222   -1181    -329    1994   -1982    1689     5412   85.2%  1.04
+live 14 (no BTC)                            3548    4713   -2009    7775    2765    9422    26215   57.4%  1.25
+live 15 + best 2 by past record             3127    4350   -1759    7249    2243    8650    23859   59.1%  1.20
+live 15 + best 4 by past record             3127    2691   -2018    5499   -2036    7060    14322   67.1%  1.13
+live 15 + best 6 by past record             3127    2691     787    6334   -2036    6340    17243   65.2%  1.14
+live 14 (no BTC) + best 4 by past record    3548    4401   -1974    5450    1714    6719    19859   61.3%  1.17
+live 15 + BLUR only                         3127    3689   -2005    6068    2485    8941    22304   63.8%  1.19
+live 15 + SAND only                         3579    5244   -1999    6861    2811    9725    26222   58.4%  1.23
+live 15 + EGLD only                         3632    4550   -1958    6930    1739    8425    23318   61.8%  1.20
+live 15 + MANA only                         2834    3973   -1928    6737    3052    9711    24379   57.1%  1.20
+live 15 + AVAX only                         3697    4046   -1665    8446   -1983    8212    20753   64.2%  1.18
+live 15 + AXS only                          2840    2597   -2004    6316   -2041    8958    16665   66.8%  1.15
 live 15 + in-sample picks                   5454    3680   -1390    3510    1097    5995    18347   66.6%  1.12
 live 14 (no BTC) + in-sample picks          4260    4418   -1992    4634   -2037    6172    15455   70.0%  1.11
 
 In-sample picks (≥ 2/3 of years profitable, PF ≥ 1.15, whole period — optimistic): ADA, AVAX, FIL, TRX, XLM, NEAR, ARB, RENDER, STRK, WIF, STX, POL, GRT, SAND, ALGO, AXS, MANA, CHZ, THETA, CFX, EGLD, ZIL, FLOW, MINA, GMX, BLUR, POPCAT, NOT, ONE, ZK, BOME, PENGU
+Best 4 by past record, per year: 2021  · 2022 LTC/ETC/BCH · 2023 ADA/ZIL/FIL/NEAR · 2024 SAND/EGLD/ZIL/MANA · 2025 SAND/AXS/AVAX/FIL · 2026 SAND/BLUR/STX/AVAX · next year POPCAT/BLUR/SAND/EGLD
 Picked for next year by past record (all years so far, needs a full year): ADA, LINK, AVAX, DOT, BCH, ETC, FIL, TRX, XLM, AAVE, NEAR, UNI, INJ, ARB, OP, SEI, S, PENDLE, RENDER, ZRO, STRK, WIF, IMX, JUP, ORDI, STX, HBAR, POL, GRT, TAO, CRV, SAND, ICP, ALGO, PYTH, AXS, MANA, CHZ, THETA, SNX, DASH, CFX, ENS, EGLD, SUSHI, YFI, 1INCH, ZIL, XTZ, FLOW, MINA, GMX, BLUR, ARKM, POPCAT, MEW, NOT, PEOPLE, ONE, BICO, MAGIC, AR, W, ZK, BOME, TURBO, NEIRO, VIRTUAL, PENGU
 ```

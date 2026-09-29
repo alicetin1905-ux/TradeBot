@@ -32,7 +32,43 @@
       "t3": "cfd9ef48-0abe-4ec9-b6d1-353238779536"
     },
     "tickSize": 0.1,
-    "markPrice": 755.21,
-    "unrealisedPnl": -3.003
+    "markPrice": 755,
+    "unrealisedPnl": -2.31
+  },
+  "POPCATUSDT": {
+    "symbol": "POPCATUSDT",
+    "bias": -1,
+    "entry": 0.05282,
+    "stop": 0.05563,
+    "initialStop": 0.05563,
+    "t1": 0.04847,
+    "t2": 0.04411,
+    "t3": 0.03976,
+    "qtyTotal": 25840,
+    "qtyRemaining": 25840,
+    "qtyT1": 5168,
+    "qtyT2": 7752,
+    "qtyT3": 12920,
+    "margin": 136.48687999999999,
+    "notional": 1364.8688,
+    "riskAmt": 72.6104,
+    "filled": {
+      "t1": false,
+      "t2": false,
+      "t3": false
+    },
+    "breakeven": false,
+    "beAfter": "t1",
+    "openedAt": 1790712076771,
+    "score": -57,
+    "orders": {
+      "entry": "e87122c1-9037-4f0e-8737-ed5ee524707e",
+      "t1": "698315d0-5c09-4db1-b612-3061de1357b8",
+      "t2": "fb3e7423-3827-4c55-a6e7-f142295907e2",
+      "t3": "81d18479-b5a7-40fc-a969-30da48fee075"
+    },
+    "tickSize": 0.00001,
+    "markPrice": 0.05273,
+    "unrealisedPnl": 2.3256
   }
 }

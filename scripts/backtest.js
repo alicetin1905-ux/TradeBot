@@ -945,18 +945,18 @@ function coinCandidates(series, cands, times, start, end) {
   }).filter(x => x.ok && x.avg > 0).sort((a, b) => b.avg - a.avg).slice(0, n).map(x => x.s);
   const topSolo = cands.filter(s => stat[s].n >= 3).sort((a, b) => stat[b].tot / stat[b].n - stat[a].tot / stat[a].n).filter(s => stat[s].w >= stat[s].n - 1).slice(0, 6);
   const strategies = {
-    'live 15': () => config.SYMBOLS,
-    'live 15 + all candidates': () => all,
-    'live 15 + candidates, past record good': (y) => [...config.SYMBOLS, ...cands.filter(s => pastOk(s, y))],
-    'live 14 (no BTC) + past record good': (y) => [...noBtc, ...cands.filter(s => pastOk(s, y))],
-    'live 14 (no BTC)': () => noBtc,
-    'live 15 + best 2 by past record': (y) => [...config.SYMBOLS, ...bestPast(y, 2)],
-    'live 15 + best 4 by past record': (y) => [...config.SYMBOLS, ...bestPast(y, 4)],
-    'live 15 + best 6 by past record': (y) => [...config.SYMBOLS, ...bestPast(y, 6)],
-    'live 14 (no BTC) + best 4 by past record': (y) => [...noBtc, ...bestPast(y, 4)],
-    ...Object.fromEntries(topSolo.map(s => [`live 15 + ${s.replace('USDT', '')} only`, () => [...config.SYMBOLS, s]])),
-    'live 15 + in-sample picks': () => [...config.SYMBOLS, ...inSample],
-    'live 14 (no BTC) + in-sample picks': () => [...noBtc, ...inSample],
+    'live': () => config.SYMBOLS,
+    'live + all candidates': () => all,
+    'live + candidates, past record good': (y) => [...config.SYMBOLS, ...cands.filter(s => pastOk(s, y))],
+    'live without BTC + past record good': (y) => [...noBtc, ...cands.filter(s => pastOk(s, y))],
+    'live without BTC': () => noBtc,
+    'live + best 2 by past record': (y) => [...config.SYMBOLS, ...bestPast(y, 2)],
+    'live + best 4 by past record': (y) => [...config.SYMBOLS, ...bestPast(y, 4)],
+    'live + best 6 by past record': (y) => [...config.SYMBOLS, ...bestPast(y, 6)],
+    'live without BTC + best 4 by past record': (y) => [...noBtc, ...bestPast(y, 4)],
+    ...Object.fromEntries(topSolo.map(s => [`live + ${s.replace('USDT', '')} only`, () => [...config.SYMBOLS, s]])),
+    'live + in-sample picks': () => [...config.SYMBOLS, ...inSample],
+    'live without BTC + in-sample picks': () => [...noBtc, ...inSample],
   };
   L.push('', '2) Portfolio per year (7 slots, max 4 per direction) — "past record good" only uses earlier years', '');
   L.push('selection'.padEnd(40) + years.slice(1).map(y => pad(y, 8)).join('') + pad('total', 9) + pad('avg DD', 8) + pad('PF', 6));

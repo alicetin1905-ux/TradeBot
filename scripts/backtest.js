@@ -545,6 +545,11 @@ const SCORE_LAB = args.includes('--score-lab');
 // --score-mom: entries on score momentum (the score rising candle to candle)
 // vs the fixed min-score rule. Written to backtest/SCORE_MOM.md.
 const SCORE_MOM = args.includes('--score-mom');
+// --lab2: exits after T1 and risk controls for bad years, 2020-2026, same
+// table as --score-mom. Written to backtest/EXIT_RISK_LAB.md.
+const LAB2 = args.includes('--lab2');
+// --lab3: combinations of the --lab2 winners. backtest/EXIT_RISK_COMBOS.md.
+const LAB3 = args.includes('--lab3');
 const LAB_MODE = args.includes('--mode') ? args[args.indexOf('--mode') + 1] : 'classic';
 const LAB_MTF = args.includes('--mtf');
 const LAB_TAG = args.includes('--tag') ? args[args.indexOf('--tag') + 1] : LAB_MODE + (LAB_MTF ? '-mtf' : '');
@@ -575,7 +580,7 @@ async function main() {
   }
   for (const s of symbols) {
     process.stderr.write(`scoring ${s}…\n`);
-    series[s].sig1 = SCORE_LAB ? new Map() : TF_COMPARE ? precompute(s, series[s].h1, 1, start) : SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB || RISK_GRID || LEV_GRID || DD_LAB || RISK_STARTS || COIN_WF || SCORE_MOM ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
+    series[s].sig1 = SCORE_LAB ? new Map() : TF_COMPARE ? precompute(s, series[s].h1, 1, start) : SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB || RISK_GRID || LEV_GRID || DD_LAB || RISK_STARTS || COIN_WF || SCORE_MOM || LAB2 || LAB3 ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
     series[s].sig4 = SCORE_LAB ? precompute(s, to4h(series[s].h1), 4, start, { h1: series[s].h1, mode: LAB_MODE, mtfTrim: LAB_MTF }) : precompute(s, to4h(series[s].h1), 4, start);
     addFilterInputs(series[s]);
   }
@@ -591,6 +596,20 @@ async function main() {
   if (LEV_GRID) return levGrid(series, symbols, times, start, now);
   if (DD_LAB) return ddLab(series, symbols, times, start, now);
   if (RISK_STARTS) return riskStarts(series, symbols, times, start, now);
+  if (LAB3) return variantTable('Exit and risk combinations', [
+    ['A  live', {}],
+    ['close 20/30/50%', { split: [0.2, 0.3, 0.5] }],
+    ['close 30/30/40%, runner trails 3 ATR after T2', { trail: { after: 't2', atr: 3 } }],
+    ['close 20/30/50%, runner trails 3 ATR after T2', { split: [0.2, 0.3, 0.5], trail: { after: 't2', atr: 3 } }],
+    ['close 20/30/50%, runner trails 4 ATR after T2', { split: [0.2, 0.3, 0.5], trail: { after: 't2', atr: 4 } }],
+    ['close 20/30/50% + half risk 30%+ below peak', { split: [0.2, 0.3, 0.5], ddThrottle: { at: 0.3, factor: 0.5 } }],
+    ['close 20/30/50% + max 3 per direction', { split: [0.2, 0.3, 0.5], maxSameDir: 3 }],
+    ['20/30/50% + trail 3 ATR + half risk 30%+', { split: [0.2, 0.3, 0.5], trail: { after: 't2', atr: 3 }, ddThrottle: { at: 0.3, factor: 0.5 } }],
+    ['20/30/50% + trail 3 ATR + max 3 per dir', { split: [0.2, 0.3, 0.5], trail: { after: 't2', atr: 3 }, maxSameDir: 3 }],
+    ['half risk 25%+ below peak', { ddThrottle: { at: 0.25, factor: 0.5 } }],
+    ['risk x0.67 while 30%+ below peak', { ddThrottle: { at: 0.3, factor: 0.67 } }],
+  ], series, times, start, now, 'EXIT_RISK_COMBOS.md');
+  if (LAB2) return lab2(series, symbols, times, start, now);
   if (SCORE_MOM) return scoreMom(series, symbols, times, start, now);
   if (SCORE_LAB) return scoreLab(series, symbols, times, start, now);
   if (TF_COMPARE) return tfCompare(series, symbols, times, start, now);
@@ -960,6 +979,69 @@ function coinCandidates(series, cands, times, start, end) {
   console.log(out);
   fs.mkdirSync(OUT, { recursive: true });
   fs.writeFileSync(path.join(OUT, 'COIN_CANDIDATES.md'), '# Candidate coins\n\n```\n' + out + '\n```\n');
+}
+
+function lab2(series, symbols, times, start, end) {
+  const V = [
+    ['A  live', {}],
+    ['-- exits --', null],
+    ['BE after T2 (not T1)', { breakevenAfter: 't2' }],
+    ['no stop to T1 after T2', { lockT1AfterT2: false }],
+    ['runner trails 2 ATR after T2 (no T3)', { trail: { after: 't2', atr: 2 } }],
+    ['runner trails 3 ATR after T2 (no T3)', { trail: { after: 't2', atr: 3 } }],
+    ['runner trails 2.5 ATR after T1 (no T3)', { trail: { after: 't1', atr: 2.5 } }],
+    ['close if no T1 after 48h', { timeStopH: 48 }],
+    ['close if no T1 after 96h', { timeStopH: 96 }],
+    ['close 50/30/20% at T1/T2/T3', { split: [0.5, 0.3, 0.2] }],
+    ['close 20/30/50% at T1/T2/T3', { split: [0.2, 0.3, 0.5] }],
+    ['-- bad years --', null],
+    ['half risk while 20%+ below peak', { ddThrottle: { at: 0.2, factor: 0.5 } }],
+    ['half risk while 30%+ below peak', { ddThrottle: { at: 0.3, factor: 0.5 } }],
+    ['pause 24h after 4 losses in a row', { streakPause: { n: 4, hours: 24 } }],
+    ['pause 48h after 6 losses in a row', { streakPause: { n: 6, hours: 48 } }],
+    ['only when BTC 4H ADX >= 20 (trending)', { btcMinAdx: 20 }],
+    ['only when the coin 4H ADX >= 20', { minAdx: 20 }],
+    ['only when the coin 4H ADX >= 25', { minAdx: 25 }],
+    ['max 3 per direction', { maxSameDir: 3 }],
+    ['max 5 open in total', { maxOpen: 5 }],
+  ];
+  variantTable('Exits after T1 and risk in bad years', V, series, times, start, end, 'EXIT_RISK_LAB.md');
+}
+
+// One row per variant (rule overrides on the live setup): per year with
+// fresh 2000 USDT and $100 fixed risk, 2020-23 vs 2024-26, and compounding.
+function variantTable(title, V, series, times, start, end, file) {
+  const live = VARIANTS.find(v => v.focus);
+  const P = config.PORTFOLIO;
+  const coins = config.SYMBOLS;
+  const pad = (x, n) => String(x).padStart(n);
+  const base = { ...live.rules, start: P.STARTING_BALANCE, margin: P.MARGIN_USDT, leverage: P.LEVERAGE, maxOpen: P.MAX_OPEN_POSITIONS, maxSameDir: P.MAX_SAME_DIRECTION };
+  const y0 = new Date(start).getUTCFullYear(), y1 = new Date(end).getUTCFullYear();
+  const years = []; for (let y = y0; y <= y1; y++) years.push(y);
+  const yearTimes = Object.fromEntries(years.map(y => [y, times.filter(t => new Date(t).getUTCFullYear() === y)]));
+  const pf = (r) => { let w = 0, l = 0; for (const t of r.tradeList) { if (t.pnl > 0) w += t.pnl; else l -= t.pnl; } return l ? w / l : 0; };
+  const L = [];
+  L.push(`${title} · ${coins.length} coins · ${new Date(start).toISOString().slice(0, 10)} → ${new Date(end).toISOString().slice(0, 10)} · 4H, live rules otherwise`, '');
+  L.push('Per year: fresh 2000 USDT, $100 fixed risk — net $ (worst drop). Compound: 2000 USDT, ' + P.RISK_PCT + '% risk, whole period.', '');
+  L.push('variant'.padEnd(42) + years.map(y => pad(y, 14)).join('') + pad('20-23', 8) + pad('24-26', 8) + pad('yrs+', 6) + '  | compound end $ / PF / worst drop / trades');
+  for (const [name, extra] of V) {
+    if (!extra) { L.push(name); continue; }
+    process.stderr.write(`${name}\n`);
+    let tr = 0, te = 0, w = 0;
+    const cells = years.map(y => {
+      const r = simulate(series, coins, yearTimes[y], { ...base, ...extra, riskUsd: 100, riskPct: null });
+      if (y <= 2023) tr += r.net; else te += r.net;
+      if (r.net > 0) w++;
+      return pad(`${r.net.toFixed(0)} (${r.maxDDPct.toFixed(0)}%)`, 14);
+    });
+    const c = simulate(series, coins, times, { ...base, ...extra, riskUsd: null, riskPct: P.RISK_PCT });
+    L.push(name.padEnd(42) + cells.join('') + pad(tr.toFixed(0), 8) + pad(te.toFixed(0), 8) + pad(`${w}/${years.length}`, 6) +
+      `  | ${Math.round(P.STARTING_BALANCE + c.net).toLocaleString('en-US')} / ${pf(c).toFixed(2)} / ${c.maxDDPct.toFixed(1)}% / ${c.trades}`);
+  }
+  const out = L.join('\n');
+  console.log(out);
+  fs.mkdirSync(OUT, { recursive: true });
+  fs.writeFileSync(path.join(OUT, file), `# ${title}\n\n\`\`\`\n` + out + '\n\`\`\`\n');
 }
 
 function scoreMom(series, symbols, times, start, end) {

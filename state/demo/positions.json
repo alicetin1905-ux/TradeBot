@@ -1,41 +1,4 @@
 {
-  "FARTCOINUSDT": {
-    "symbol": "FARTCOINUSDT",
-    "bias": -1,
-    "entry": 0.17335,
-    "stop": 0.19279,
-    "initialStop": 0.19279,
-    "t1": 0.14385,
-    "t2": 0.11436,
-    "t3": 0.08486,
-    "qtyTotal": 5091,
-    "qtyRemaining": 5091,
-    "qtyT1": 1527,
-    "qtyT2": 1527,
-    "qtyT3": 2037,
-    "margin": 88.25248500000001,
-    "notional": 882.52485,
-    "riskAmt": 98.96903999999992,
-    "filled": {
-      "t1": false,
-      "t2": false,
-      "t3": false
-    },
-    "breakeven": false,
-    "beAfter": "t1",
-    "openedAt": 1790597171376,
-    "score": -53,
-    "orders": {
-      "entry": "eb79640a-03ba-49f7-b757-98f9613125ef",
-      "t1": "e9e8923d-3606-4c1e-809d-5913aaac9257",
-      "t2": "4f9d2258-32af-4295-914a-83fcf546ec77",
-      "t3": "88fa3447-0273-4a92-acfe-0af20b62eaff"
-    },
-    "tickSize": 0.00001,
-    "markPrice": 0.17468,
-    "unrealisedPnl": -6.77103,
-    "funding": 0.21284704999999998
-  },
   "BNBUSDT": {
     "symbol": "BNBUSDT",
     "bias": -1,
@@ -69,8 +32,8 @@
       "t3": "739c73d4-fd0e-48b5-8fa7-a40653fa7cd7"
     },
     "tickSize": 0.1,
-    "markPrice": 763.8,
-    "unrealisedPnl": -25.728,
+    "markPrice": 763.32,
+    "unrealisedPnl": -23.7984,
     "funding": 0.05808898
   }
 }

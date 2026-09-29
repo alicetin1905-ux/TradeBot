@@ -107,7 +107,7 @@ Requires Node 18+ (native `fetch`), no dependencies. Keys come from `.env`
 The bot runs from a Mac via cron, set up once with `bash scripts/setup-mac.sh`
 (see *Setup* below):
 
-- `:06` every hour — full run (`scripts/exchange-run.sh demo`)
+- `:01` every hour — full run (`scripts/exchange-run.sh demo`)
 - every 5 minutes — sync (`scripts/exchange-run.sh demo sync`)
 
 Each run commits `state/demo/*.json` back to this repo — that is how the bot

@@ -63,7 +63,7 @@ function due(st, now = Date.now()) {
 // Hourly status: equity (allocation + open P&L), each open trade's live
 // P&L from Bybit, targets hit, free slots, and the strongest waiting coins.
 // True on the runs that send the status push: the first run in every
-// NOTIFY.STATUS_EVERY_H-th UTC hour (runs are at :06, right after a candle close).
+// NOTIFY.STATUS_EVERY_H-th UTC hour (runs are at :01, right after a candle close).
 function statusDue(now = Date.now()) {
   const every = config.NOTIFY.STATUS_EVERY_H || 1;
   return new Date(now).getUTCHours() % every === 0;

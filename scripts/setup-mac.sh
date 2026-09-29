@@ -2,7 +2,7 @@
 # One-time setup on the Mac that runs the Bybit demo bot:
 #   - git identity + saved GitHub token so runs can push state/demo/
 #   - first upload of state/demo/ so the dashboard's Bybit demo tab fills
-#   - cron: Bybit run hourly at :06, quick sync every 5 minutes
+#   - cron: Bybit run hourly at :01 (right after the candle close), quick sync every 5 minutes
 # Safe to run again: it replaces its own cron lines and leaves others alone.
 #
 #   cd ~/TradeBot && bash scripts/setup-mac.sh
@@ -61,7 +61,7 @@ RUN="$REPO_DIR/scripts/exchange-run.sh"
 OTHER_JOBS="$(crontab -l 2>/dev/null | grep -v 'exchange-run.sh' || true)"
 {
   [ -n "$OTHER_JOBS" ] && printf '%s\n' "$OTHER_JOBS"
-  echo "6 * * * *   PUSH_STATE=1 $RUN $MODE"
+  echo "1 * * * *   PUSH_STATE=1 $RUN $MODE"
   echo "*/5 * * * * PUSH_STATE=1 $RUN $MODE sync"
 } | crontab -
 echo "✓ Schedule installed:"

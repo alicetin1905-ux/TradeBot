@@ -32,6 +32,15 @@ trap 'rm -rf "$LOCK"' EXIT
 {
   if [ ${#ARGS[@]} -eq 0 ]; then echo "=== $(date -u +%Y-%m-%dT%H:%M:%SZ) ==="; fi
   git pull --rebase --autostash -q || echo "git pull failed — running current checkout"
+  # One-time move of the hourly run from :06 to :01 — right after the 4H
+  # close, like the backtest. Only this script's own cron line is touched.
+  if command -v crontab >/dev/null 2>&1; then
+    CUR="$(crontab -l 2>/dev/null || true)"
+    if printf '%s\n' "$CUR" | grep -q '^6 \* \* \* \* .*exchange-run\.sh'; then
+      printf '%s\n' "$CUR" | sed '/exchange-run\.sh/s/^6 \* \* \* \* /1 * * * * /' | crontab - \
+        && echo "cron: hourly run moved from :06 to :01" || echo "cron: could not move the hourly run (run scripts/setup-mac.sh)"
+    fi
+  fi
   TRADEBOT_MODE="$MODE" node src/run.js ${ARGS[@]+"${ARGS[@]}"}
 
   if [ "${PUSH_STATE:-0}" = "1" ]; then

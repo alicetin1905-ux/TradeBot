@@ -121,6 +121,13 @@ function to4h(h1) {
 // (daily pivot) and, for mtfTrim, the 1H/4H/1D alignment are rebuilt as they
 // stood at each signal close; mode: 'classic' | 'graded' (src/atlasScore.js).
 function precompute(symbol, candles, tfHours, fromMs, opts = {}) {
+  // opts.entryTf: score another signal timeframe (e.g. 'D'); the strategy
+  // helpers read config.ENTRY_TF, so it is switched for this call only.
+  const savedTf = config.ENTRY_TF;
+  if (opts.entryTf) config.ENTRY_TF = opts.entryTf;
+  try { return precomputeTf(symbol, candles, tfHours, fromMs, opts); } finally { config.ENTRY_TF = savedTf; }
+}
+function precomputeTf(symbol, candles, tfHours, fromMs, opts) {
   const flipStore = {};
   const out = new Map();
   const h1 = opts.h1, d1 = h1 ? to1d(h1) : null;
@@ -240,7 +247,7 @@ function simulate(series, symbols, times, rules) {
   const R = { ...BASE_RULES, ...rules };
   const split = R.split || [0.40, 0.35, 0.25];
   const FEE_TAKER = R.fees ? FEES.taker : 0, FEE_MAKER = R.fees ? FEES.maker : 0;
-  const sigKey = R.tf === '4H' ? 'sig4' : 'sig1';
+  const sigKey = R.tf === '4H' ? 'sig4' : R.tf === '1D' ? 'sigD' : 'sig1';
   let balance = R.start, peak = R.start, maxDD = 0, curDD = 0, peakT = times[0], dd = null;
   let lossStreak = 0, pauseUntil = 0;
   const open = {};      // symbol -> position
@@ -363,6 +370,12 @@ function simulate(series, symbols, times, rules) {
       const sig = series[s][sigKey].get(t);
       const minScore = (R.minScoreBySymbol && R.minScoreBySymbol[s] != null) ? R.minScoreBySymbol[s] : R.minScore;
       if (!sig || sig.bias === 0 || !sig.ratio) continue;
+      if (R.dAgree) {
+        // daily trend filter: the last closed 1D signal must point the trade's way
+        const dayStart = Math.floor((t + HOUR) / (24 * HOUR)) * 24 * HOUR - 24 * HOUR;
+        const d = series[s].sigD && series[s].sigD.get(dayStart + 23 * HOUR);
+        if (!d || d.bias !== sig.bias) continue;
+      }
       if (R.entryFn) {
         // score momentum: the score in the trade's direction now and 1 / 2 signal candles ago
         const step = R.tf === '4H' ? 4 * HOUR : HOUR, b = sig.bias;
@@ -550,6 +563,9 @@ const SCORE_MOM = args.includes('--score-mom');
 const LAB2 = args.includes('--lab2');
 // --lab3: combinations of the --lab2 winners. backtest/EXIT_RISK_COMBOS.md.
 const LAB3 = args.includes('--lab3');
+// --tf-day: 1D signals vs 4H, and 4H entries only with the daily trend.
+// backtest/TF_DAY.md.
+const TF_DAY = args.includes('--tf-day');
 const LAB_MODE = args.includes('--mode') ? args[args.indexOf('--mode') + 1] : 'classic';
 const LAB_MTF = args.includes('--mtf');
 const LAB_TAG = args.includes('--tag') ? args[args.indexOf('--tag') + 1] : LAB_MODE + (LAB_MTF ? '-mtf' : '');
@@ -566,7 +582,7 @@ async function main() {
   const symbols = SCAN ? [...new Set(['BTCUSDT', ...config.SYMBOLS, ...SCAN])] : COINS ? [...new Set(['BTCUSDT', ...COINS])] : [...new Set([...config.SYMBOLS, ...CANDIDATES])];
   const now = Date.now() - END_AGO * 24 * HOUR;
   const start = now - DAYS * 24 * HOUR;
-  const from = start - (LOOKBACK * 4 + 48) * HOUR; // warm-up for the 4H series too
+  const from = start - (LOOKBACK * (TF_DAY ? 24 : 4) + 48) * HOUR; // warm-up for the 4H (or 1D) series too
   const series = {};
   for (const s of [...symbols]) {
     process.stderr.write(`fetching ${s}… `);
@@ -580,8 +596,9 @@ async function main() {
   }
   for (const s of symbols) {
     process.stderr.write(`scoring ${s}…\n`);
-    series[s].sig1 = SCORE_LAB ? new Map() : TF_COMPARE ? precompute(s, series[s].h1, 1, start) : SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB || RISK_GRID || LEV_GRID || DD_LAB || RISK_STARTS || COIN_WF || SCORE_MOM || LAB2 || LAB3 ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
+    series[s].sig1 = SCORE_LAB ? new Map() : TF_COMPARE ? precompute(s, series[s].h1, 1, start) : SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB || RISK_GRID || LEV_GRID || DD_LAB || RISK_STARTS || COIN_WF || SCORE_MOM || LAB2 || LAB3 || TF_DAY ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
     series[s].sig4 = SCORE_LAB ? precompute(s, to4h(series[s].h1), 4, start, { h1: series[s].h1, mode: LAB_MODE, mtfTrim: LAB_MTF }) : precompute(s, to4h(series[s].h1), 4, start);
+    if (TF_DAY) series[s].sigD = precompute(s, to1d(series[s].h1), 24, start, { entryTf: 'D' });
     addFilterInputs(series[s]);
   }
   const times = [...new Set(symbols.flatMap(s => series[s].h1.map(c => c.t)))].filter(t => t >= start && t <= now).sort((a, b) => a - b);
@@ -596,6 +613,15 @@ async function main() {
   if (LEV_GRID) return levGrid(series, symbols, times, start, now);
   if (DD_LAB) return ddLab(series, symbols, times, start, now);
   if (RISK_STARTS) return riskStarts(series, symbols, times, start, now);
+  if (TF_DAY) return variantTable('1D vs 4H signals', [
+    ['4H signals (live)', {}],
+    ['1D signals, same rules', { tf: '1D' }],
+    ['1D signals, min score 40', { tf: '1D', minScore: 40 }],
+    ['1D signals, min score 60', { tf: '1D', minScore: 60 }],
+    ['1D signals, targets 1/2/3R', { tf: '1D', targetsR: [1, 2, 3] }],
+    ['4H, only with the 1D signal (daily trend)', { dAgree: true }],
+    ['4H, only with the 1D signal, min score 40', { dAgree: true, minScore: 40 }],
+  ], series, times, start, now, 'TF_DAY.md');
   if (LAB3) return variantTable('Exit and risk combinations', [
     ['A  live', {}],
     ['close 20/30/50%', { split: [0.2, 0.3, 0.5] }],

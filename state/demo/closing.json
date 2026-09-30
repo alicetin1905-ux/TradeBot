@@ -36,5 +36,42 @@
     "unrealisedPnl": -53.46,
     "funding": 0.36167428,
     "closedDetectedAt": 1790772902221
+  },
+  "SANDUSDT": {
+    "symbol": "SANDUSDT",
+    "bias": 1,
+    "entry": 0.04518,
+    "stop": 0.04312,
+    "initialStop": 0.04312,
+    "t1": 0.04832,
+    "t2": 0.05145,
+    "t3": 0.05459,
+    "qtyTotal": 34421,
+    "qtyRemaining": 34421,
+    "qtyT1": 6884,
+    "qtyT2": 10326,
+    "qtyT3": 17211,
+    "margin": 155.51407799999998,
+    "notional": 1555.14078,
+    "riskAmt": 70.90725999999998,
+    "filled": {
+      "t1": false,
+      "t2": false,
+      "t3": false
+    },
+    "breakeven": false,
+    "beAfter": "t1",
+    "openedAt": 1790769675987,
+    "score": 68,
+    "orders": {
+      "entry": "bb742d68-3377-479d-b9ca-9c9e02a629f7",
+      "t1": "a9481661-63ce-4e5d-a13d-5542744805fb",
+      "t2": "8ffc9d40-8c57-491a-a6d7-806ebed663e5",
+      "t3": "4c281fac-31b6-4839-a67a-acc97e43e8f4"
+    },
+    "tickSize": 0.00001,
+    "markPrice": 0.0434,
+    "unrealisedPnl": -61.26938,
+    "closedDetectedAt": 1790793602494
   }
 }

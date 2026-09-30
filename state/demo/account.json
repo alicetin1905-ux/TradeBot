@@ -7,7 +7,7 @@
       "POPCATUSDT": 0.27549316
     }
   },
-  "balance": 1923.30953222,
+  "balance": 1850.62634562,
   "startingBalance": 2000,
   "marginPct": 10,
   "marginUsdt": 400,
@@ -23,14 +23,14 @@
   "maxOpenPositions": 7,
   "mode": "demo",
   "fundingError": null,
-  "exchangeEquity": 1819.75986628,
+  "exchangeEquity": 1820.42599784,
   "settings": {
     "RISK_PCT": 3.75,
     "RISK_USDT": 100,
     "MARGIN_USDT": 400,
     "LEVERAGE": 10,
     "MAX_OPEN_POSITIONS": 7,
-    "MAX_NEW_PER_CANDLE": 2,
+    "MAX_NEW_PER_CANDLE": 3,
     "MAX_SAME_DIRECTION": 4,
     "DAILY_LOSS_LIMIT_PCT": 20,
     "TARGETS_R": [
@@ -90,7 +90,7 @@
     "MARGIN_USDT": 400,
     "LEVERAGE": 10,
     "MAX_OPEN_POSITIONS": 7,
-    "MAX_NEW_PER_CANDLE": 2,
+    "MAX_NEW_PER_CANDLE": 3,
     "MAX_SAME_DIRECTION": 4,
     "DAILY_LOSS_LIMIT_PCT": 20,
     "TARGETS_R": [
@@ -145,5 +145,5 @@
     "STATUS_EVERY_H": 4
   },
   "settingsErrors": [],
-  "updatedAt": 1790792704842
+  "updatedAt": 1790793604818
 }

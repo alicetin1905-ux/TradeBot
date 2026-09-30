@@ -476,7 +476,7 @@ const VARIANTS = [
   { key: '1h_all', name: '  + 1H & 4H Supertrend + volume ≥ 1.2x', rules: { targetsR: BIG, riskUsd: 50, st1Agree: true, st4Agree: true, volMin: 1.2 } },
   { key: 'x_score40', name: 'idea: min score 40', rules: { tf: '4H', targetsR: BIG, riskUsd: 50, minScore: 40 } },
   { key: 'new_tp', name: 'TP 1.5/2.5/3.5R, 50/25/25%', rules: { tf: '4H', targetsR: [1.5, 2.5, 3.5], split: [0.5, 0.25, 0.25], riskUsd: 50, btcFilter: true, maxOpen: 7, maxSameDir: 4 } },
-  { key: 'tp_203050', name: 'TP 1.5/3/4.5R, 20/30/50% (live now)', rules: { tf: '4H', targetsR: BIG, split: [0.2, 0.3, 0.5], riskUsd: 50, btcFilter: true, maxOpen: 7, maxSameDir: 4, lockT1AfterT2: true }, focus: true },
+  { key: 'tp_203050', name: 'TP 1.5/3/4.5R, 20/30/50% (live now)', rules: { tf: '4H', targetsR: BIG, split: [0.2, 0.3, 0.5], riskUsd: 50, btcFilter: true, maxOpen: 7, maxSameDir: 4, maxNewPerCandle: 3, lockT1AfterT2: true }, focus: true },
   { key: 'x_score45', name: 'idea: min score 45', rules: { tf: '4H', targetsR: BIG, riskUsd: 50, minScore: 45 } },
   { key: 'x_score35', name: 'idea: min score 35', rules: { tf: '4H', targetsR: BIG, riskUsd: 50, minScore: 35 } },
   { key: 'x_score60', name: 'idea: min score 60', rules: { tf: '4H', targetsR: BIG, riskUsd: 50, minScore: 60 } },
@@ -573,6 +573,9 @@ const TF_DAY = args.includes('--tf-day');
 const PER_CANDLE = args.includes('--per-candle');
 // --coinset A,B,C: the live setup on this coin list vs the live coin list.
 // backtest/COINSET.md.
+// --tune: targets, splits, stops after T1/T2, min score, risk, margin,
+// leverage, slots on the live coins. backtest/TUNE.md.
+const TUNE = args.includes('--tune');
 const COINSET = args.includes('--coinset') ? String(args[args.indexOf('--coinset') + 1] || '').split(',').filter(Boolean).map(x => x.toUpperCase().replace(/USDT$/, '') + 'USDT') : null;
 const LAB_MODE = args.includes('--mode') ? args[args.indexOf('--mode') + 1] : 'classic';
 const LAB_MTF = args.includes('--mtf');
@@ -604,7 +607,7 @@ async function main() {
   }
   for (const s of symbols) {
     process.stderr.write(`scoring ${s}…\n`);
-    series[s].sig1 = SCORE_LAB ? new Map() : TF_COMPARE ? precompute(s, series[s].h1, 1, start) : SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB || RISK_GRID || LEV_GRID || DD_LAB || RISK_STARTS || COIN_WF || SCORE_MOM || LAB2 || LAB3 || TF_DAY || PER_CANDLE || COINSET ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
+    series[s].sig1 = SCORE_LAB ? new Map() : TF_COMPARE ? precompute(s, series[s].h1, 1, start) : SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB || RISK_GRID || LEV_GRID || DD_LAB || RISK_STARTS || COIN_WF || SCORE_MOM || LAB2 || LAB3 || TF_DAY || PER_CANDLE || COINSET || TUNE ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
     series[s].sig4 = SCORE_LAB ? precompute(s, to4h(series[s].h1), 4, start, { h1: series[s].h1, mode: LAB_MODE, mtfTrim: LAB_MTF }) : precompute(s, to4h(series[s].h1), 4, start);
     if (TF_DAY) series[s].sigD = precompute(s, to1d(series[s].h1), 24, start, { entryTf: 'D' });
     addFilterInputs(series[s]);
@@ -621,6 +624,53 @@ async function main() {
   if (LEV_GRID) return levGrid(series, symbols, times, start, now);
   if (DD_LAB) return ddLab(series, symbols, times, start, now);
   if (RISK_STARTS) return riskStarts(series, symbols, times, start, now);
+  if (TUNE) return variantTable('Tuning on the live coins', [
+    ['A  live (1.5/3/4.5R, 20/30/50, score 50, 3.75%)', {}],
+    ['-- targets (R) --', null],
+    ['targets 1 / 2 / 3', { targetsR: [1, 2, 3] }],
+    ['targets 1.5 / 2.5 / 3.5', { targetsR: [1.5, 2.5, 3.5] }],
+    ['targets 2 / 3 / 4.5', { targetsR: [2, 3, 4.5] }],
+    ['targets 2 / 4 / 6', { targetsR: [2, 4, 6] }],
+    ['targets 1.5 / 3 / 6', { targetsR: [1.5, 3, 6] }],
+    ['targets 1 / 3 / 5', { targetsR: [1, 3, 5] }],
+    ['-- close shares at T1/T2/T3 --', null],
+    ['close 30 / 30 / 40', { split: [0.3, 0.3, 0.4] }],
+    ['close 10 / 30 / 60', { split: [0.1, 0.3, 0.6] }],
+    ['close 40 / 35 / 25', { split: [0.4, 0.35, 0.25] }],
+    ['close 33 / 33 / 34', { split: [0.33, 0.33, 0.34] }],
+    ['-- stops after T1 / T2 --', null],
+    ['stop to entry after T2 (not T1)', { breakevenAfter: 't2' }],
+    ['no stop to T1 after T2', { lockT1AfterT2: false }],
+    ['runner trails 3 ATR after T2', { trail: { after: 't2', atr: 3 } }],
+    ['-- min score to enter --', null],
+    ['min score 40', { minScore: 40 }],
+    ['min score 45', { minScore: 45 }],
+    ['min score 55', { minScore: 55 }],
+    ['min score 60', { minScore: 60 }],
+    ['min score 65', { minScore: 65 }],
+    ['-- risk per trade (compound; per year = same % of 2000) --', null],
+    ['risk 2%', { cRiskPct: 2 }],
+    ['risk 2.5%', { cRiskPct: 2.5 }],
+    ['risk 3%', { cRiskPct: 3 }],
+    ['risk 4.5%', { cRiskPct: 4.5 }],
+    ['risk 5%', { cRiskPct: 5 }],
+    ['-- margin cap / leverage --', null],
+    ['max margin $200', { margin: 200 }],
+    ['max margin $600', { margin: 600 }],
+    ['max margin $800', { margin: 800 }],
+    ['leverage 5x (same margin cap)', { leverage: 5 }],
+    ['leverage 20x (same margin cap)', { leverage: 20 }],
+    ['-- slots --', null],
+    ['max 5 open', { maxOpen: 5 }],
+    ['max 9 open', { maxOpen: 9, maxSameDir: 5 }],
+    ['max 3 per direction', { maxSameDir: 3 }],
+    ['max 5 per direction', { maxSameDir: 5 }],
+    ['max 2 new per candle', { maxNewPerCandle: 2 }],
+    ['no per-candle limit', { maxNewPerCandle: null }],
+    ['-- protection --', null],
+    ['half risk while 30%+ below peak', { ddThrottle: { at: 0.3, factor: 0.5 } }],
+    ['BTC filter off', { btcFilter: false }],
+  ], series, times, start, now, 'TUNE.md');
   if (COINSET) {
     const set = COINSET.filter(s => series[s]);
     const liveSet = config.SYMBOLS.filter(s => series[s]);
@@ -1081,12 +1131,12 @@ function variantTable(title, V, series, times, start, end, file, note) {
     process.stderr.write(`${name}\n`);
     let tr = 0, te = 0, w = 0;
     const cells = years.map(y => {
-      const r = simulate(series, extra.coins || coins, yearTimes[y], { ...base, ...extra, riskUsd: 100, riskPct: null });
+      const r = simulate(series, extra.coins || coins, yearTimes[y], { ...base, ...extra, riskUsd: extra.cRiskPct ? P.STARTING_BALANCE * extra.cRiskPct / 100 : 100, riskPct: null });
       if (y <= 2023) tr += r.net; else te += r.net;
       if (r.net > 0) w++;
       return pad(`${r.net.toFixed(0)} (${r.maxDDPct.toFixed(0)}%)`, 14);
     });
-    const c = simulate(series, extra.coins || coins, times, { ...base, ...extra, riskUsd: null, riskPct: P.RISK_PCT });
+    const c = simulate(series, extra.coins || coins, times, { ...base, ...extra, riskUsd: null, riskPct: extra.cRiskPct || P.RISK_PCT });
     L.push(name.padEnd(42) + cells.join('') + pad(tr.toFixed(0), 8) + pad(te.toFixed(0), 8) + pad(`${w}/${years.length}`, 6) +
       `  | ${Math.round(P.STARTING_BALANCE + c.net).toLocaleString('en-US')} / ${pf(c).toFixed(2)} / ${c.maxDDPct.toFixed(1)}% / ${c.trades}`);
   }

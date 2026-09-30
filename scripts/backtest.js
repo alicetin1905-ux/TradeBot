@@ -576,6 +576,8 @@ const PER_CANDLE = args.includes('--per-candle');
 // --tune: targets, splits, stops after T1/T2, min score, risk, margin,
 // leverage, slots on the live coins. backtest/TUNE.md.
 const TUNE = args.includes('--tune');
+// --combo: the chosen tuning changes together. backtest/COMBO.md.
+const COMBO = args.includes('--combo');
 const COINSET = args.includes('--coinset') ? String(args[args.indexOf('--coinset') + 1] || '').split(',').filter(Boolean).map(x => x.toUpperCase().replace(/USDT$/, '') + 'USDT') : null;
 const LAB_MODE = args.includes('--mode') ? args[args.indexOf('--mode') + 1] : 'classic';
 const LAB_MTF = args.includes('--mtf');
@@ -607,7 +609,7 @@ async function main() {
   }
   for (const s of symbols) {
     process.stderr.write(`scoring ${s}…\n`);
-    series[s].sig1 = SCORE_LAB ? new Map() : TF_COMPARE ? precompute(s, series[s].h1, 1, start) : SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB || RISK_GRID || LEV_GRID || DD_LAB || RISK_STARTS || COIN_WF || SCORE_MOM || LAB2 || LAB3 || TF_DAY || PER_CANDLE || COINSET || TUNE ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
+    series[s].sig1 = SCORE_LAB ? new Map() : TF_COMPARE ? precompute(s, series[s].h1, 1, start) : SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB || RISK_GRID || LEV_GRID || DD_LAB || RISK_STARTS || COIN_WF || SCORE_MOM || LAB2 || LAB3 || TF_DAY || PER_CANDLE || COINSET || TUNE || COMBO ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
     series[s].sig4 = SCORE_LAB ? precompute(s, to4h(series[s].h1), 4, start, { h1: series[s].h1, mode: LAB_MODE, mtfTrim: LAB_MTF }) : precompute(s, to4h(series[s].h1), 4, start);
     if (TF_DAY) series[s].sigD = precompute(s, to1d(series[s].h1), 24, start, { entryTf: 'D' });
     addFilterInputs(series[s]);
@@ -624,6 +626,21 @@ async function main() {
   if (LEV_GRID) return levGrid(series, symbols, times, start, now);
   if (DD_LAB) return ddLab(series, symbols, times, start, now);
   if (RISK_STARTS) return riskStarts(series, symbols, times, start, now);
+  if (COMBO) {
+    const T = { targetsR: [1.5, 2.5, 3.5] }, R = { cRiskPct: 2.5 }, M = { maxOpen: 5 };
+    return variantTable('Tuning combinations on the live coins', [
+      ['A  live (1.5/3/4.5R, 3.75%, 7 open)', {}],
+      ['risk 2.5%', R],
+      ['max 5 open', M],
+      ['targets 1.5/2.5/3.5', T],
+      ['risk 2.5% + max 5 open', { ...R, ...M }],
+      ['risk 2.5% + 1.5/2.5/3.5', { ...R, ...T }],
+      ['max 5 open + 1.5/2.5/3.5', { ...M, ...T }],
+      ['ALL 3: 2.5% + 5 open + 1.5/2.5/3.5', { ...R, ...M, ...T }],
+      ['ALL 3 + no stop to T1 after T2', { ...R, ...M, ...T, lockT1AfterT2: false }],
+      ['risk 3% + 5 open + 1.5/2.5/3.5', { cRiskPct: 3, ...M, ...T }],
+    ], series, times, start, now, 'COMBO.md');
+  }
   if (TUNE) return variantTable('Tuning on the live coins', [
     ['A  live (1.5/3/4.5R, 20/30/50, score 50, 3.75%)', {}],
     ['-- targets (R) --', null],

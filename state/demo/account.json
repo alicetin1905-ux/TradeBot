@@ -23,13 +23,14 @@
   "maxOpenPositions": 7,
   "mode": "demo",
   "fundingError": null,
-  "exchangeEquity": 1808.78929628,
+  "exchangeEquity": 1819.75986628,
   "settings": {
     "RISK_PCT": 3.75,
     "RISK_USDT": 100,
     "MARGIN_USDT": 400,
     "LEVERAGE": 10,
     "MAX_OPEN_POSITIONS": 7,
+    "MAX_NEW_PER_CANDLE": 2,
     "MAX_SAME_DIRECTION": 4,
     "DAILY_LOSS_LIMIT_PCT": 20,
     "TARGETS_R": [
@@ -89,6 +90,7 @@
     "MARGIN_USDT": 400,
     "LEVERAGE": 10,
     "MAX_OPEN_POSITIONS": 7,
+    "MAX_NEW_PER_CANDLE": 2,
     "MAX_SAME_DIRECTION": 4,
     "DAILY_LOSS_LIMIT_PCT": 20,
     "TARGETS_R": [
@@ -143,5 +145,5 @@
     "STATUS_EVERY_H": 4
   },
   "settingsErrors": [],
-  "updatedAt": 1790791283835
+  "updatedAt": 1790792704842
 }

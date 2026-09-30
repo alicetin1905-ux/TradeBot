@@ -571,6 +571,9 @@ const LAB3 = args.includes('--lab3');
 const TF_DAY = args.includes('--tf-day');
 // --per-candle: max new entries per 4H candle. backtest/PER_CANDLE.md.
 const PER_CANDLE = args.includes('--per-candle');
+// --coinset A,B,C: the live setup on this coin list vs the live coin list.
+// backtest/COINSET.md.
+const COINSET = args.includes('--coinset') ? String(args[args.indexOf('--coinset') + 1] || '').split(',').filter(Boolean).map(x => x.toUpperCase().replace(/USDT$/, '') + 'USDT') : null;
 const LAB_MODE = args.includes('--mode') ? args[args.indexOf('--mode') + 1] : 'classic';
 const LAB_MTF = args.includes('--mtf');
 const LAB_TAG = args.includes('--tag') ? args[args.indexOf('--tag') + 1] : LAB_MODE + (LAB_MTF ? '-mtf' : '');
@@ -584,7 +587,7 @@ async function main() {
     fs.writeFileSync(path.join(OUT, 'SCORE_LAB.md'), '# Score computation lab\n\nPer year: fresh 2000 USDT each year, $100 fixed risk — net $ (worst drop). Compound: 2000 USDT, live % risk, whole period. Live rules otherwise (4H, targets 1.5/3/4.5R, 7 slots, BTC filter, fees). Price/volume signals only (no funding, OI, book, tape).\n\n```\n' + out + '\n```\n');
     return;
   }
-  const symbols = SCAN ? [...new Set(['BTCUSDT', ...config.SYMBOLS, ...SCAN])] : COINS ? [...new Set(['BTCUSDT', ...COINS])] : [...new Set([...config.SYMBOLS, ...CANDIDATES])];
+  const symbols = SCAN ? [...new Set(['BTCUSDT', ...config.SYMBOLS, ...SCAN])] : COINS ? [...new Set(['BTCUSDT', ...COINS])] : [...new Set([...config.SYMBOLS, ...CANDIDATES, ...(COINSET || []), 'BTCUSDT'])];
   const now = Date.now() - END_AGO * 24 * HOUR;
   const start = now - DAYS * 24 * HOUR;
   const from = start - (LOOKBACK * (TF_DAY ? 24 : 4) + 48) * HOUR; // warm-up for the 4H (or 1D) series too
@@ -593,7 +596,7 @@ async function main() {
     process.stderr.write(`fetching ${s}… `);
     let h1;
     try { h1 = (await fetchHistory(s, from)).filter(c => c.t >= from); } catch (err) {
-      if (!CANDIDATES.includes(s)) throw err;
+      if (!CANDIDATES.includes(s) && !(COINSET || []).includes(s)) throw err;
       process.stderr.write(`skipped (${err.message})\n`); symbols.splice(symbols.indexOf(s), 1); continue;
     }
     process.stderr.write(`${h1.length} 1H candles\n`);
@@ -601,7 +604,7 @@ async function main() {
   }
   for (const s of symbols) {
     process.stderr.write(`scoring ${s}…\n`);
-    series[s].sig1 = SCORE_LAB ? new Map() : TF_COMPARE ? precompute(s, series[s].h1, 1, start) : SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB || RISK_GRID || LEV_GRID || DD_LAB || RISK_STARTS || COIN_WF || SCORE_MOM || LAB2 || LAB3 || TF_DAY || PER_CANDLE ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
+    series[s].sig1 = SCORE_LAB ? new Map() : TF_COMPARE ? precompute(s, series[s].h1, 1, start) : SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB || RISK_GRID || LEV_GRID || DD_LAB || RISK_STARTS || COIN_WF || SCORE_MOM || LAB2 || LAB3 || TF_DAY || PER_CANDLE || COINSET ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
     series[s].sig4 = SCORE_LAB ? precompute(s, to4h(series[s].h1), 4, start, { h1: series[s].h1, mode: LAB_MODE, mtfTrim: LAB_MTF }) : precompute(s, to4h(series[s].h1), 4, start);
     if (TF_DAY) series[s].sigD = precompute(s, to1d(series[s].h1), 24, start, { entryTf: 'D' });
     addFilterInputs(series[s]);
@@ -618,6 +621,15 @@ async function main() {
   if (LEV_GRID) return levGrid(series, symbols, times, start, now);
   if (DD_LAB) return ddLab(series, symbols, times, start, now);
   if (RISK_STARTS) return riskStarts(series, symbols, times, start, now);
+  if (COINSET) {
+    const set = COINSET.filter(s => series[s]);
+    const liveSet = config.SYMBOLS.filter(s => series[s]);
+    return variantTable('Coin list comparison', [
+      [`live list (${liveSet.length} coins)`, { coins: liveSet }],
+      [`your list (${set.length} coins)`, { coins: set }],
+      [`your list without BTC filter coins missing`, null],
+    ].filter(v => v[1]), series, times, start, now, 'COINSET.md', `your list: ${set.map(s => s.replace('USDT', '')).join(', ')}`);
+  }
   if (PER_CANDLE) return variantTable('Max new entries per 4H candle', [
     ['live (no limit)', {}],
     ['max 1 new entry per candle', { maxNewPerCandle: 1 }],
@@ -1048,7 +1060,7 @@ function lab2(series, symbols, times, start, end) {
 
 // One row per variant (rule overrides on the live setup): per year with
 // fresh 2000 USDT and $100 fixed risk, 2020-23 vs 2024-26, and compounding.
-function variantTable(title, V, series, times, start, end, file) {
+function variantTable(title, V, series, times, start, end, file, note) {
   const live = VARIANTS.find(v => v.focus);
   const P = config.PORTFOLIO;
   const coins = config.SYMBOLS;
@@ -1061,18 +1073,19 @@ function variantTable(title, V, series, times, start, end, file) {
   const L = [];
   L.push(`${title} · ${coins.length} coins · ${new Date(start).toISOString().slice(0, 10)} → ${new Date(end).toISOString().slice(0, 10)} · 4H, live rules otherwise`, '');
   L.push('Per year: fresh 2000 USDT, $100 fixed risk — net $ (worst drop). Compound: 2000 USDT, ' + P.RISK_PCT + '% risk, whole period.', '');
+  if (note) L.push(note, '');
   L.push('variant'.padEnd(42) + years.map(y => pad(y, 14)).join('') + pad('20-23', 8) + pad('24-26', 8) + pad('yrs+', 6) + '  | compound end $ / PF / worst drop / trades');
   for (const [name, extra] of V) {
     if (!extra) { L.push(name); continue; }
     process.stderr.write(`${name}\n`);
     let tr = 0, te = 0, w = 0;
     const cells = years.map(y => {
-      const r = simulate(series, coins, yearTimes[y], { ...base, ...extra, riskUsd: 100, riskPct: null });
+      const r = simulate(series, extra.coins || coins, yearTimes[y], { ...base, ...extra, riskUsd: 100, riskPct: null });
       if (y <= 2023) tr += r.net; else te += r.net;
       if (r.net > 0) w++;
       return pad(`${r.net.toFixed(0)} (${r.maxDDPct.toFixed(0)}%)`, 14);
     });
-    const c = simulate(series, coins, times, { ...base, ...extra, riskUsd: null, riskPct: P.RISK_PCT });
+    const c = simulate(series, extra.coins || coins, times, { ...base, ...extra, riskUsd: null, riskPct: P.RISK_PCT });
     L.push(name.padEnd(42) + cells.join('') + pad(tr.toFixed(0), 8) + pad(te.toFixed(0), 8) + pad(`${w}/${years.length}`, 6) +
       `  | ${Math.round(P.STARTING_BALANCE + c.net).toLocaleString('en-US')} / ${pf(c).toFixed(2)} / ${c.maxDDPct.toFixed(1)}% / ${c.trades}`);
   }

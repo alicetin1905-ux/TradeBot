@@ -1,1 +1,40 @@
-{}
+{
+  "BNBUSDT": {
+    "symbol": "BNBUSDT",
+    "bias": -1,
+    "entry": 754.3,
+    "stop": 777,
+    "initialStop": 777,
+    "t1": 720.3,
+    "t2": 686.3,
+    "t3": 652.3,
+    "qtyTotal": 3.3,
+    "qtyRemaining": 3.3,
+    "qtyT1": 0.99,
+    "qtyT2": 0.99,
+    "qtyT3": 1.32,
+    "margin": 248.91899999999995,
+    "notional": 2489.1899999999996,
+    "riskAmt": 74.91000000000015,
+    "filled": {
+      "t1": false,
+      "t2": false,
+      "t3": false
+    },
+    "breakeven": false,
+    "beAfter": "t1",
+    "openedAt": 1790697975329,
+    "score": -56,
+    "orders": {
+      "entry": "541ac0b3-acaf-44fe-857f-340f36e30868",
+      "t1": "d467d62b-1892-4c22-a7fb-992be2c0585e",
+      "t2": "a9b09b42-824d-4de4-904b-25516d6926c6",
+      "t3": "cfd9ef48-0abe-4ec9-b6d1-353238779536"
+    },
+    "tickSize": 0.1,
+    "markPrice": 770.5,
+    "unrealisedPnl": -53.46,
+    "funding": 0.36167428,
+    "closedDetectedAt": 1790772902221
+  }
+}

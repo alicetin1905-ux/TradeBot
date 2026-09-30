@@ -5,7 +5,9 @@
 
 ## Use it
 
-1. Open a **4H** chart of a USDT perpetual, e.g. `BYBIT:SOLUSDT.P`.
+1. Open a **4H** chart of a USDT perpetual, e.g. `BYBIT:SOLUSDT.P`, with **normal
+   candles** (not Heikin Ashi — those are averaged prices; the strategy refuses
+   to trade on them because the score and fills would be wrong and far too good).
 2. Pine Editor → paste the whole file → **Add to chart**.
 3. Results are in **Strategy Tester** (TradingView's own backtest on that coin).
 

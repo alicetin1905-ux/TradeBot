@@ -25,7 +25,7 @@
 strategy("TradeBot ATLAS 4H", overlay = true, initial_capital = 2000, currency = currency.USDT,
      commission_type = strategy.commission.percent, commission_value = 0.055, slippage = 0,
      pyramiding = 0, calc_on_every_tick = false, process_orders_on_close = false,
-     margin_long = 10, margin_short = 10, max_bars_back = 500)
+     margin_long = 10, margin_short = 10, max_bars_back = 500, fill_orders_on_standard_ohlc = true)
 
 // ---------------- inputs ----------------
 grpS = "Signal"
@@ -331,7 +331,10 @@ if strategy.position_size != 0
 // ---------------- entries ----------------
 bool chaseOk = not na(flipPrice) and math.abs(close - flipPrice) <= chaseAtr * atr14
 bool btcOk = not useBtc or isBtc or btcBias != -bias
-bool baseOk = strategy.position_size == 0 and bias != 0 and math.abs(score) >= minScore and not signalUsed and chaseOk and btcOk
+// Heikin Ashi / Renko etc. candles are averages, not real prices: the score and
+// fills would be wrong (far too good), so the strategy only trades on normal candles.
+bool stdChart = chart.is_standard
+bool baseOk = stdChart and strategy.position_size == 0 and bias != 0 and math.abs(score) >= minScore and not signalUsed and chaseOk and btcOk
 bool fibOk = true
 if baseOk and useFib
     fibOk := f_fibAgrees(bias, fibTh, 12, 300, 6, 0.618)
@@ -377,7 +380,7 @@ plot(inPos ? t3 : na, "T3", color.new(color.teal, 0), 2, plot.style_linebr)
 plot(bias != 0 ? flipPrice : na, "Signal price", color.new(color.gray, 20), 1, plot.style_circles)
 bgcolor(score >= minScore ? color.new(color.green, 90) : score <= -minScore ? color.new(color.red, 90) : na, title = "Score strong enough")
 
-var table info = table.new(position.top_right, 2, 4, bgcolor = color.new(color.black, 20), border_width = 1)
+var table info = table.new(position.top_right, 2, 5, bgcolor = color.new(color.black, 20), border_width = 1)
 if barstate.islast
     color sCol = score >= minScore ? color.green : score <= -minScore ? color.red : color.gray
     table.cell(info, 0, 0, "ATLAS score", text_color = color.white, text_size = size.small)
@@ -388,6 +391,8 @@ if barstate.islast
     table.cell(info, 1, 2, na(flipPrice) ? "—" : str.tostring(flipPrice, format.mintick) + (chaseOk ? " (in range)" : " (too far)"), text_color = color.white, text_size = size.small)
     table.cell(info, 0, 3, "Timeframe", text_color = color.white, text_size = size.small)
     table.cell(info, 1, 3, timeframe.period == "240" ? "4H ✓" : timeframe.period + " — use 4H", text_color = timeframe.period == "240" ? color.green : color.orange, text_size = size.small)
+    table.cell(info, 0, 4, "Candles", text_color = color.white, text_size = size.small)
+    table.cell(info, 1, 4, stdChart ? "normal ✓" : "NOT normal — switch to Candles, no trades", text_color = stdChart ? color.green : color.red, text_size = size.small)
 
 // Data window / chart-data export: the score and every indicator's vote, to
 // compare with the bot candle by candle.

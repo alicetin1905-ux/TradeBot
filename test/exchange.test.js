@@ -17,6 +17,9 @@ config.PORTFOLIO.MARGIN_PCT = 25;
 config.PORTFOLIO.MARGIN_USDT = null;
 config.PORTFOLIO.MAX_SAME_DIRECTION = null;
 config.PORTFOLIO.MAX_NEW_PER_CANDLE = null;
+// A fixed coin universe for the tests, independent of the live coin list.
+config.SYMBOLS = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'XRPUSDT', 'BNBUSDT', 'WLDUSDT'];
+config.ALL_SYMBOLS = config.SYMBOLS.slice();
 config.PORTFOLIO.MAX_OPEN_POSITIONS = 4;
 config.PORTFOLIO.RISK_USDT = null;
 config.PORTFOLIO.RISK_PCT = null;

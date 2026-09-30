@@ -1,8 +1,8 @@
 # TradeBot
 
-Auto trading bot — a pooled-balance bot trading SOL, XRP, DOGE, HYPE, SUI,
-ENA, WLD, DYDX, GALA, KAITO, EGLD, NEAR, XLM, BLUR, SAND, AXS, ZIL, TRX, CHZ
-and POPCAT perps (BTC is scored only, for the BTC filter) on **Bybit Demo Trading** (mainnet prices, demo funds). It uses the same signal stack as
+Auto trading bot — a pooled-balance bot trading SOL, DOGE, SUI, ENA,
+WLD, DYDX, GALA, EGLD, NEAR, XLM, BLUR, SAND, AXS, ZIL, CHZ, POPCAT, PI, GRAM,
+AERO and PEPE (Bybit: 1000PEPEUSDT) perps (BTC is scored only, for the BTC filter) on **Bybit Demo Trading** (mainnet prices, demo funds). It uses the same signal stack as
 [UltimateTradingBot](https://github.com/alicetin1905-ux/UltimateTradingBot):
 
 - **ATLAS** — primary signal: ~25-indicator weighted score, Chandelier Exit

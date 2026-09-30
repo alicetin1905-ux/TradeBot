@@ -56,7 +56,7 @@ async function fetchHistory(symbol, fromMs) {
   try { rows = JSON.parse(fs.readFileSync(file, 'utf8')); } catch (e) { /* no cache yet */ }
   const have = new Set(rows.map(r => r.t));
   const oldest = () => (rows.length ? rows.reduce((m, r) => Math.min(m, r.t), Infinity) : Infinity);
-  const instId = symbol.replace('USDT', '') + '-USDT-SWAP';
+  const instId = require('../src/okx').instId(symbol); // 1000PEPEUSDT -> PEPE-USDT-SWAP (per-1000 price; % levels are unaffected)
   // Newest first, paging back with `after`; once a page adds nothing new,
   // jump straight past what the cache already holds.
   let after = '';
@@ -715,7 +715,8 @@ async function main() {
   process.stderr.write(`\nwrote backtest/results.json and backtest/REPORT.md\n`);
 }
 
-function analyze(series, symbols, times, start, end) {
+function analyze(series, allSymbols, times, start, end) {
+  const symbols = config.SYMBOLS.filter(s => series[s]); // BTC may be loaded for the BTC filter only
   const live = VARIANTS.find(v => v.focus);
   const P = config.PORTFOLIO;
   const rules = { ...live.rules, start: P.STARTING_BALANCE, riskUsd: P.RISK_PCT != null ? null : P.RISK_USDT, riskPct: P.RISK_PCT, margin: P.MARGIN_USDT, leverage: P.LEVERAGE, maxSameDir: P.MAX_SAME_DIRECTION, maxOpen: P.MAX_OPEN_POSITIONS };

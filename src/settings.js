@@ -32,6 +32,7 @@ const FIELDS = {
   MARGIN_USDT: { at: ['PORTFOLIO', 'MARGIN_USDT'], check: num(10, 1000), label: 'Max margin per trade (USDT)' },
   LEVERAGE: { at: ['PORTFOLIO', 'LEVERAGE'], check: num(1, 25, { int: true }), label: 'Leverage' },
   MAX_OPEN_POSITIONS: { at: ['PORTFOLIO', 'MAX_OPEN_POSITIONS'], check: num(1, 8, { int: true }), label: 'Max open positions' },
+  MAX_NEW_PER_CANDLE: { at: ['PORTFOLIO', 'MAX_NEW_PER_CANDLE'], check: num(1, 8, { int: true, nullable: true }), label: 'Max new trades per signal candle (null = no limit)' },
   MAX_SAME_DIRECTION: { at: ['PORTFOLIO', 'MAX_SAME_DIRECTION'], check: num(1, 8, { int: true, nullable: true }), label: 'Max positions in one direction (null = no limit)' },
   DAILY_LOSS_LIMIT_PCT: { at: ['EXECUTION', 'DAILY_LOSS_LIMIT_PCT'], check: num(1, 100), label: 'Daily loss limit (% of balance)' },
   // Exits

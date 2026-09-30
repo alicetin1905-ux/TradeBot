@@ -398,11 +398,13 @@ function simulate(series, symbols, times, rules) {
       cands.push({ s, sig });
     }
     cands.sort((a, b) => Math.abs(b.sig.score) - Math.abs(a.sig.score));
+    let newNow = 0; // entries on this signal candle (maxNewPerCandle)
     for (const { s, sig } of cands) {
       const busy = [...Object.values(open), ...Object.values(pending).map(o => o.sig)];
       if (busy.length >= R.maxOpen) break;
       if (busy.filter(p => p.bias === sig.bias).length >= R.maxSameDir) continue;
       if (t < pauseUntil) break;
+      if (R.maxNewPerCandle && newNow >= R.maxNewPerCandle) break;
       let margin = R.margin;
       let risk = R.riskPct ? balance * R.riskPct / 100 : R.riskUsd;
       if (R.ddThrottle && curDD >= R.ddThrottle.at) risk *= R.ddThrottle.factor;
@@ -417,6 +419,7 @@ function simulate(series, symbols, times, rules) {
       } else {
         openPosition(s, sig, sig.close, t, FEE_TAKER, margin);
       }
+      newNow++;
     }
 
     // equity: realized + open P&L at this candle's close
@@ -566,6 +569,8 @@ const LAB3 = args.includes('--lab3');
 // --tf-day: 1D signals vs 4H, and 4H entries only with the daily trend.
 // backtest/TF_DAY.md.
 const TF_DAY = args.includes('--tf-day');
+// --per-candle: max new entries per 4H candle. backtest/PER_CANDLE.md.
+const PER_CANDLE = args.includes('--per-candle');
 const LAB_MODE = args.includes('--mode') ? args[args.indexOf('--mode') + 1] : 'classic';
 const LAB_MTF = args.includes('--mtf');
 const LAB_TAG = args.includes('--tag') ? args[args.indexOf('--tag') + 1] : LAB_MODE + (LAB_MTF ? '-mtf' : '');
@@ -596,7 +601,7 @@ async function main() {
   }
   for (const s of symbols) {
     process.stderr.write(`scoring ${s}…\n`);
-    series[s].sig1 = SCORE_LAB ? new Map() : TF_COMPARE ? precompute(s, series[s].h1, 1, start) : SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB || RISK_GRID || LEV_GRID || DD_LAB || RISK_STARTS || COIN_WF || SCORE_MOM || LAB2 || LAB3 || TF_DAY ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
+    series[s].sig1 = SCORE_LAB ? new Map() : TF_COMPARE ? precompute(s, series[s].h1, 1, start) : SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB || RISK_GRID || LEV_GRID || DD_LAB || RISK_STARTS || COIN_WF || SCORE_MOM || LAB2 || LAB3 || TF_DAY || PER_CANDLE ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
     series[s].sig4 = SCORE_LAB ? precompute(s, to4h(series[s].h1), 4, start, { h1: series[s].h1, mode: LAB_MODE, mtfTrim: LAB_MTF }) : precompute(s, to4h(series[s].h1), 4, start);
     if (TF_DAY) series[s].sigD = precompute(s, to1d(series[s].h1), 24, start, { entryTf: 'D' });
     addFilterInputs(series[s]);
@@ -613,6 +618,13 @@ async function main() {
   if (LEV_GRID) return levGrid(series, symbols, times, start, now);
   if (DD_LAB) return ddLab(series, symbols, times, start, now);
   if (RISK_STARTS) return riskStarts(series, symbols, times, start, now);
+  if (PER_CANDLE) return variantTable('Max new entries per 4H candle', [
+    ['live (no limit)', {}],
+    ['max 1 new entry per candle', { maxNewPerCandle: 1 }],
+    ['max 2 new entries per candle', { maxNewPerCandle: 2 }],
+    ['max 3 new entries per candle', { maxNewPerCandle: 3 }],
+    ['max 2 per candle + max 3 per direction', { maxNewPerCandle: 2, maxSameDir: 3 }],
+  ], series, times, start, now, 'PER_CANDLE.md');
   if (TF_DAY) return variantTable('1D vs 4H signals', [
     ['4H signals (live)', {}],
     ['1D signals, same rules', { tf: '1D' }],

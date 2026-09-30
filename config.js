@@ -97,6 +97,7 @@ const config = module.exports = {
     MARGIN_PCT: 10,          // % of the current shared balance put up as margin per trade (when MARGIN_USDT is null)
     LEVERAGE: 10,            // position value = margin x leverage (100 USDT -> 1000 USDT)
     MAX_OPEN_POSITIONS: 7,
+    MAX_NEW_PER_CANDLE: 2,   // at most this many new trades per 4H signal candle (null = no limit)
     MAX_SAME_DIRECTION: 4,   // at most this many longs (and this many shorts) open at once
   },
 

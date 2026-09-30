@@ -492,6 +492,7 @@
     { g: 'Money', k: 'MARGIN_USDT', label: 'Max margin per trade ($)', t: 'num', min: 10, max: 1000 },
     { g: 'Money', k: 'LEVERAGE', label: 'Leverage (x)', t: 'num', min: 1, max: 25, int: true },
     { g: 'Money', k: 'MAX_OPEN_POSITIONS', label: 'Max open positions', t: 'num', min: 1, max: 8, int: true },
+    { g: 'Money', k: 'MAX_NEW_PER_CANDLE', label: 'Max new trades per 4H candle', t: 'num', min: 1, max: 8, int: true, nullable: true },
     { g: 'Money', k: 'MAX_SAME_DIRECTION', label: 'Max in one direction', t: 'num', min: 1, max: 8, int: true, nullable: true },
     { g: 'Money', k: 'DAILY_LOSS_LIMIT_PCT', label: 'Daily loss limit (%)', t: 'num', min: 1, max: 100 },
     { g: 'Take profit / stop loss', k: 'TARGETS_R', label: 'T1 / T2 / T3 (R)', t: 'list3' },

@@ -241,11 +241,22 @@ async function openEntries({ client, st, exPos, wallet, candidates, events, halt
   }
 
   let available = wallet.available;
+  // Trades opened since the current signal candle began (still open or already
+  // closed) count toward MAX_NEW_PER_CANDLE — correlated alts tend to fire
+  // together, so this spreads them out.
+  const tfMs = config.ENTRY_TF === 'D' ? DAY_MS : +config.ENTRY_TF * 60000;
+  const candleStart = Math.floor(now / tfMs) * tfMs;
+  let newThisCandle = Object.values(st.positions).filter(p => p.openedAt >= candleStart).length
+    + new Set(st.trades.filter(t => t.openedAt >= candleStart && !st.positions[t.symbol]).map(t => t.symbol + ':' + t.openedAt)).size;
   for (const c of candidates) {
     const sym = c.symbol;
     const hold = (reason) => events.push({ symbol: sym, type: 'hold', reason, score: c.analysis.score });
     try {
       if (exPos[sym]) { hold('a position is already open on the exchange for this coin'); continue; }
+      if (P.MAX_NEW_PER_CANDLE != null && newThisCandle >= P.MAX_NEW_PER_CANDLE) {
+        hold(`already ${newThisCandle} new trade${newThisCandle === 1 ? '' : 's'} on this candle (max ${P.MAX_NEW_PER_CANDLE})`);
+        continue;
+      }
       if (Object.keys(exPos).length >= P.MAX_OPEN_POSITIONS) { hold(`all ${P.MAX_OPEN_POSITIONS} position slots in use`); continue; }
       const sameDir = Object.values(exPos).filter(p => p.bias === c.analysis.bias).length;
       if (P.MAX_SAME_DIRECTION != null && sameDir >= P.MAX_SAME_DIRECTION) {
@@ -312,6 +323,7 @@ async function openEntries({ client, st, exPos, wallet, candidates, events, halt
       };
       exPos[sym] = live;
       available -= posMargin;
+      newThisCandle++;
       events.push({
         symbol: sym, type: 'enter', bias: c.analysis.bias, score: c.analysis.score, entry, stop: stopLoss,
         t1: tp[0], t2: tp[1], t3: tp[2], qty: live.size, margin: posMargin, riskAmt: st.positions[sym].riskAmt,

@@ -16,6 +16,7 @@ const config = require('../config');
 config.PORTFOLIO.MARGIN_PCT = 25;
 config.PORTFOLIO.MARGIN_USDT = null;
 config.PORTFOLIO.MAX_SAME_DIRECTION = null;
+config.PORTFOLIO.MAX_NEW_PER_CANDLE = null;
 config.PORTFOLIO.MAX_OPEN_POSITIONS = 4;
 config.PORTFOLIO.RISK_USDT = null;
 config.PORTFOLIO.RISK_PCT = null;
@@ -599,6 +600,26 @@ test('max 3 in one direction: a 4th long waits, a short still gets in', async ()
   }
   assert.deepEqual(Object.keys(st.positions).sort(), ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'XRPUSDT']);
   assert.ok(events.some(e => e.symbol === 'BNBUSDT' && /already 3 longs open/.test(e.reason)));
+});
+
+test('max 2 new trades per candle: the strongest two open, the rest wait — also across runs', async () => {
+  const { client } = fakeBybit({ equity: 10000, marks });
+  const st = freshState();
+  const events = [];
+  Object.assign(config.PORTFOLIO, { MAX_NEW_PER_CANDLE: 2, MAX_OPEN_POSITIONS: 5, MARGIN_USDT: 100 });
+  try {
+    await exchange.runExchange({ client, st, signals: {}, events, candidates: [
+      candidate('XRPUSDT', 1, 90, 2.5, 0.02), candidate('BTCUSDT', 1, 85, 100000, 0.01), candidate('SOLUSDT', 1, 80, 200, 0.02),
+    ] });
+    assert.deepEqual(Object.keys(st.positions).sort(), ['BTCUSDT', 'XRPUSDT']);
+    assert.ok(events.some(e => e.symbol === 'SOLUSDT' && /already 2 new trades on this candle \(max 2\)/.test(e.reason)));
+    // a second run inside the same candle still counts those two
+    const ev2 = [];
+    await exchange.runExchange({ client, st, signals: {}, events: ev2, candidates: [candidate('ETHUSDT', -1, -70, 4000, 0.015)] });
+    assert.ok(!st.positions.ETHUSDT);
+  } finally {
+    Object.assign(config.PORTFOLIO, { MAX_NEW_PER_CANDLE: null, MAX_OPEN_POSITIONS: 4, MARGIN_USDT: null });
+  }
 });
 
 test('a newer trade on the same coin keeps its own fills (no mix-up with the closed one)', async () => {

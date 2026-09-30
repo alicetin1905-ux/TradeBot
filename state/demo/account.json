@@ -1,10 +1,12 @@
 {
   "fundingSince": 1790691607598,
   "funding": {
-    "total": 0,
-    "bySymbol": {}
+    "total": 0.11118118,
+    "bySymbol": {
+      "BNBUSDT": 0.11118118
+    }
   },
-  "balance": 2000,
+  "balance": 2000.11118118,
   "startingBalance": 2000,
   "marginPct": 10,
   "marginUsdt": 400,
@@ -20,7 +22,7 @@
   "maxOpenPositions": 7,
   "mode": "demo",
   "fundingError": null,
-  "exchangeEquity": 1986.14479663,
+  "exchangeEquity": 1988.99009825,
   "settings": {
     "RISK_PCT": 3.75,
     "RISK_USDT": 100,
@@ -140,5 +142,5 @@
     "STATUS_EVERY_H": 4
   },
   "settingsErrors": [],
-  "updatedAt": 1790722887559
+  "updatedAt": 1790726488634
 }

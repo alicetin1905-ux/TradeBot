@@ -379,8 +379,15 @@ async function closeAll({ client, st, events, now = Date.now() }) {
   const exPos = await client.getPositions();
   for (const sym of config.ALL_SYMBOLS || config.SYMBOLS) {
     try {
-      await client.cancelAll(sym);
       const live = exPos[sym];
+      try {
+        await client.cancelAll(sym);
+      } catch (err) {
+        // A coin with nothing open (e.g. one the exchange doesn't list) must
+        // not block a close-all / reset: note it and move on.
+        if (!live) { events.push({ symbol: sym, type: 'info', reason: `no orders cancelled: ${err.message}` }); continue; }
+        throw err;
+      }
       if (!live) continue;
       const id = await client.closeMarket({ symbol: sym, bias: live.bias, qty: live.size });
       events.push({ symbol: sym, type: 'info', reason: `closed ${live.size} at market` });

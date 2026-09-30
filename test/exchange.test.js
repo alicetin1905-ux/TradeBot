@@ -884,3 +884,20 @@ test('MARKET_DATA setting: only "bybit" or "okx"', () => {
   assert.equal(cfg.MARKET_DATA, 'okx');
   assert.equal(settings.apply(cfg, { MARKET_DATA: 'binance' }).errors.length, 1);
 });
+
+test('close-all: a coin the exchange rejects (nothing open) does not block the reset', async () => {
+  const calls = [];
+  const client = {
+    getPositions: async () => ({ SOLUSDT: { bias: 1, size: 3 } }),
+    cancelAll: async (sym) => { calls.push('cancel ' + sym); if (sym === 'XRPUSDT') throw new Error('Bybit 10001: symbol invalid'); },
+    closeMarket: async ({ symbol }) => { calls.push('close ' + symbol); return 'id1'; },
+  };
+  const st = freshState();
+  st.positions.SOLUSDT = { symbol: 'SOLUSDT', bias: 1, orders: {} };
+  const events = [];
+  await exchange.closeAll({ client, st, events });
+  assert.ok(calls.includes('close SOLUSDT'));
+  assert.ok(!events.some(e => e.type === 'error'));          // the reset would go ahead
+  assert.ok(events.some(e => e.symbol === 'XRPUSDT' && e.type === 'info'));
+  assert.ok(!st.positions.SOLUSDT && st.closing.SOLUSDT);
+});

@@ -38,8 +38,8 @@ number as a rehearsal of the strategy, not investment advice.
 ## Rules (`config.js` → `PORTFOLIO`)
 
 - **One shared 2000 USDT balance** for all 20 coins.
-- **3.75% of the balance at risk per trade** (`RISK_PCT`): each position is
-  sized so hitting its stop loses 3.75% of the bot's balance — $75 on 2000
+- **2.5% of the balance at risk per trade** (`RISK_PCT`): each position is
+  sized so hitting its stop loses 2.5% of the bot's balance — $50 on 2000
   USDT, more as the account grows, less after losses. Capped at **400 USDT
   margin / 4000 USDT position** (`MARGIN_USDT`). `RISK_PCT: null` switches
   to a fixed dollar amount (`RISK_USDT`). Backtest from 12 start dates
@@ -67,7 +67,7 @@ number as a rehearsal of the strategy, not investment advice.
   isn't entered in that direction again until its score has gone neutral or
   flipped at least once since — closing a trade never triggers an instant
   re-entry on the same signal (`state/demo/usedSignals.json`).
-- Scaled exit: 20% off at T1 (1.5R), 30% at T2 (3R), 50% at T3 (4.5R) —
+- Scaled exit: 20% off at T1 (1.5R), 30% at T2 (2.5R), 50% at T3 (3.5R) —
   R = the stop distance (`TARGETS_R`, `TARGET_SPLIT`). The stop moves to
   breakeven the moment T1 fills, and up to T1 once T2 fills
   (`LOCK_T1_AFTER_T2`). A firm score flip against an open position closes it.
@@ -166,13 +166,13 @@ window. Limit entries and breakeven-after-T2 didn't help.
 - **Funding fees:** every funding payment on the bot's coins (Bybit
   transaction log) is added to the bot's balance — paid is negative — and
   shown on the dashboard in total and per open position.
-- **Sizing:** 3.75% of the balance at the stop (max 400 USDT margin at 10x), capped by the bot's **allocation**. The allocation
+- **Sizing:** 2.5% of the balance at the stop (max 400 USDT margin at 10x), capped by the bot's **allocation**. The allocation
   starts at 2000 USDT and moves with realized P&L (from Bybit's closed-P&L
   records, net of fees), so a demo wallet with more USDT still trades like
   a 2000 USDT account. Never more margin than Bybit says is free.
 - **Each hourly run:** books fills, moves the stop to breakeven on Bybit once
   T1 fills, closes at market on a firm score flip, cancels leftover target
-  orders after a close, then fills free slots (max 7, max 4 per direction, max 3 new per 4H candle — strongest score first). Any open USDT-perp
+  orders after a close, then fills free slots (max 5, max 4 per direction, max 3 new per 4H candle — strongest score first). Any open USDT-perp
   position on the account, including ones the bot didn't open, counts as a
   used slot; the bot leaves positions it didn't open alone. Best to give the
   bot its own (sub-)account.

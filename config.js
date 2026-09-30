@@ -72,7 +72,7 @@ const config = module.exports = {
   TARGET_SPLIT: [0.40, 0.35, 0.25], // T1 / T2 / T3 shares, must sum to 1
   // T1 / T2 / T3 at these multiples of the stop distance (R) from entry.
   // null = the strategy's own levels (1R / 2R / 3R, T2 liquidity-refined).
-  TARGETS_R: [1.5, 3, 4.5],
+  TARGETS_R: [1.5, 2.5, 3.5],
   // Stop = entry -/+ this many ATRs, widened to the Chandelier Exit stop when that's further.
   STOP_ATR: 1.5,
   // Move the stop to entry once this target fills: 't1', 't2' or 'off'.
@@ -89,14 +89,14 @@ const config = module.exports = {
   // Money rules: all coins trade out of ONE shared balance.
   PORTFOLIO: {
     STARTING_BALANCE: 2000,  // USDT
-    RISK_PCT: 3.75,          // risk this % of the balance per trade (overrides RISK_USDT); null = use RISK_USDT
+    RISK_PCT: 2.5,           // risk this % of the balance per trade (overrides RISK_USDT); null = use RISK_USDT
                              // backtest/RISK_STARTS.md: about the profit of a fixed $100 with smaller drops
     RISK_USDT: 100,          // max loss at the stop per trade: the position is sized so a stop costs this much
                              // (capped at MARGIN_USDT x LEVERAGE, so tight stops don't blow up the size); null = always full MARGIN_USDT
     MARGIN_USDT: 400,        // max margin per trade in USDT (fixed margin when RISK_USDT is null); null = use MARGIN_PCT
     MARGIN_PCT: 10,          // % of the current shared balance put up as margin per trade (when MARGIN_USDT is null)
     LEVERAGE: 10,            // position value = margin x leverage (100 USDT -> 1000 USDT)
-    MAX_OPEN_POSITIONS: 7,
+    MAX_OPEN_POSITIONS: 5,
     MAX_NEW_PER_CANDLE: 3,   // at most this many new trades per 4H signal candle (null = no limit)
     MAX_SAME_DIRECTION: 4,   // at most this many longs (and this many shorts) open at once
   },

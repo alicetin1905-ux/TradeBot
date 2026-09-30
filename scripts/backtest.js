@@ -1477,4 +1477,4 @@ function scoreWalkForward(series, symbols, times, start, end) {
 }
 
 if (require.main === module) main().catch((e) => { console.error(e); process.exit(1); });
-module.exports = { simulate, precompute, to4h, BASE_RULES };
+module.exports = { simulate, precompute, to4h, BASE_RULES, addFilterInputs, VARIANTS };

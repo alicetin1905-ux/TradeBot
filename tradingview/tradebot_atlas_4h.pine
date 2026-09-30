@@ -55,7 +55,8 @@ maxMargin = input.float(400, "Max margin per trade (USDT)", minval = 10, group =
 lev       = input.int(10, "Leverage", minval = 1, maxval = 25, group = grpM)
 
 // ---------------- ATLAS score (src/atlasScore.js, classic mode) ----------------
-// Returns [score, ATR14, Chandelier long stop, Chandelier short stop, Chandelier direction].
+// Returns [score, ATR14, Chandelier long stop, Chandelier short stop, Chandelier direction,
+// then every indicator's vote (-1 / 0 / +1) for the data window].
 f_atlas() =>
     // --- trend ---
     e20  = ta.ema(close, 20)
@@ -178,7 +179,8 @@ f_atlas() =>
         tot += (close > piv ? 1 : -1) * 3
         wsum += 3
     float sc = math.round(tot / wsum * 100)
-    [sc, ta.atr(14), ceL, ceS, ceD]
+    int pivVote = na(piv) ? 0 : close > piv ? 1 : -1
+    [sc, ta.atr(14), ceL, ceS, ceD, stacked, pe200, stDir, zlVote, adxVote, ichVote, rsiVote, macdVote, srVote, cciVote, wrVote, rocVote, bbVote, strVote, vwVote, pivVote, obvVote, mfVote]
 
 // ---------------- Fibonacci check (src/fib.js detectImpulse + confluence) ----------------
 // A fresh impulse (>= thPct within windowN candles, ended <= maxAge candles
@@ -243,9 +245,15 @@ f_fibAgrees(int b, float thPct, int windowN, int maxScan, int maxAge, float reco
         agrees := b == 0 or impDir == b or stale
     agrees
 
+// Quantities in whole contract steps (TradingView rounds them), so T1 + T2 + T3
+// always add up to the full position with no leftover piece.
+f_step(float q) =>
+    float st = syminfo.mincontract > 0 ? syminfo.mincontract : 0.001
+    math.floor(q / st + 1e-9) * st
+
 // ---------------- signals ----------------
-[score, atr14, ceL, ceS, ceDir] = f_atlas()
-[btcScore, bA, bL, bS, bD] = request.security(btcSym, timeframe.period, f_atlas())
+[score, atr14, ceL, ceS, ceDir, vEma, vE200, vSt, vZl, vAdx, vIch, vRsi, vMacd, vSr, vCci, vWr, vRoc, vBb, vStr, vVw, vPiv, vObv, vMf] = f_atlas()
+[btcScore, bA, bL, bS, bD, b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11, b12, b13, b14, b15, b16, b17, b18] = request.security(btcSym, timeframe.period, f_atlas())
 int bias = score >= biasTh ? 1 : score <= -biasTh ? -1 : 0
 int btcBias = btcScore >= biasTh ? 1 : btcScore <= -biasTh ? -1 : 0
 bool isBtc = str.contains(syminfo.ticker, "BTCUSDT")
@@ -294,8 +302,8 @@ if strategy.position_size != 0 and strategy.position_size[1] == 0
     t1 := entryPx + posBias * R * r1
     t2 := entryPx + posBias * R * r2
     t3 := entryPx + posBias * R * r3
-    q1 := entryQty * pct1 / 100
-    q2 := entryQty * pct2 / 100
+    q1 := f_step(entryQty * pct1 / 100)
+    q2 := f_step(entryQty * pct2 / 100)
     q3 := entryQty - q1 - q2
     t1Done := false
     t2Done := false
@@ -338,7 +346,7 @@ if baseOk and fibOk
     stopFrac := math.abs(1 - stopRef / flipPrice)
     float riskUsd = strategy.equity * riskPct / 100
     float notional = math.min(riskUsd / stopFrac, maxMargin * lev)
-    float qty = notional / close
+    float qty = f_step(notional / close)
     if qty > 0
         usedBias := bias
         usedReset := false
@@ -348,8 +356,8 @@ if baseOk and fibOk
         t1 := close + bias * R0 * r1
         t2 := close + bias * R0 * r2
         t3 := close + bias * R0 * r3
-        q1 := qty * pct1 / 100
-        q2 := qty * pct2 / 100
+        q1 := f_step(qty * pct1 / 100)
+        q2 := f_step(qty * pct2 / 100)
         q3 := qty - q1 - q2
         entryQty := qty
         t1Done := false
@@ -380,3 +388,26 @@ if barstate.islast
     table.cell(info, 1, 2, na(flipPrice) ? "—" : str.tostring(flipPrice, format.mintick) + (chaseOk ? " (in range)" : " (too far)"), text_color = color.white, text_size = size.small)
     table.cell(info, 0, 3, "Timeframe", text_color = color.white, text_size = size.small)
     table.cell(info, 1, 3, timeframe.period == "240" ? "4H ✓" : timeframe.period + " — use 4H", text_color = timeframe.period == "240" ? color.green : color.orange, text_size = size.small)
+
+// Data window / chart-data export: the score and every indicator's vote, to
+// compare with the bot candle by candle.
+plot(score, "Score", display = display.data_window)
+plot(vEma, "v EMA stack", display = display.data_window)
+plot(vE200, "v Price vs EMA200", display = display.data_window)
+plot(vSt, "v Supertrend", display = display.data_window)
+plot(ceDir, "v Chandelier", display = display.data_window)
+plot(vZl, "v ZLSMA", display = display.data_window)
+plot(vAdx, "v ADX", display = display.data_window)
+plot(vIch, "v Ichimoku", display = display.data_window)
+plot(vRsi, "v RSI", display = display.data_window)
+plot(vMacd, "v MACD", display = display.data_window)
+plot(vSr, "v Stoch RSI", display = display.data_window)
+plot(vCci, "v CCI", display = display.data_window)
+plot(vWr, "v Williams R", display = display.data_window)
+plot(vRoc, "v ROC", display = display.data_window)
+plot(vBb, "v Bollinger", display = display.data_window)
+plot(vStr, "v Structure", display = display.data_window)
+plot(vVw, "v VWAP", display = display.data_window)
+plot(vPiv, "v Pivot", display = display.data_window)
+plot(vObv, "v OBV", display = display.data_window)
+plot(vMf, "v MFI", display = display.data_window)

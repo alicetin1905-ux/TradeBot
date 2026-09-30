@@ -578,6 +578,8 @@ const PER_CANDLE = args.includes('--per-candle');
 const TUNE = args.includes('--tune');
 // --combo: the chosen tuning changes together. backtest/COMBO.md.
 const COMBO = args.includes('--combo');
+// --split: share closed at T1/T2/T3 on the live setup. backtest/SPLIT.md.
+const SPLIT = args.includes('--split');
 const COINSET = args.includes('--coinset') ? String(args[args.indexOf('--coinset') + 1] || '').split(',').filter(Boolean).map(x => x.toUpperCase().replace(/USDT$/, '') + 'USDT') : null;
 const LAB_MODE = args.includes('--mode') ? args[args.indexOf('--mode') + 1] : 'classic';
 const LAB_MTF = args.includes('--mtf');
@@ -609,7 +611,7 @@ async function main() {
   }
   for (const s of symbols) {
     process.stderr.write(`scoring ${s}…\n`);
-    series[s].sig1 = SCORE_LAB ? new Map() : TF_COMPARE ? precompute(s, series[s].h1, 1, start) : SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB || RISK_GRID || LEV_GRID || DD_LAB || RISK_STARTS || COIN_WF || SCORE_MOM || LAB2 || LAB3 || TF_DAY || PER_CANDLE || COINSET || TUNE || COMBO ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
+    series[s].sig1 = SCORE_LAB ? new Map() : TF_COMPARE ? precompute(s, series[s].h1, 1, start) : SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB || RISK_GRID || LEV_GRID || DD_LAB || RISK_STARTS || COIN_WF || SCORE_MOM || LAB2 || LAB3 || TF_DAY || PER_CANDLE || COINSET || TUNE || COMBO || SPLIT ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
     series[s].sig4 = SCORE_LAB ? precompute(s, to4h(series[s].h1), 4, start, { h1: series[s].h1, mode: LAB_MODE, mtfTrim: LAB_MTF }) : precompute(s, to4h(series[s].h1), 4, start);
     if (TF_DAY) series[s].sigD = precompute(s, to1d(series[s].h1), 24, start, { entryTf: 'D' });
     addFilterInputs(series[s]);
@@ -626,6 +628,17 @@ async function main() {
   if (LEV_GRID) return levGrid(series, symbols, times, start, now);
   if (DD_LAB) return ddLab(series, symbols, times, start, now);
   if (RISK_STARTS) return riskStarts(series, symbols, times, start, now);
+  if (SPLIT) return variantTable('Close shares at T1 / T2 / T3 (live setup)', [
+    ['A  live 20 / 30 / 50', {}],
+    ['10 / 30 / 60', { split: [0.1, 0.3, 0.6] }],
+    ['25 / 25 / 50', { split: [0.25, 0.25, 0.5] }],
+    ['20 / 40 / 40', { split: [0.2, 0.4, 0.4] }],
+    ['30 / 30 / 40', { split: [0.3, 0.3, 0.4] }],
+    ['33 / 33 / 34', { split: [0.33, 0.33, 0.34] }],
+    ['40 / 30 / 30', { split: [0.4, 0.3, 0.3] }],
+    ['50 / 25 / 25', { split: [0.5, 0.25, 0.25] }],
+    ['50 / 30 / 20', { split: [0.5, 0.3, 0.2] }],
+  ], series, times, start, now, 'SPLIT.md');
   if (COMBO) {
     const T = { targetsR: [1.5, 2.5, 3.5] }, R = { cRiskPct: 2.5 }, M = { maxOpen: 5 };
     return variantTable('Tuning combinations on the live coins', [

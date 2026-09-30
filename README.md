@@ -172,7 +172,7 @@ window. Limit entries and breakeven-after-T2 didn't help.
   a 2000 USDT account. Never more margin than Bybit says is free.
 - **Each hourly run:** books fills, moves the stop to breakeven on Bybit once
   T1 fills, closes at market on a firm score flip, cancels leftover target
-  orders after a close, then fills free slots (max 7, max 4 per direction, max 2 new per 4H candle — strongest score first). Any open USDT-perp
+  orders after a close, then fills free slots (max 7, max 4 per direction, max 3 new per 4H candle — strongest score first). Any open USDT-perp
   position on the account, including ones the bot didn't open, counts as a
   used slot; the bot leaves positions it didn't open alone. Best to give the
   bot its own (sub-)account.

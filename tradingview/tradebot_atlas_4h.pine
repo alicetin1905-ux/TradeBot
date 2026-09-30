@@ -1,0 +1,382 @@
+//@version=6
+// TradeBot — ATLAS 4H strategy for TradingView.
+// A port of the bot in this repo (src/atlasScore.js, src/strategy.js,
+// src/fib.js, src/exchange.js) for ONE chart / coin at a time. Use it on a
+// 4H chart of a USDT perpetual (e.g. BYBIT:SOLUSDT.P).
+//
+// What it does, like the bot:
+//   - ATLAS score (-100..+100) on the closed 4H candle from the same
+//     price/volume indicators and weights. |score| >= 25 = long/short signal.
+//   - Signal price = close of the candle where the signal flipped.
+//   - Entry when |score| >= 50, not traded on this signal yet, price within
+//     1x ATR of the signal price, Fibonacci check passes, BTC's own score
+//     doesn't point the other way. Fills at the next candle's open.
+//   - Stop 1.5x ATR from the signal price (widened to the Chandelier Exit
+//     stop), carried over to the fill price as a %; risk 3.75% of equity,
+//     max $400 margin at 10x.
+//   - Targets 1.5R / 3R / 4.5R closing 20% / 30% / 50%; stop to entry after
+//     T1, to T1 after T2; close everything when the signal flips.
+// Not possible on one chart (the bot does these across all coins): the
+// order-flow inputs (funding, open interest, long/short ratio, order book,
+// taker tape — ~20% of the live score's weight), 7 slots / max 4 per
+// direction / max 3 new per candle, the daily loss limit, and the small
+// liquidation-cluster stop nudge. So this matches the repo's backtest more
+// closely than the live bot.
+strategy("TradeBot ATLAS 4H", overlay = true, initial_capital = 2000, currency = currency.USDT,
+     commission_type = strategy.commission.percent, commission_value = 0.055, slippage = 0,
+     pyramiding = 0, calc_on_every_tick = false, process_orders_on_close = false,
+     margin_long = 10, margin_short = 10, max_bars_back = 500)
+
+// ---------------- inputs ----------------
+grpS = "Signal"
+minScore = input.int(50, "Min |score| to enter", minval = 25, maxval = 100, group = grpS)
+biasTh   = input.int(25, "Signal threshold (long / short)", minval = 1, maxval = 100, group = grpS)
+chaseAtr = input.float(1.0, "Max distance from signal price (x ATR)", minval = 0.1, maxval = 5, group = grpS)
+useFib   = input.bool(true, "Fibonacci check", group = grpS)
+fibTh    = input.float(2.0, "Fibonacci impulse min move %", minval = 0.5, maxval = 10, group = grpS,
+     tooltip = "The bot uses 2% for most coins; ETH 1, SOL 3, XRP 3, HYPE 3, SUI 4.")
+useBtc   = input.bool(true, "BTC filter (no trades against BTC's signal)", group = grpS)
+btcSym   = input.symbol("BYBIT:BTCUSDT.P", "BTC symbol", group = grpS)
+
+grpE = "Exits"
+stopAtr  = input.float(1.5, "Stop (x ATR, widened to Chandelier Exit)", minval = 0.5, maxval = 5, group = grpE)
+r1       = input.float(1.5, "T1 (R)", minval = 0.25, group = grpE)
+r2       = input.float(3.0, "T2 (R)", minval = 0.25, group = grpE)
+r3       = input.float(4.5, "T3 (R)", minval = 0.25, group = grpE)
+pct1     = input.float(20, "Close at T1 (%)", minval = 0, maxval = 100, group = grpE)
+pct2     = input.float(30, "Close at T2 (%)", minval = 0, maxval = 100, group = grpE)
+beAfter1 = input.bool(true, "Stop to entry after T1", group = grpE)
+lockT1   = input.bool(true, "Stop to T1 after T2", group = grpE)
+flipExit = input.bool(true, "Close when the signal flips", group = grpE)
+
+grpM = "Money"
+riskPct   = input.float(3.75, "Risk per trade (% of equity)", minval = 0.1, maxval = 20, group = grpM)
+maxMargin = input.float(400, "Max margin per trade (USDT)", minval = 10, group = grpM)
+lev       = input.int(10, "Leverage", minval = 1, maxval = 25, group = grpM)
+
+// ---------------- ATLAS score (src/atlasScore.js, classic mode) ----------------
+// Returns [score, ATR14, Chandelier long stop, Chandelier short stop, Chandelier direction].
+f_atlas() =>
+    // --- trend ---
+    e20  = ta.ema(close, 20)
+    e50  = ta.ema(close, 50)
+    e200 = ta.ema(close, 200)
+    int stacked = e20 > e50 and e50 > e200 ? 1 : e20 < e50 and e50 < e200 ? -1 : 0
+    int pe200 = close > e200 ? 1 : -1
+    [stVal, stRaw] = ta.supertrend(3.0, 10)
+    int stDir = stRaw < 0 ? 1 : -1                 // Pine: negative direction = uptrend
+    // Chandelier Exit 4 / 2, useClose
+    a4  = ta.atr(4)
+    ls0 = ta.highest(close, 4) - a4 * 2.0
+    ss0 = ta.lowest(close, 4) + a4 * 2.0
+    var float ceL = na
+    var float ceS = na
+    var int ceD = 1
+    if not na(ls0) and not na(ss0)
+        float prevL = ceL
+        float prevS = ceS
+        float ls = na(prevL) ? ls0 : close[1] > prevL ? math.max(ls0, prevL) : ls0
+        float ss = na(prevS) ? ss0 : close[1] < prevS ? math.min(ss0, prevS) : ss0
+        int d = ceD
+        if not na(prevS) and close > prevS
+            d := 1
+        else if not na(prevL) and close < prevL
+            d := -1
+        ceL := ls
+        ceS := ss
+        ceD := d
+    // ZLSMA 32
+    lr1 = ta.linreg(close, 32, 0)
+    lr2 = ta.linreg(lr1, 32, 0)
+    zl  = lr1 + (lr1 - lr2)
+    int zlDir = close > zl ? 1 : -1
+    int zlSlope = zl > zl[3] ? 1 : -1
+    int zlVote = zlDir == zlSlope ? zlDir : 0
+    // ADX / DI 14
+    [pdi, ndi, adxV] = ta.dmi(14, 14)
+    int adxVote = adxV < 20 ? 0 : pdi > ndi ? 1 : -1
+    // Ichimoku cloud (9 / 26 / 52, displaced 26)
+    tenkan = (ta.highest(high, 9) + ta.lowest(low, 9)) / 2
+    kijun  = (ta.highest(high, 26) + ta.lowest(low, 26)) / 2
+    spanB  = (ta.highest(high, 52) + ta.lowest(low, 52)) / 2
+    spanA  = (tenkan + kijun) / 2
+    cTop = math.max(spanA[26], spanB[26])
+    cBot = math.min(spanA[26], spanB[26])
+    int ichVote = na(cTop) ? 0 : close > cTop ? 1 : close < cBot ? -1 : 0
+    // --- momentum ---
+    r14 = ta.rsi(close, 14)
+    int rsiVote = r14 > 55 ? 1 : r14 < 45 ? -1 : 0
+    [mLine, mSig, mHist] = ta.macd(close, 12, 26, 9)
+    int mdDir = mLine > mSig ? 1 : -1
+    int macdVote = (mHist > 0 ? 1 : -1) == mdDir ? mdDir : 0
+    rHi = ta.highest(r14, 14)
+    rLo = ta.lowest(r14, 14)
+    srRaw = rHi == rLo ? 50.0 : 100 * (r14 - rLo) / (rHi - rLo)
+    srK = ta.sma(srRaw, 3)
+    srD = ta.sma(srK, 3)
+    int srVote = srK > srD and srK < 80 ? 1 : srK < srD and srK > 20 ? -1 : 0
+    cc = ta.cci(hlc3, 20)
+    int cciVote = cc > 100 ? 1 : cc < -100 ? -1 : 0
+    hh14 = ta.highest(high, 14)
+    ll14 = ta.lowest(low, 14)
+    wr = hh14 == ll14 ? -50.0 : -100 * (hh14 - close) / (hh14 - ll14)
+    int wrVote = wr > -50 ? 1 : -1
+    roc = (close / close[10] - 1) * 100
+    int rocVote = roc > 0.3 ? 1 : roc < -0.3 ? -1 : 0
+    // --- structure ---
+    basis = ta.sma(close, 20)
+    dev   = ta.stdev(close, 20)
+    pctB  = (close - (basis - 2 * dev)) / (4 * dev)
+    int bbVote = pctB > 0.55 ? 1 : pctB < 0.45 ? -1 : 0
+    // market structure: last two 5-bar fractal highs / lows
+    var float sh1 = na
+    var float sh2 = na
+    var float sl1 = na
+    var float sl2 = na
+    if high[2] > high[3] and high[2] > high[4] and high[2] > high[1] and high[2] > high
+        sh1 := sh2
+        sh2 := high[2]
+    if low[2] < low[3] and low[2] < low[4] and low[2] < low[1] and low[2] < low
+        sl1 := sl2
+        sl2 := low[2]
+    int strVote = na(sh1) or na(sl1) ? 0 : sh2 > sh1 and sl2 > sl1 ? 1 : sh2 <= sh1 and sl2 <= sl1 ? -1 : 0
+    // VWAP anchored to the UTC day
+    bool newDay = dayofmonth(time, "UTC") != dayofmonth(time[1], "UTC")
+    var float pv = 0.0
+    var float vv = 0.0
+    if newDay
+        pv := 0.0
+        vv := 0.0
+    pv += hlc3 * volume
+    vv += volume
+    float vw = vv > 0 ? pv / vv : close
+    int vwVote = close > vw ? 1 : -1
+    // daily pivot: (H + L + C) / 3 of the last closed UTC day
+    var float dH = na
+    var float dL = na
+    var float pivPrev = na
+    if newDay
+        if not na(dH)
+            pivPrev := (dH + dL + close[1]) / 3
+        dH := high
+        dL := low
+    else
+        dH := na(dH) ? high : math.max(dH, high)
+        dL := na(dL) ? low : math.min(dL, low)
+    bool lastOfDay = dayofmonth(time_close, "UTC") != dayofmonth(time, "UTC")
+    float piv = lastOfDay ? (dH + dL + close) / 3 : pivPrev
+    // --- flow (price/volume only) ---
+    int obvVote = ta.obv > ta.obv[10] ? 1 : -1
+    mf = ta.mfi(hlc3, 14)
+    int mfVote = mf > 55 ? 1 : mf < 45 ? -1 : 0
+    // --- weighted sum (volume vs average: weight 3, never votes) ---
+    float tot = stacked * 8 + pe200 * 6 + stDir * 7 + ceD * 7 + zlVote * 5 + adxVote * 5 + ichVote * 5 +
+         rsiVote * 6 + macdVote * 7 + srVote * 4 + cciVote * 3 + wrVote * 3 + rocVote * 3 +
+         bbVote * 3 + strVote * 6 + vwVote * 4 + obvVote * 4 + mfVote * 3
+    float wsum = 43 + 26 + 13 + 10
+    if not na(piv)
+        tot += (close > piv ? 1 : -1) * 3
+        wsum += 3
+    float sc = math.round(tot / wsum * 100)
+    [sc, ta.atr(14), ceL, ceS, ceD]
+
+// ---------------- Fibonacci check (src/fib.js detectImpulse + confluence) ----------------
+// A fresh impulse (>= thPct within windowN candles, ended <= maxAge candles
+// ago, < recov of it won back) against the trade blocks it.
+f_fibAgrees(int b, float thPct, int windowN, int maxScan, int maxAge, float recov) =>
+    bool agrees = true
+    int n = bar_index + 1
+    int lim = math.min(maxScan - 1, n - 1)
+    bool found = false
+    int impDir = 0
+    float p0 = na
+    float p1 = na
+    int endOff = 0
+    if lim > 0
+        for jOff = 0 to lim - 1
+            if found
+                break
+            int startOff = math.min(jOff + windowN, n - 1)
+            int loOff = startOff
+            int hiOff = startOff
+            for k = startOff to jOff
+                if low[k] < low[loOff]
+                    loOff := k
+                if high[k] > high[hiOff]
+                    hiOff := k
+            float lo = low[loOff]
+            float hi = high[hiOff]
+            if lo > 0
+                if hiOff < loOff and (hi - lo) / lo * 100 >= thPct
+                    float endHi = hi
+                    int eOff = hiOff
+                    if hiOff > 0
+                        for k = hiOff - 1 to 0
+                            if low[k] < lo
+                                break
+                            if high[k] > endHi
+                                endHi := high[k]
+                                eOff := k
+                    found := true
+                    impDir := 1
+                    p0 := endHi
+                    p1 := lo
+                    endOff := eOff
+                else if loOff < hiOff and (hi - lo) / hi * 100 >= thPct
+                    float endLo = lo
+                    int eOff = loOff
+                    if loOff > 0
+                        for k = loOff - 1 to 0
+                            if high[k] > hi
+                                break
+                            if low[k] < endLo
+                                endLo := low[k]
+                                eOff := k
+                    found := true
+                    impDir := -1
+                    p0 := endLo
+                    p1 := hi
+                    endOff := eOff
+    if found
+        float recovered = (close - p0) / (p1 - p0)
+        bool stale = endOff > maxAge or recovered >= recov
+        agrees := b == 0 or impDir == b or stale
+    agrees
+
+// ---------------- signals ----------------
+[score, atr14, ceL, ceS, ceDir] = f_atlas()
+[btcScore, bA, bL, bS, bD] = request.security(btcSym, timeframe.period, f_atlas())
+int bias = score >= biasTh ? 1 : score <= -biasTh ? -1 : 0
+int btcBias = btcScore >= biasTh ? 1 : btcScore <= -biasTh ? -1 : 0
+bool isBtc = str.contains(syminfo.ticker, "BTCUSDT")
+
+// signal price: close of the candle where the signal flipped
+var float flipPrice = na
+var int flipBias = 0
+if bias != 0 and bias != flipBias
+    flipBias := bias
+    flipPrice := close
+else if bias == 0
+    flipBias := 0
+    flipPrice := na
+
+// one trade per signal: re-armed once the signal goes neutral or flips (and no position)
+var int usedBias = 0
+var bool usedReset = true
+if usedBias != 0 and bias != usedBias
+    usedReset := true
+if usedReset and strategy.position_size == 0
+    usedBias := 0
+bool signalUsed = usedBias != 0 and not usedReset and usedBias == bias
+
+// ---------------- position state ----------------
+var float stopLvl = na
+var float t1 = na
+var float t2 = na
+var float t3 = na
+var float q1 = na
+var float q2 = na
+var float q3 = na
+var float entryQty = na
+var float entryPx = na
+var float stopFrac = na
+var int posBias = 0
+var bool t1Done = false
+var bool t2Done = false
+
+// the entry filled: carry the levels over to the real fill price (as the bot does)
+if strategy.position_size != 0 and strategy.position_size[1] == 0
+    entryPx  := strategy.position_avg_price
+    entryQty := math.abs(strategy.position_size)
+    posBias  := strategy.position_size > 0 ? 1 : -1
+    float R = entryPx * stopFrac
+    stopLvl := entryPx - posBias * R
+    t1 := entryPx + posBias * R * r1
+    t2 := entryPx + posBias * R * r2
+    t3 := entryPx + posBias * R * r3
+    q1 := entryQty * pct1 / 100
+    q2 := entryQty * pct2 / 100
+    q3 := entryQty - q1 - q2
+    t1Done := false
+    t2Done := false
+
+// ---------------- exits ----------------
+if strategy.position_size != 0
+    float sz = math.abs(strategy.position_size)
+    if not t1Done and sz <= entryQty - q1 * 0.999
+        t1Done := true
+        if beAfter1
+            stopLvl := entryPx
+    if not t2Done and sz <= entryQty - (q1 + q2) * 0.999
+        t2Done := true
+        if lockT1
+            stopLvl := t1
+    if flipExit and bias != 0 and bias != posBias
+        strategy.close_all(comment = "signal flip")
+    else
+        if not t1Done and q1 > 0
+            strategy.exit("T1", "ATLAS", qty = q1, limit = t1, stop = stopLvl, comment_profit = "T1", comment_loss = "stop")
+        if not t2Done and q2 > 0
+            strategy.exit("T2", "ATLAS", qty = q2, limit = t2, stop = stopLvl, comment_profit = "T2", comment_loss = t1Done ? "BE / lock" : "stop")
+        strategy.exit("T3", "ATLAS", qty = q3, limit = t3, stop = stopLvl, comment_profit = "T3", comment_loss = t1Done ? "BE / lock" : "stop")
+
+// ---------------- entries ----------------
+bool chaseOk = not na(flipPrice) and math.abs(close - flipPrice) <= chaseAtr * atr14
+bool btcOk = not useBtc or isBtc or btcBias != -bias
+bool baseOk = strategy.position_size == 0 and bias != 0 and math.abs(score) >= minScore and not signalUsed and chaseOk and btcOk
+bool fibOk = true
+if baseOk and useFib
+    fibOk := f_fibAgrees(bias, fibTh, 12, 300, 6, 0.618)
+
+if baseOk and fibOk
+    // stop: 1.5x ATR from the signal price, widened to the Chandelier Exit stop
+    float stopRef = bias == 1 ? flipPrice - stopAtr * atr14 : flipPrice + stopAtr * atr14
+    if bias == 1 and ceDir == 1 and ceL < flipPrice
+        stopRef := math.min(stopRef, ceL)
+    if bias == -1 and ceDir == -1 and ceS > flipPrice
+        stopRef := math.max(stopRef, ceS)
+    stopFrac := math.abs(1 - stopRef / flipPrice)
+    float riskUsd = strategy.equity * riskPct / 100
+    float notional = math.min(riskUsd / stopFrac, maxMargin * lev)
+    float qty = notional / close
+    if qty > 0
+        usedBias := bias
+        usedReset := false
+        // provisional levels from this close; reset to the real fill price next bar
+        float R0 = close * stopFrac
+        stopLvl := close - bias * R0
+        t1 := close + bias * R0 * r1
+        t2 := close + bias * R0 * r2
+        t3 := close + bias * R0 * r3
+        q1 := qty * pct1 / 100
+        q2 := qty * pct2 / 100
+        q3 := qty - q1 - q2
+        entryQty := qty
+        t1Done := false
+        t2Done := false
+        strategy.entry("ATLAS", bias == 1 ? strategy.long : strategy.short, qty = qty, comment = (bias == 1 ? "LONG " : "SHORT ") + str.tostring(score))
+        strategy.exit("T1", "ATLAS", qty = q1, limit = t1, stop = stopLvl, comment_profit = "T1", comment_loss = "stop")
+        strategy.exit("T2", "ATLAS", qty = q2, limit = t2, stop = stopLvl, comment_profit = "T2", comment_loss = "stop")
+        strategy.exit("T3", "ATLAS", qty = q3, limit = t3, stop = stopLvl, comment_profit = "T3", comment_loss = "stop")
+        alert(syminfo.ticker + " ATLAS " + (bias == 1 ? "LONG" : "SHORT") + " score " + str.tostring(score), alert.freq_once_per_bar_close)
+
+// ---------------- chart ----------------
+bool inPos = strategy.position_size != 0
+plot(inPos ? stopLvl : na, "Stop", color.new(color.red, 0), 2, plot.style_linebr)
+plot(inPos and not t1Done ? t1 : na, "T1", color.new(color.teal, 30), 1, plot.style_linebr)
+plot(inPos and not t2Done ? t2 : na, "T2", color.new(color.teal, 15), 1, plot.style_linebr)
+plot(inPos ? t3 : na, "T3", color.new(color.teal, 0), 2, plot.style_linebr)
+plot(bias != 0 ? flipPrice : na, "Signal price", color.new(color.gray, 20), 1, plot.style_circles)
+bgcolor(score >= minScore ? color.new(color.green, 90) : score <= -minScore ? color.new(color.red, 90) : na, title = "Score strong enough")
+
+var table info = table.new(position.top_right, 2, 4, bgcolor = color.new(color.black, 20), border_width = 1)
+if barstate.islast
+    color sCol = score >= minScore ? color.green : score <= -minScore ? color.red : color.gray
+    table.cell(info, 0, 0, "ATLAS score", text_color = color.white, text_size = size.small)
+    table.cell(info, 1, 0, str.tostring(score), text_color = sCol, text_size = size.small)
+    table.cell(info, 0, 1, "BTC score", text_color = color.white, text_size = size.small)
+    table.cell(info, 1, 1, str.tostring(btcScore), text_color = btcScore >= biasTh ? color.green : btcScore <= -biasTh ? color.red : color.gray, text_size = size.small)
+    table.cell(info, 0, 2, "Signal price", text_color = color.white, text_size = size.small)
+    table.cell(info, 1, 2, na(flipPrice) ? "—" : str.tostring(flipPrice, format.mintick) + (chaseOk ? " (in range)" : " (too far)"), text_color = color.white, text_size = size.small)
+    table.cell(info, 0, 3, "Timeframe", text_color = color.white, text_size = size.small)
+    table.cell(info, 1, 3, timeframe.period == "240" ? "4H ✓" : timeframe.period + " — use 4H", text_color = timeframe.period == "240" ? color.green : color.orange, text_size = size.small)

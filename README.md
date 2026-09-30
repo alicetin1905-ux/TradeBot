@@ -1,7 +1,7 @@
 # TradeBot
 
 Auto trading bot — a pooled-balance bot trading SOL, DOGE, SUI, ENA,
-WLD, DYDX, GALA, EGLD, NEAR, XLM, BLUR, SAND, AXS, ZIL, CHZ, POPCAT, PI, GRAM,
+WLD, DYDX, GALA, EGLD, NEAR, XLM, BLUR, SAND, AXS, ZIL, CHZ, POPCAT, GRAM,
 AERO and PEPE (Bybit: 1000PEPEUSDT) perps (BTC is scored only, for the BTC filter) on **Bybit Demo Trading** (mainnet prices, demo funds). It uses the same signal stack as
 [UltimateTradingBot](https://github.com/alicetin1905-ux/UltimateTradingBot):
 
@@ -37,7 +37,7 @@ number as a rehearsal of the strategy, not investment advice.
 
 ## Rules (`config.js` → `PORTFOLIO`)
 
-- **One shared 2000 USDT balance** for all 20 coins.
+- **One shared 2000 USDT balance** for all 19 coins.
 - **2.5% of the balance at risk per trade** (`RISK_PCT`): each position is
   sized so hitting its stop loses 2.5% of the bot's balance — $50 on 2000
   USDT, more as the account grows, less after losses. Capped at **400 USDT

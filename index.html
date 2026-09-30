@@ -223,7 +223,7 @@
 </div>
 
 <div class="banner exchange">
-  <b>Bybit demo</b> — demo funds, not real money. One 2000 USDT balance for all 25 coins;
+  <b>Bybit demo</b> — demo funds, not real money. One 2000 USDT balance for all 24 coins;
   stops and targets sit on Bybit. Open P&amp;L uses live Bybit prices<span id="priceSourceNote"></span>.
 </div>
 
@@ -291,7 +291,6 @@
     { id: 'LDOUSDT', label: 'LDO' },
     { id: 'GALAUSDT', label: 'GALA' },
     { id: 'KAITOUSDT', label: 'KAITO' },
-    { id: 'FARTCOINUSDT', label: 'FARTCOIN' },
     { id: 'EGLDUSDT', label: 'EGLD' },
     { id: 'NEARUSDT', label: 'NEAR' },
     { id: 'XLMUSDT', label: 'XLM' },
@@ -633,7 +632,10 @@
   }
 
   var OKX_BASE = 'https://www.okx.com';
-  function okxInstId(symbol) { return symbol.replace('USDT', '') + '-USDT-SWAP'; }
+  // 1000PEPEUSDT (Bybit, price per 1000) is plain PEPE on OKX.
+  var OKX_ALIAS = { '1000PEPEUSDT': { ccy: 'PEPE', mult: 1000 } };
+  function okxInstId(symbol) { return (OKX_ALIAS[symbol] ? OKX_ALIAS[symbol].ccy : symbol.replace('USDT', '')) + '-USDT-SWAP'; }
+  function okxMult(symbol) { return OKX_ALIAS[symbol] ? OKX_ALIAS[symbol].mult : 1; }
 
   var BYBIT_BASE = 'https://api.bybit.com';
 
@@ -661,7 +663,7 @@
       var tk = tr.data && tr.data[0];
       if (tk) marketStats[symbol] = { vol24: +tk.volCcy24h * +tk.last, chg24: (+tk.last / +tk.open24h - 1) * 100, oi: null, src: 'OKX' };
     } catch (e) { /* stats are optional */ }
-    return +d.data[0].markPx;
+    return +d.data[0].markPx * okxMult(symbol);
   }
   function fmtBig(x) {
     if (!(x > 0)) return '—';

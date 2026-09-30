@@ -691,8 +691,9 @@ test('BTC filter: no altcoin entry against BTC signal; BTC itself and agreeing a
   });
   const signals = { BTCUSDT: sig('BTCUSDT', -1, -55), XRPUSDT: sig('XRPUSDT', 1, 70), SOLUSDT: sig('SOLUSDT', -1, -60) };
   const st = { positions: {}, usedSignals: {}, scores: { XRPUSDT: {}, SOLUSDT: {}, BTCUSDT: {} } };
-  const saved = [config.BTC_FILTER, config.USE_FIB, config.ENTRY_FRESH_MIN];
+  const saved = [config.BTC_FILTER, config.USE_FIB, config.ENTRY_FRESH_MIN, config.SYMBOLS];
   config.USE_FIB = false; config.ENTRY_FRESH_MIN = 60;
+  config.SYMBOLS = ['BTCUSDT', 'XRPUSDT', 'SOLUSDT'];
   try {
     config.BTC_FILTER = true;
     let events = [];
@@ -700,7 +701,10 @@ test('BTC filter: no altcoin entry against BTC signal; BTC itself and agreeing a
     assert.equal(st.scores.XRPUSDT.wait, 'btc');
     config.BTC_FILTER = false;
     assert.deepEqual(entryCandidates(signals, st, [], [], now).map(c => c.symbol), ['XRPUSDT', 'SOLUSDT', 'BTCUSDT']);
-  } finally { [config.BTC_FILTER, config.USE_FIB, config.ENTRY_FRESH_MIN] = saved; }
+    // BTC off the traded list: never entered itself, but still filters the alts
+    config.BTC_FILTER = true; config.SYMBOLS = ['XRPUSDT', 'SOLUSDT'];
+    assert.deepEqual(entryCandidates(signals, st, [], [], now).map(c => c.symbol), ['SOLUSDT']);
+  } finally { [config.BTC_FILTER, config.USE_FIB, config.ENTRY_FRESH_MIN, config.SYMBOLS] = saved; }
 });
 
 test('LOCK_T1_AFTER_T2: after T2 fills the exchange stop moves up to T1; a stop there is labelled', async () => {

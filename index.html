@@ -223,7 +223,7 @@
 </div>
 
 <div class="banner exchange">
-  <b>Bybit demo</b> — demo funds, not real money. One 2000 USDT balance for all 24 coins;
+  <b>Bybit demo</b> — demo funds, not real money. One 2000 USDT balance for all 20 coins;
   stops and targets sit on Bybit. Open P&amp;L uses live Bybit prices<span id="priceSourceNote"></span>.
 </div>
 
@@ -277,18 +277,15 @@
   'use strict';
 
   var SYMBOLS = [
-    { id: 'BTCUSDT', label: 'BTC' },
-    { id: 'ETHUSDT', label: 'ETH' },
+    { id: 'BTCUSDT', label: 'BTC (filter only)' },
     { id: 'SOLUSDT', label: 'SOL' },
     { id: 'XRPUSDT', label: 'XRP' },
-    { id: 'BNBUSDT', label: 'BNB' },
     { id: 'DOGEUSDT', label: 'DOGE' },
     { id: 'HYPEUSDT', label: 'HYPE' },
     { id: 'SUIUSDT', label: 'SUI' },
     { id: 'ENAUSDT', label: 'ENA' },
     { id: 'WLDUSDT', label: 'WLD' },
     { id: 'DYDXUSDT', label: 'DYDX' },
-    { id: 'LDOUSDT', label: 'LDO' },
     { id: 'GALAUSDT', label: 'GALA' },
     { id: 'KAITOUSDT', label: 'KAITO' },
     { id: 'EGLDUSDT', label: 'EGLD' },
@@ -421,6 +418,10 @@
             ' · T2 ' + fmtPrice(pos.t2) + (pos.filled && pos.filled.t2 ? ' ✓' : '') +
             ' · T3 ' + fmtPrice(pos.t3) +
           '</div>';
+      } else if (sc && account && account.settings && account.settings.SYMBOLS && account.settings.SYMBOLS.indexOf(s.id) < 0) {
+        // scored but not traded (BTC for the BTC filter)
+        extraHtml = '<div class="pnl flat">not traded</div><div class="noPos">' +
+          (s.id === 'BTCUSDT' ? 'BTC filter: alts ' + (sc.bias === 1 ? 'can go long, no shorts' : sc.bias === -1 ? 'can go short, no longs' : 'free both ways') : 'off the coin list') + '</div>';
       } else if (sc) {
         var byCoin = account && account.settings && account.settings.ENTRY_MIN_SCORE_BY_SYMBOL;
         var thresh = (byCoin && byCoin[s.id]) || SCORE_THRESHOLD;
@@ -444,7 +445,7 @@
       }
       var scoreTxt = sc ? (sc.score > 0 ? '+' : '') + sc.score : '—';
       return (
-        '<div class="coin' + (pos ? ' inPos' : '') + ringClass(sc, s.id, account) + '">' +
+        '<div class="coin' + (pos ? ' inPos' : '') + (account && account.settings && account.settings.SYMBOLS && account.settings.SYMBOLS.indexOf(s.id) < 0 ? '' : ringClass(sc, s.id, account)) + '">' +
           '<div class="px" data-px="' + s.id + '">' + pxHtml(s.id) + '</div>' +
           '<div class="sym">' + s.label + '</div>' +
           '<div class="bal">score ' + scoreTxt + '</div>' +

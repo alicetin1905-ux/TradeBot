@@ -854,6 +854,21 @@ test('market data: falls back to OKX — whole candle set, or one flow feed at a
   } finally { global.fetch = saved; }
 });
 
+test('OKX fallback for 1000PEPEUSDT: reads PEPE-USDT-SWAP, prices x1000', async () => {
+  const okx = require('../src/okx');
+  assert.equal(okx.instId('1000PEPEUSDT'), 'PEPE-USDT-SWAP');
+  assert.equal(okx.instId('SOLUSDT'), 'SOL-USDT-SWAP');
+  const saved = global.fetch;
+  let url = '';
+  global.fetch = async (u) => { url = u; return { json: async () => ({ code: '0', data: [['1000', '0.00001', '0.000012', '0.000009', '0.000011', 'x', '5000000', 'x', '1']] }) }; };
+  try {
+    const [c] = await okx.getKlines('1000PEPEUSDT', '240', 10);
+    assert.match(url, /instId=PEPE-USDT-SWAP/);
+    assert.ok(Math.abs(c.c - 0.011) < 1e-12 && Math.abs(c.h - 0.012) < 1e-12);
+    assert.equal(c.v, 5000);
+  } finally { global.fetch = saved; }
+});
+
 test('MARKET_DATA setting: only "bybit" or "okx"', () => {
   const settings = require('../src/settings');
   const cfg = JSON.parse(JSON.stringify({ MARKET_DATA: 'bybit', PORTFOLIO: {}, EXECUTION: {}, NOTIFY: {} }));

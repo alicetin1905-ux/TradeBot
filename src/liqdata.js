@@ -21,7 +21,7 @@ const MAX_PAGES = 20;
 
 function empty() { return { ctVal: {}, lastTs: {}, since: {}, hours: {}, samples: [], stats: null }; }
 
-const uly = (symbol) => symbol.replace('USDT', '') + '-USDT';
+const uly = (symbol) => require('./okx').ccy(symbol) + '-USDT'; // 1000PEPEUSDT -> PEPE-USDT
 
 async function getJson(url, fetchImpl) {
   const r = await fetchImpl(url);

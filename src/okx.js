@@ -9,8 +9,12 @@ const BASE = 'https://www.okx.com';
 const BAR = { '30': '30m', '60': '1H', '240': '4H', 'D': '1D' };
 
 // Bybit/Binance-style "BTCUSDT" -> OKX's "BTC-USDT-SWAP" / bare "BTC".
-function instId(symbol) { return symbol.replace('USDT', '') + '-USDT-SWAP'; }
-function ccy(symbol) { return symbol.replace('USDT', ''); }
+// Coins Bybit lists per 1000 (1000PEPEUSDT) are plain PEPE on OKX: same
+// coin, price x1000 on Bybit, so OKX candles are scaled to Bybit's units.
+const ALIAS = { '1000PEPEUSDT': { ccy: 'PEPE', mult: 1000 } };
+function ccy(symbol) { return ALIAS[symbol] ? ALIAS[symbol].ccy : symbol.replace('USDT', ''); }
+function instId(symbol) { return ccy(symbol) + '-USDT-SWAP'; }
+function priceMult(symbol) { return ALIAS[symbol] ? ALIAS[symbol].mult : 1; }
 
 async function api(path) {
   const r = await fetch(BASE + path);
@@ -24,7 +28,8 @@ async function getKlines(symbol, interval, limit) {
   // OKX caps /market/candles at 300 per call regardless of what's asked for.
   const rows = await api(`/api/v5/market/candles?instId=${instId(symbol)}&bar=${bar}&limit=${Math.min(limit, 300)}`);
   // OKX returns newest-first: [ts, o, h, l, c, vol, volCcy, volCcyQuote, confirm]
-  return rows.slice().reverse().map(k => ({ t: +k[0], o: +k[1], h: +k[2], l: +k[3], c: +k[4], v: +k[6] }));
+  const m = priceMult(symbol);
+  return rows.slice().reverse().map(k => ({ t: +k[0], o: +k[1] * m, h: +k[2] * m, l: +k[3] * m, c: +k[4] * m, v: +k[6] / m }));
 }
 
 async function getTicker(symbol) {
@@ -80,4 +85,4 @@ async function loadSymbolData(symbol, mtfTfs, entryTf) {
   return { symbol, candles, ticker, oi, ratio, book, tape };
 }
 
-module.exports = { api, getKlines, getTicker, getOpenInterest, getAccountRatio, getOrderbook, getRecentTrades, loadSymbolData };
+module.exports = { ccy, instId, priceMult, api, getKlines, getTicker, getOpenInterest, getAccountRatio, getOrderbook, getRecentTrades, loadSymbolData };

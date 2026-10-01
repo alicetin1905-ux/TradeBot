@@ -1,121 +1,120 @@
 {
   "SOLUSDT": {
-    "score": -39,
-    "bias": -1,
-    "at": 1790881262454,
+    "score": -4,
+    "bias": 0,
+    "at": 1790884862020,
     "src": "bybit",
-    "atr": 2.22419,
-    "wait": "weak"
+    "atr": 2.23032
   },
   "DOGEUSDT": {
-    "score": -8,
+    "score": 3,
     "bias": 0,
-    "at": 1790881262853,
-    "src": "bybit",
-    "atr": 0.00210958
+    "at": 1790884862820,
+    "src": "okx",
+    "atr": 0.00208095
   },
   "SUIUSDT": {
-    "score": 1,
-    "bias": 0,
-    "at": 1790881263251,
-    "src": "bybit",
-    "atr": 0.0447523
-  },
-  "ENAUSDT": {
-    "score": 1,
-    "bias": 0,
-    "at": 1790881263638,
-    "src": "bybit",
-    "atr": 0.0124183
-  },
-  "WLDUSDT": {
-    "score": -22,
-    "bias": 0,
-    "at": 1790881264204,
-    "src": "bybit",
-    "atr": 0.0267709
-  },
-  "DYDXUSDT": {
-    "score": 77,
+    "score": 33,
     "bias": 1,
-    "at": 1790881264940,
-    "src": "okx",
-    "atr": 0.00525806
-  },
-  "GALAUSDT": {
-    "score": 43,
-    "bias": 1,
-    "at": 1790881265645,
-    "src": "okx",
-    "atr": 0.0000827854,
+    "at": 1790884863375,
+    "src": "bybit",
+    "atr": 0.0454843,
     "wait": "weak"
   },
-  "EGLDUSDT": {
-    "score": -14,
+  "ENAUSDT": {
+    "score": -7,
     "bias": 0,
-    "at": 1790881266028,
+    "at": 1790884864165,
     "src": "bybit",
-    "atr": 0.156383
+    "atr": 0.0121242
+  },
+  "WLDUSDT": {
+    "score": 0,
+    "bias": 0,
+    "at": 1790884865128,
+    "src": "okx",
+    "atr": 0.0260975
+  },
+  "DYDXUSDT": {
+    "score": 75,
+    "bias": 1,
+    "at": 1790884865817,
+    "src": "okx",
+    "atr": 0.00531034
+  },
+  "GALAUSDT": {
+    "score": 50,
+    "bias": 1,
+    "at": 1790884866889,
+    "src": "bybit",
+    "atr": 0.0000825434
+  },
+  "EGLDUSDT": {
+    "score": 10,
+    "bias": 0,
+    "at": 1790884867441,
+    "src": "bybit",
+    "atr": 0.157999
   },
   "NEARUSDT": {
-    "score": 8,
+    "score": -5,
     "bias": 0,
-    "at": 1790881266423,
+    "at": 1790884867840,
     "src": "bybit",
-    "atr": 0.274855
+    "atr": 0.273437
   },
   "XLMUSDT": {
-    "score": -11,
+    "score": -5,
     "bias": 0,
-    "at": 1790881267079,
-    "src": "okx",
-    "atr": 0.00690017
+    "at": 1790884868733,
+    "src": "bybit",
+    "atr": 0.00677948
   },
   "BLURUSDT": {
-    "score": 46,
+    "score": 43,
     "bias": 1,
-    "at": 1790881268071,
+    "at": 1790884869628,
     "src": "bybit",
-    "atr": 0.000796312,
+    "atr": 0.000777289,
     "wait": "weak"
   },
   "SANDUSDT": {
-    "score": 37,
+    "score": 35,
     "bias": 1,
-    "at": 1790881269103,
-    "src": "okx",
-    "atr": 0.00144337,
+    "at": 1790884870012,
+    "src": "bybit",
+    "atr": 0.0014363,
     "wait": "weak"
   },
   "AXSUSDT": {
-    "score": 9,
-    "bias": 0,
-    "at": 1790881269664,
-    "src": "bybit",
-    "atr": 0.0308618
-  },
-  "ZILUSDT": {
-    "score": -29,
-    "bias": -1,
-    "at": 1790881270202,
-    "src": "bybit",
-    "atr": 0.0000871241,
+    "score": 28,
+    "bias": 1,
+    "at": 1790884871494,
+    "src": "okx",
+    "atr": 0.0312624,
     "wait": "weak"
   },
-  "CHZUSDT": {
-    "score": -2,
+  "ZILUSDT": {
+    "score": -6,
     "bias": 0,
-    "at": 1790881270589,
+    "at": 1790884872203,
     "src": "bybit",
-    "atr": 0.000430605
+    "atr": 0.0000855438
+  },
+  "CHZUSDT": {
+    "score": -3,
+    "bias": 0,
+    "at": 1790884873007,
+    "src": "okx",
+    "atr": 0.000428969
   },
   "POPCATUSDT": {
-    "score": -71,
+    "score": -37,
     "bias": -1,
-    "at": 1790881270983,
+    "at": 1790884873559,
     "src": "bybit",
-    "atr": 0.00171582,
-    "wait": "stale"
+    "atr": 0.00169754,
+    "wait": "weak"
   },
   "PIUSDT": {
     "score": 69,
@@ -126,47 +125,45 @@
     "wait": "stale"
   },
   "GRAMUSDT": {
-    "score": -12,
+    "score": 12,
     "bias": 0,
-    "at": 1790881271688,
-    "src": "okx",
-    "atr": 0.0506241
+    "at": 1790884874093,
+    "src": "bybit",
+    "atr": 0.0519528
   },
   "AEROUSDT": {
-    "score": -26,
-    "bias": -1,
-    "at": 1790881272235,
+    "score": -11,
+    "bias": 0,
+    "at": 1790884874489,
     "src": "bybit",
-    "atr": 0.0302561,
-    "wait": "weak"
+    "atr": 0.030195
   },
   "1000PEPEUSDT": {
-    "score": 51,
+    "score": 40,
     "bias": 1,
-    "at": 1790881272975,
+    "at": 1790884875100,
     "src": "bybit",
-    "atr": 0.000132179
+    "atr": 0.000131023
   },
   "BTCUSDT": {
-    "score": 29,
+    "score": 36,
     "bias": 1,
-    "at": 1790881274486,
+    "at": 1790884877242,
     "src": "bybit",
-    "atr": 904.29
+    "atr": 928.376
   },
   "KAITOUSDT": {
-    "score": 0,
+    "score": -7,
     "bias": 0,
-    "at": 1790881273368,
+    "at": 1790884875991,
     "src": "bybit",
-    "atr": 0.0114971
+    "atr": 0.0113473
   },
   "XRPUSDT": {
-    "score": -32,
-    "bias": -1,
-    "at": 1790881273939,
+    "score": 1,
+    "bias": 0,
+    "at": 1790884876708,
     "src": "bybit",
-    "atr": 0.030064,
-    "wait": "weak"
+    "atr": 0.0301666
   }
 }

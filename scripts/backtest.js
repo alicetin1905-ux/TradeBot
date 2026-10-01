@@ -580,6 +580,8 @@ const TUNE = args.includes('--tune');
 const COMBO = args.includes('--combo');
 // --split: share closed at T1/T2/T3 on the live setup. backtest/SPLIT.md.
 const SPLIT = args.includes('--split');
+// --slots: open-position and per-direction limits on the live setup. backtest/SLOTS.md.
+const SLOTS = args.includes('--slots');
 const COINSET = args.includes('--coinset') ? String(args[args.indexOf('--coinset') + 1] || '').split(',').filter(Boolean).map(x => x.toUpperCase().replace(/USDT$/, '') + 'USDT') : null;
 const LAB_MODE = args.includes('--mode') ? args[args.indexOf('--mode') + 1] : 'classic';
 const LAB_MTF = args.includes('--mtf');
@@ -611,7 +613,7 @@ async function main() {
   }
   for (const s of symbols) {
     process.stderr.write(`scoring ${s}…\n`);
-    series[s].sig1 = SCORE_LAB ? new Map() : TF_COMPARE ? precompute(s, series[s].h1, 1, start) : SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB || RISK_GRID || LEV_GRID || DD_LAB || RISK_STARTS || COIN_WF || SCORE_MOM || LAB2 || LAB3 || TF_DAY || PER_CANDLE || COINSET || TUNE || COMBO || SPLIT ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
+    series[s].sig1 = SCORE_LAB ? new Map() : TF_COMPARE ? precompute(s, series[s].h1, 1, start) : SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB || RISK_GRID || LEV_GRID || DD_LAB || RISK_STARTS || COIN_WF || SCORE_MOM || LAB2 || LAB3 || TF_DAY || PER_CANDLE || COINSET || TUNE || COMBO || SPLIT || SLOTS ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
     series[s].sig4 = SCORE_LAB ? precompute(s, to4h(series[s].h1), 4, start, { h1: series[s].h1, mode: LAB_MODE, mtfTrim: LAB_MTF }) : precompute(s, to4h(series[s].h1), 4, start);
     if (TF_DAY) series[s].sigD = precompute(s, to1d(series[s].h1), 24, start, { entryTf: 'D' });
     addFilterInputs(series[s]);
@@ -628,6 +630,16 @@ async function main() {
   if (LEV_GRID) return levGrid(series, symbols, times, start, now);
   if (DD_LAB) return ddLab(series, symbols, times, start, now);
   if (RISK_STARTS) return riskStarts(series, symbols, times, start, now);
+  if (SLOTS) return variantTable('Slot limits on the live setup', [
+    ['A  live: 5 open, 4 per direction', {}],
+    ['3 open, 2 per direction', { maxOpen: 3, maxSameDir: 2 }],
+    ['3 open, 3 per direction', { maxOpen: 3, maxSameDir: 3 }],
+    ['4 open, 2 per direction', { maxOpen: 4, maxSameDir: 2 }],
+    ['4 open, 3 per direction', { maxOpen: 4, maxSameDir: 3 }],
+    ['5 open, 3 per direction', { maxOpen: 5, maxSameDir: 3 }],
+    ['5 open, 2 per direction', { maxOpen: 5, maxSameDir: 2 }],
+    ['6 open, 4 per direction', { maxOpen: 6, maxSameDir: 4 }],
+  ], series, times, start, now, 'SLOTS.md');
   if (SPLIT) return variantTable('Close shares at T1 / T2 / T3 (live setup)', [
     ['A  live 20 / 30 / 50', {}],
     ['10 / 30 / 60', { split: [0.1, 0.3, 0.6] }],

@@ -74,5 +74,43 @@
     "unrealisedPnl": -44.46195,
     "funding": -0.09948077,
     "closedDetectedAt": 1790866501845
+  },
+  "WLDUSDT": {
+    "symbol": "WLDUSDT",
+    "bias": 1,
+    "entry": 0.5342,
+    "stop": 0.4887,
+    "initialStop": 0.4887,
+    "t1": 0.6024,
+    "t2": 0.6479,
+    "t3": 0.6934,
+    "qtyTotal": 1099.4,
+    "qtyRemaining": 1099.4,
+    "qtyT1": 274.8,
+    "qtyT2": 274.8,
+    "qtyT3": 549.8,
+    "margin": 58.729948,
+    "notional": 587.29948,
+    "riskAmt": 50.022699999999986,
+    "filled": {
+      "t1": false,
+      "t2": false,
+      "t3": false
+    },
+    "breakeven": false,
+    "beAfter": "t1",
+    "openedAt": 1790812876203,
+    "score": 59,
+    "orders": {
+      "entry": "f24b1b60-8420-4046-8976-0921cc7f938f",
+      "t1": "d1f24392-04a1-4f22-8763-8060216f50e4",
+      "t2": "004842d6-8169-4841-a2c4-0fc5ecc5ec15",
+      "t3": "75fe1984-71ca-477b-8695-ab2c0c8ae11c"
+    },
+    "tickSize": 0.0001,
+    "markPrice": 0.4932,
+    "unrealisedPnl": -45.0754,
+    "funding": -0.05710284,
+    "closedDetectedAt": 1790869502243
   }
 }

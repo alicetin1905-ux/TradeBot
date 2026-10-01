@@ -32,8 +32,8 @@
       "t3": "5d3f7faa-125a-4e2e-8d04-ce282bc093c9"
     },
     "tickSize": 0.00001,
-    "markPrice": 0.14404,
-    "unrealisedPnl": 3.35185
+    "markPrice": 0.14612,
+    "unrealisedPnl": 17.295546
   },
   "NEARUSDT": {
     "symbol": "NEARUSDT",
@@ -68,8 +68,8 @@
       "t3": "18311964-d938-4042-974a-3cba6c5812a8"
     },
     "tickSize": 0.001,
-    "markPrice": 5.2991,
-    "unrealisedPnl": -3.88926
+    "markPrice": 5.3932,
+    "unrealisedPnl": 6.02888
   },
   "WLDUSDT": {
     "symbol": "WLDUSDT",
@@ -104,7 +104,43 @@
       "t3": "75fe1984-71ca-477b-8695-ab2c0c8ae11c"
     },
     "tickSize": 0.0001,
-    "markPrice": 0.5392,
-    "unrealisedPnl": 5.497
+    "markPrice": 0.5378,
+    "unrealisedPnl": 3.95784
+  },
+  "SANDUSDT": {
+    "symbol": "SANDUSDT",
+    "bias": 1,
+    "entry": 0.04462,
+    "stop": 0.04244,
+    "initialStop": 0.04244,
+    "t1": 0.04791,
+    "t2": 0.0501,
+    "t3": 0.05229,
+    "qtyTotal": 22801,
+    "qtyRemaining": 22801,
+    "qtyT1": 5700,
+    "qtyT2": 5700,
+    "qtyT3": 11401,
+    "margin": 101.738062,
+    "notional": 1017.38062,
+    "riskAmt": 49.70618000000003,
+    "filled": {
+      "t1": false,
+      "t2": false,
+      "t3": false
+    },
+    "breakeven": false,
+    "beAfter": "t1",
+    "openedAt": 1790827273097,
+    "score": 73,
+    "orders": {
+      "entry": "ae455a81-d24b-4ced-933c-4fdd304d00e2",
+      "t1": "05830cf1-b38d-4377-a2f0-4fff09e54912",
+      "t2": "2b23d65c-4fa7-49ca-a17c-cf797154e2bc",
+      "t3": "ea7f2e91-7e4f-46f0-9086-a07654ecb532"
+    },
+    "tickSize": 0.00001,
+    "markPrice": 0.04463,
+    "unrealisedPnl": 0.22801
   }
 }

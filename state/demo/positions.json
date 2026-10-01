@@ -1,1 +1,110 @@
-{}
+{
+  "DYDXUSDT": {
+    "symbol": "DYDXUSDT",
+    "bias": 1,
+    "entry": 0.14354,
+    "stop": 0.13615,
+    "initialStop": 0.13615,
+    "t1": 0.15472,
+    "t2": 0.16218,
+    "t3": 0.16963,
+    "qtyTotal": 6703.7,
+    "qtyRemaining": 6703.7,
+    "qtyT1": 1675.9,
+    "qtyT2": 1675.9,
+    "qtyT3": 3351.9,
+    "margin": 96.2249098,
+    "notional": 962.249098,
+    "riskAmt": 49.54034300000005,
+    "filled": {
+      "t1": false,
+      "t2": false,
+      "t3": false
+    },
+    "breakeven": false,
+    "beAfter": "t1",
+    "openedAt": 1790812876203,
+    "score": 75,
+    "orders": {
+      "entry": "2612a1cc-6675-4a70-a942-51317bd1872f",
+      "t1": "1bed5c37-00a8-4cb6-adfa-c60b59428156",
+      "t2": "def45dab-7c67-4fcc-9ddf-2ac88bea3808",
+      "t3": "5d3f7faa-125a-4e2e-8d04-ce282bc093c9"
+    },
+    "tickSize": 0.00001,
+    "markPrice": 0.14361,
+    "unrealisedPnl": 0.469259
+  },
+  "NEARUSDT": {
+    "symbol": "NEARUSDT",
+    "bias": 1,
+    "entry": 5.336,
+    "stop": 4.863,
+    "initialStop": 4.863,
+    "t1": 6.047,
+    "t2": 6.521,
+    "t3": 6.995,
+    "qtyTotal": 105.4,
+    "qtyRemaining": 105.4,
+    "qtyT1": 26.3,
+    "qtyT2": 26.3,
+    "qtyT3": 52.8,
+    "margin": 56.24144000000001,
+    "notional": 562.4144000000001,
+    "riskAmt": 49.85419999999999,
+    "filled": {
+      "t1": false,
+      "t2": false,
+      "t3": false
+    },
+    "breakeven": false,
+    "beAfter": "t1",
+    "openedAt": 1790812876203,
+    "score": 75,
+    "orders": {
+      "entry": "f228d423-056b-48c0-9d33-d51a28d1e96b",
+      "t1": "21530b74-a856-4673-80c3-ba531832715e",
+      "t2": "e8e01dc9-65ac-41d9-bba0-a15731fe1213",
+      "t3": "18311964-d938-4042-974a-3cba6c5812a8"
+    },
+    "tickSize": 0.001,
+    "markPrice": 5.3368,
+    "unrealisedPnl": 0.08432
+  },
+  "WLDUSDT": {
+    "symbol": "WLDUSDT",
+    "bias": 1,
+    "entry": 0.5342,
+    "stop": 0.4887,
+    "initialStop": 0.4887,
+    "t1": 0.6024,
+    "t2": 0.6479,
+    "t3": 0.6934,
+    "qtyTotal": 1099.4,
+    "qtyRemaining": 1099.4,
+    "qtyT1": 274.8,
+    "qtyT2": 274.8,
+    "qtyT3": 549.8,
+    "margin": 58.729948,
+    "notional": 587.29948,
+    "riskAmt": 50.022699999999986,
+    "filled": {
+      "t1": false,
+      "t2": false,
+      "t3": false
+    },
+    "breakeven": false,
+    "beAfter": "t1",
+    "openedAt": 1790812876203,
+    "score": 59,
+    "orders": {
+      "entry": "f24b1b60-8420-4046-8976-0921cc7f938f",
+      "t1": "d1f24392-04a1-4f22-8763-8060216f50e4",
+      "t2": "004842d6-8169-4841-a2c4-0fc5ecc5ec15",
+      "t3": "75fe1984-71ca-477b-8695-ab2c0c8ae11c"
+    },
+    "tickSize": 0.0001,
+    "markPrice": 0.5342,
+    "unrealisedPnl": 0
+  }
+}

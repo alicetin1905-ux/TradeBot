@@ -25,7 +25,7 @@
   "maxOpenPositions": 5,
   "mode": "demo",
   "fundingError": null,
-  "exchangeEquity": 1878.8789334,
+  "exchangeEquity": 1870.8779294,
   "settings": {
     "RISK_PCT": 2.5,
     "RISK_USDT": 100,
@@ -53,6 +53,7 @@
     "ENTRY_MIN_SCORE": 50,
     "ENTRY_MIN_SCORE_BY_SYMBOL": {},
     "MARKET_DATA": "bybit",
+    "SCORE_MODE": "graded",
     "USE_FIB": true,
     "BTC_FILTER": true,
     "MAX_CHASE_ATR": 1,
@@ -109,6 +110,7 @@
     "ENTRY_MIN_SCORE": 50,
     "ENTRY_MIN_SCORE_BY_SYMBOL": {},
     "MARKET_DATA": "bybit",
+    "SCORE_MODE": "classic",
     "USE_FIB": true,
     "BTC_FILTER": true,
     "MAX_CHASE_ATR": 1,
@@ -139,5 +141,5 @@
     "STATUS_EVERY_H": 4
   },
   "settingsErrors": [],
-  "updatedAt": 1790881284205
+  "updatedAt": 1790883904101
 }

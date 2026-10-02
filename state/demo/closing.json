@@ -1,42 +1,4 @@
 {
-  "NEARUSDT": {
-    "symbol": "NEARUSDT",
-    "bias": 1,
-    "entry": 5.336,
-    "stop": 4.863,
-    "initialStop": 4.863,
-    "t1": 6.047,
-    "t2": 6.521,
-    "t3": 6.995,
-    "qtyTotal": 105.4,
-    "qtyRemaining": 105.4,
-    "qtyT1": 26.3,
-    "qtyT2": 26.3,
-    "qtyT3": 52.8,
-    "margin": 56.24144000000001,
-    "notional": 562.4144000000001,
-    "riskAmt": 49.85419999999999,
-    "filled": {
-      "t1": false,
-      "t2": false,
-      "t3": false
-    },
-    "breakeven": false,
-    "beAfter": "t1",
-    "openedAt": 1790812876203,
-    "score": 75,
-    "orders": {
-      "entry": "f228d423-056b-48c0-9d33-d51a28d1e96b",
-      "t1": "21530b74-a856-4673-80c3-ba531832715e",
-      "t2": "e8e01dc9-65ac-41d9-bba0-a15731fe1213",
-      "t3": "18311964-d938-4042-974a-3cba6c5812a8"
-    },
-    "tickSize": 0.001,
-    "markPrice": 5.078,
-    "unrealisedPnl": -27.1932,
-    "funding": 0.00185318,
-    "closedDetectedAt": 1790860215951
-  },
   "SANDUSDT": {
     "symbol": "SANDUSDT",
     "bias": 1,

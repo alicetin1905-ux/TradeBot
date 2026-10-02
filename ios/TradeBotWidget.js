@@ -152,6 +152,54 @@ function strongRows(box, strong, pos, account, o) {
   if (strong.length > o.max) text(box, '+' + (strong.length - o.max) + ' more', 10, C.dim);
 }
 
+// Lock Screen / StandBy widgets (iOS 16+): tiny, monochrome, text only.
+const LOCK = ['accessoryInline', 'accessoryCircular', 'accessoryRectangular'];
+
+function buildLock(fam, data) {
+  const w = new ListWidget();
+  w.url = DASHBOARD;
+  w.refreshAfterDate = new Date(Date.now() + 5 * 60 * 1000);
+  const t = (box, s, size, weight) => {
+    const x = box.addText(String(s));
+    x.font = weight === 'bold' ? Font.boldSystemFont(size) : Font.systemFont(size);
+    x.lineLimit = 1;
+    x.minimumScaleFactor = 0.6; // shrink instead of cutting off on the narrow Lock Screen
+    return x;
+  };
+  if (!data) { t(w, 'TradeBot: no data', 12); return w; }
+  const { account, positions, scores, tradesFile } = data;
+  const pos = Object.values(positions || {});
+  const trades = Array.isArray(tradesFile) ? tradesFile : (tradesFile && tradesFile.trades) || [];
+  const upnl = pos.reduce((s, p) => s + (p.unrealisedPnl || 0), 0);
+  const equity = account.exchangeEquity != null ? account.exchangeEquity : account.balance;
+  const maxOpen = (account.settings && account.settings.MAX_OPEN_POSITIONS) || 5;
+  const traded = new Set((account.settings && account.settings.SYMBOLS) || Object.keys(scores));
+  const open = new Set(pos.map((p) => p.symbol));
+  const strong = Object.entries(scores)
+    .filter(([sym, s]) => traded.has(sym) && !open.has(sym) && s && s.score != null && Math.abs(s.score) >= MIN_SCORE)
+    .sort((a, b) => Math.abs(b[1].score) - Math.abs(a[1].score));
+
+  if (fam === 'accessoryInline') {
+    t(w, 'TB $' + equity.toFixed(0) + ' · ' + money(upnl) + ' · ' + pos.length + '/' + maxOpen, 12);
+  } else if (fam === 'accessoryCircular') {
+    w.addAccessoryWidgetBackground = true;
+    w.addSpacer();
+    const a = w.addStack(); a.addSpacer(); t(a, money(upnl), 15, 'bold'); a.addSpacer();
+    const b = w.addStack(); b.addSpacer(); t(b, pos.length + '/' + maxOpen + ' open', 9); b.addSpacer();
+    w.addSpacer();
+  } else {
+    // rectangular: equity + open P&L, open coins, strong coins (3 short lines)
+    const R = realized(trades);
+    t(w, '$' + equity.toFixed(0) + '  open ' + money(upnl) + '  day ' + money(R.today), 12, 'bold');
+    const openTxt = pos.slice().sort((x, y) => (y.unrealisedPnl || 0) - (x.unrealisedPnl || 0)).slice(0, 3)
+      .map((p) => (p.bias > 0 ? '▲' : '▼') + short(p.symbol) + ' ' + money(p.unrealisedPnl || 0).replace('$', '')).join(' ');
+    t(w, openTxt || 'no open positions', 11);
+    const strongTxt = strong.slice(0, 3).map(([sym, s]) => short(sym) + ' ' + (s.score > 0 ? '+' : '') + s.score).join('  ');
+    t(w, '≥50: ' + (strongTxt || 'none'), 11);
+  }
+  return w;
+}
+
 function build(data) {
   const w = new ListWidget();
   w.backgroundColor = C.bg;
@@ -242,8 +290,12 @@ try {
   data = { account, positions, scores, tradesFile };
 } catch (e) { console.error(e); }
 
-const widget = build(data);
+const family = config.widgetFamily || 'medium';
+const widget = LOCK.includes(family) ? buildLock(family, data) : build(data);
 if (config.runsInWidget) Script.setWidget(widget);
-else if (config.widgetFamily === 'small') await widget.presentSmall();
+else if (family === 'small') await widget.presentSmall();
+else if (family === 'accessoryRectangular') await widget.presentAccessoryRectangular();
+else if (family === 'accessoryCircular') await widget.presentAccessoryCircular();
+else if (family === 'accessoryInline') await widget.presentAccessoryInline();
 else await widget.presentMedium();
 Script.complete();

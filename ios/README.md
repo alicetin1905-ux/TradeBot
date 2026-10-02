@@ -23,7 +23,13 @@ uses. No keys, can't place or change trades.
    Name it `TradeBot`. Tap ▶ to preview.
 3. Long-press the home screen, **+**, **Scriptable**, pick small / medium / large,
    add it, then long-press the widget, **Edit Widget**, Script: `TradeBot`.
-   (A Lock Screen or StandBy widget works the same way.)
+4. **Lock Screen** (iOS 16+): long-press the Lock Screen, **Customize**, tap the
+   widget area, add **Scriptable**, then tap it and choose Script `TradeBot`.
+   - rectangular (under the clock): equity / open P&L / today, the open coins
+     with P&L, and the coins at ±50
+   - circular: open P&L and open/max positions
+   - inline (above the clock): equity, open P&L, open positions
+   StandBy shows the same widgets. They are monochrome, as iOS requires.
 
 Tapping the widget opens the dashboard. iOS decides how often a widget
 refreshes (roughly every 5–15 minutes); the data itself updates with each

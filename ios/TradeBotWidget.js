@@ -247,6 +247,19 @@ function buildLock(fam, data) {
   return w;
 }
 
+// what the book is worth if every stop fills now, and free slots
+function riskLine(w, pos, trades, maxOpen, small) {
+  if (!pos.length || small) return;
+  const stopOut = stopOutValue(pos, trades);
+  w.addSpacer(4);
+  const line = w.addStack(); line.centerAlignContent();
+  text(line, stopOut < 0 ? 'at risk ' : 'locked in ', 10, C.dim);
+  text(line, money(stopOut), 10, col(stopOut), 'bold');
+  text(line, '  if all stops hit', 10, C.dim);
+  line.addSpacer();
+  text(line, (maxOpen - pos.length) + ' slot' + (maxOpen - pos.length === 1 ? '' : 's') + ' free', 10, C.dim);
+}
+
 function build(data) {
   const w = new ListWidget();
   w.backgroundColor = C.bg;
@@ -309,26 +322,17 @@ function build(data) {
     if (strong.length) { const r = readiness(strong[0][1], pos, account); text(line, r.s, 10, r.c, r.s === 'READY' ? 'bold' : null); }
   } else {
     positionRows(w, pos, trades, { label: true, maxOpen, max: small ? 2 : 5, bar: !small, labels: large, detail: large, width: W, gap: large ? 4 : 1 });
-    w.addSpacer(6);
-    strongRows(w, strong, pos, account, { max: small ? 2 : large ? 4 : 6, reason: !small, long: true, perRow: large ? 2 : 1 });
-  }
-
-  // money at risk: what the book is worth if every stop fills now (banked partials included)
-  if (pos.length && !small && fam !== 'medium') {
-    const stopOut = stopOutValue(pos, trades);
-    w.addSpacer(4);
-    const line = w.addStack(); line.centerAlignContent();
-    text(line, stopOut < 0 ? 'at risk ' : 'locked in ', 10, C.dim);
-    text(line, money(stopOut), 10, col(stopOut), 'bold');
-    text(line, '  if all stops hit', 10, C.dim);
-    line.addSpacer();
-    text(line, (maxOpen - pos.length) + ' slot' + (maxOpen - pos.length === 1 ? '' : 's') + ' free', 10, C.dim);
+    riskLine(w, pos, trades, maxOpen, small);
+    // strong coins sit at the bottom; the fewer positions are open, the more of them fit
+    w.addSpacer();
+    const rows = large ? Math.max(2, 7 - pos.length) : 6;
+    strongRows(w, strong, pos, account, { max: small ? 2 : large ? rows * 2 : 6, reason: !small, long: true, perRow: large ? 2 : 1 });
   }
 
   if (fam === 'medium') return w;
 
   // footer: BTC filter, next entry check, time
-  w.addSpacer();
+  w.addSpacer(6);
   const foot = w.addStack(); foot.centerAlignContent();
   const btc = scores.BTCUSDT;
   if (btc && btc.score != null && !small) text(foot, 'BTC filter ' + (btc.score > 0 ? '+' : '') + btc.score, 10, C.dim);

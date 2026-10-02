@@ -111,5 +111,79 @@
     "unrealisedPnl": 72.38454,
     "lockedT1": true,
     "closedDetectedAt": 1790948402209
+  },
+  "BLURUSDT": {
+    "symbol": "BLURUSDT",
+    "bias": 1,
+    "entry": 0.021261,
+    "stop": 0.020118,
+    "initialStop": 0.020118,
+    "t1": 0.022989,
+    "t2": 0.02414,
+    "t3": 0.025292,
+    "qtyTotal": 42445,
+    "qtyRemaining": 42445,
+    "qtyT1": 10611,
+    "qtyT2": 10611,
+    "qtyT3": 21223,
+    "margin": 90.24231449999999,
+    "notional": 902.423145,
+    "riskAmt": 48.51463499999992,
+    "filled": {
+      "t1": false,
+      "t2": false,
+      "t3": false
+    },
+    "breakeven": false,
+    "beAfter": "t1",
+    "openedAt": 1790928075737,
+    "score": 73,
+    "orders": {
+      "entry": "e9b168a0-d04a-49ea-9c58-c98d6140c7de",
+      "t1": "40fa3628-3dca-46fe-bc89-a8bd356b57c3",
+      "t2": "f8dbbac6-3900-493e-a4de-34e99fefeb2b",
+      "t3": "d16cd0c0-7cea-412d-b055-a9ccc467be70"
+    },
+    "tickSize": 0.000001,
+    "markPrice": 0.020874,
+    "unrealisedPnl": -16.426215,
+    "closedDetectedAt": 1790966401596
+  },
+  "CHZUSDT": {
+    "symbol": "CHZUSDT",
+    "bias": 1,
+    "entry": 0.01673,
+    "stop": 0.01608,
+    "initialStop": 0.01608,
+    "t1": 0.01769,
+    "t2": 0.01832,
+    "t3": 0.01896,
+    "qtyTotal": 81038,
+    "qtyRemaining": 81038,
+    "qtyT1": 20259,
+    "qtyT2": 20259,
+    "qtyT3": 40520,
+    "margin": 135.576574,
+    "notional": 1355.7657399999998,
+    "riskAmt": 52.674699999999824,
+    "filled": {
+      "t1": false,
+      "t2": false,
+      "t3": false
+    },
+    "breakeven": false,
+    "beAfter": "t1",
+    "openedAt": 1790956876831,
+    "score": 53,
+    "orders": {
+      "entry": "d5a3dbae-321f-4799-b763-fa8e50cd301d",
+      "t1": "f0b6a4ef-6e1e-4486-9ea4-ec5528e06faa",
+      "t2": "04b91db7-3ef1-4c92-8146-f784344716a1",
+      "t3": "0197b924-3040-4e6e-8a5e-15e154c34e58"
+    },
+    "tickSize": 0.00001,
+    "markPrice": 0.01658,
+    "unrealisedPnl": -12.1557,
+    "closedDetectedAt": 1790966401596
   }
 }

@@ -32,8 +32,8 @@
       "t3": "5d3f7faa-125a-4e2e-8d04-ce282bc093c9"
     },
     "tickSize": 0.00001,
-    "markPrice": 0.1508,
-    "unrealisedPnl": 48.668862,
+    "markPrice": 0.15275,
+    "unrealisedPnl": 61.741077,
     "funding": -0.19263083
   },
   "1000PEPEUSDT": {
@@ -69,20 +69,20 @@
       "t3": "d279b58e-3c22-4c4b-b6fa-eb2e0764d085"
     },
     "tickSize": 0.000001,
-    "markPrice": 0.0045623,
-    "unrealisedPnl": 22.39857
+    "markPrice": 0.0045169,
+    "unrealisedPnl": 14.59431
   },
   "GALAUSDT": {
     "symbol": "GALAUSDT",
     "bias": 1,
     "entry": 0.002302,
-    "stop": 0.002179,
+    "stop": 0.002302,
     "initialStop": 0.002179,
     "t1": 0.00249,
     "t2": 0.002616,
     "t3": 0.002741,
     "qtyTotal": 366504,
-    "qtyRemaining": 366504,
+    "qtyRemaining": 274878,
     "qtyT1": 91626,
     "qtyT2": 91626,
     "qtyT3": 183252,
@@ -90,11 +90,11 @@
     "notional": 843.6922079999999,
     "riskAmt": 45.07999199999994,
     "filled": {
-      "t1": false,
+      "t1": true,
       "t2": false,
       "t3": false
     },
-    "breakeven": false,
+    "breakeven": true,
     "beAfter": "t1",
     "openedAt": 1790884877245,
     "score": 50,
@@ -105,7 +105,7 @@
       "t3": "8ba9ea3f-ebb9-42c7-9c84-eba803e294cc"
     },
     "tickSize": 0.000001,
-    "markPrice": 0.002362,
-    "unrealisedPnl": 21.99024
+    "markPrice": 0.002484,
+    "unrealisedPnl": 50.027796
   }
 }

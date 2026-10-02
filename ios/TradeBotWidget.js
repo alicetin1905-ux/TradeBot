@@ -7,7 +7,7 @@
 
 const RAW = 'https://raw.githubusercontent.com/alicetin1905-ux/TradeBot/main/state/demo/';
 const DASHBOARD = 'https://alicetin1905-ux.github.io/TradeBot/';
-const MIN_SCORE = 50; // same as ENTRY_MIN_SCORE
+let MIN_SCORE = 50; // replaced by the bot's live ENTRY_MIN_SCORE once account.json loads
 const H4 = 4 * 3600 * 1000;
 
 const C = {
@@ -346,6 +346,7 @@ let data = null;
 try {
   const [account, positions, scores, tradesFile] = await Promise.all([load('account'), load('positions'), load('scores'), load('trades')]);
   data = { account, positions, scores, tradesFile };
+  if (account.settings && account.settings.ENTRY_MIN_SCORE) MIN_SCORE = account.settings.ENTRY_MIN_SCORE;
 } catch (e) { console.error(e); }
 
 const family = config.widgetFamily || 'medium';

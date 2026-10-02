@@ -425,7 +425,7 @@
           (s.id === 'BTCUSDT' ? 'BTC filter: alts ' + (sc.bias === 1 ? 'can go long, no shorts' : sc.bias === -1 ? 'can go short, no longs' : 'free both ways') : 'off the coin list') + '</div>';
       } else if (sc) {
         var byCoin = account && account.settings && account.settings.ENTRY_MIN_SCORE_BY_SYMBOL;
-        var thresh = (byCoin && byCoin[s.id]) || SCORE_THRESHOLD;
+        var thresh = (byCoin && byCoin[s.id]) || (account && account.settings && account.settings.ENTRY_MIN_SCORE) || SCORE_THRESHOLD;
         var pct = Math.max(0, Math.min(100, Math.round((Math.abs(sc.score) / thresh) * 100)));
         var dirWord = sc.score > 0 ? 'long' : sc.score < 0 ? 'short' : '—';
         extraHtml =

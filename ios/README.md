@@ -1,7 +1,18 @@
 # iOS home-screen widget
 
-Shows equity, open positions with live P&L (T1/T2 status), and the coins at
-score +50 or higher / −50 or lower that aren't open yet, plus the BTC filter.
+Shows:
+
+- equity, open profit, realized P&L today (and 7 days / total on large)
+- open positions with a stop→T3 progress bar (red tick = stop, white = entry,
+  grey = T1/T2/T3, dot = price) and, on large, distance to the stop and the
+  next target
+- money at risk: what the book is worth if every stop fills now (negative =
+  at risk, positive = profit locked in), and free slots
+- coins at score +50 / −50 that aren't open, each with why it can or can't
+  enter: READY, next 4H close (with countdown), signal used, ran too far,
+  Fib check, BTC blocks, or long/short limit reached
+- BTC filter and the countdown to the next 4H close (the entry check)
+
 Read-only: it only reads the public `state/demo/*.json` files the dashboard
 uses. No keys, can't place or change trades.
 

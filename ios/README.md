@@ -3,9 +3,10 @@
 Shows:
 
 - equity, open profit, realized P&L today (and 7 days / total on large)
-- open positions with a stop→T3 progress bar (red tick = stop, white = entry,
-  grey = T1/T2/T3, dot = price) and, on large, distance to the stop and the
-  next target
+- open positions, each with a full-width stop→T3 bar under it (red tick =
+  stop, white = entry, grey = T1/T2/T3 turning green once filled, dot =
+  price); on large the ticks are labelled SL/T1/T2/T3 and the row shows the
+  distance to the stop and the next target
 - money at risk: what the book is worth if every stop fills now (negative =
   at risk, positive = profit locked in), and free slots
 - coins at score +50 / −50 that aren't open, each with why it can or can't

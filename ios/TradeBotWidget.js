@@ -47,24 +47,51 @@ function along(p, price) {
   return Math.max(0, Math.min(1, u));
 }
 
-function progressBar(p, mark, w, h) {
+// Width of the widget's content area in points. iOS doesn't tell a script
+// its widget size, so it's looked up from the screen width (Apple's sizes).
+function contentWidth() {
+  const sw = Device.screenSize().width;
+  const table = { 440: 364, 430: 364, 428: 364, 414: 360, 402: 338, 393: 338, 390: 338, 375: 329, 360: 329, 320: 292 };
+  const w = table[sw] || (sw >= 428 ? 364 : sw >= 390 ? 338 : 329);
+  return w - 28; // minus the 14pt side padding
+}
+
+// stop → T3 line: red tick = stop, white = entry, grey ticks = targets (green
+// once filled), dot = price, coloured fill = entry → price. With labels, SL /
+// T1 / T2 / T3 are written under their ticks.
+function progressBar(p, mark, w, labels) {
+  const lh = labels ? 9 : 0, bh = 8, h = bh + lh;
   const dc = new DrawContext();
   dc.size = new Size(w, h);
   dc.opaque = false;
   dc.respectScreenScale = true;
   const x = (price) => along(p, price) * w;
+  const mid = bh / 2;
   dc.setFillColor(C.track);
-  dc.fillRect(new Rect(0, h / 2 - 1.5, w, 3));
+  dc.fillRect(new Rect(0, mid - 1.5, w, 3));
   const a = x(p.entry), b = x(mark);
   dc.setFillColor(b >= a ? C.green : C.red);
-  dc.fillRect(new Rect(Math.min(a, b), h / 2 - 1.5, Math.abs(b - a), 3));
-  [[p.t1, C.dim], [p.t2, C.dim], [p.t3, C.dim], [p.entry, C.text], [p.stop, C.red]].forEach(([price, c]) => {
+  dc.fillRect(new Rect(Math.min(a, b), mid - 1.5, Math.abs(b - a), 3));
+  const f = p.filled || {};
+  const ticks = [
+    [p.t1, f.t1 ? C.green : C.dim, 'T1'], [p.t2, f.t2 ? C.green : C.dim, 'T2'], [p.t3, f.t3 ? C.green : C.dim, 'T3'],
+    [p.entry, C.text, null], [p.stop, C.red, 'SL'],
+  ];
+  for (const [price, c, name] of ticks) {
+    const tx = Math.max(0, Math.min(w - 2, x(price) - 1));
     dc.setFillColor(c);
-    dc.fillRect(new Rect(Math.max(0, Math.min(w - 1.5, x(price) - 0.75)), 0, 1.5, h));
-  });
+    dc.fillRect(new Rect(tx, 0, 2, bh));
+    if (labels && name) {
+      dc.setFont(Font.boldSystemFont(7));
+      dc.setTextColor(c);
+      dc.setTextAlignedCenter();
+      const lx = Math.max(0, Math.min(w - 16, tx - 7));
+      dc.drawTextInRect(name, new Rect(lx, bh, 16, lh));
+    }
+  }
   dc.setFillColor(C.text);
-  dc.fillEllipse(new Rect(Math.max(0, Math.min(w - 5, b - 2.5)), h / 2 - 2.5, 5, 5));
-  return dc.getImage();
+  dc.fillEllipse(new Rect(Math.max(0, Math.min(w - 7, b - 3.5)), mid - 3.5, 7, 7));
+  return { img: dc.getImage(), w, h };
 }
 
 // distance (%) from the mark to the stop and to the next unfilled target
@@ -72,6 +99,16 @@ function distances(p, mark) {
   const toStop = (mark - p.stop) * p.bias / mark * 100;
   const next = !p.filled.t1 ? ['T1', p.t1] : !p.filled.t2 ? ['T2', p.t2] : ['T3', p.t3];
   return { toStop, nextName: next[0], toNext: (next[1] - mark) * p.bias / mark * 100 };
+}
+
+// what the open book is worth if every stop fills now (banked partials included)
+function stopOutValue(pos, trades) {
+  let v = 0;
+  for (const p of pos) {
+    const banked = trades.filter((t) => t.symbol === p.symbol && t.openedAt === p.openedAt).reduce((s, t) => s + t.pnl, 0);
+    v += banked + p.qtyRemaining * (p.stop - p.entry) * p.bias;
+  }
+  return v;
 }
 
 function realized(trades) {
@@ -112,43 +149,53 @@ function readiness(s, pos, account) {
 }
 
 function positionRows(box, pos, trades, o) {
-  text(box, 'OPEN ' + pos.length + '/' + o.maxOpen, 9, C.dim, 'bold');
+  if (o.label) text(box, 'OPEN ' + pos.length + '/' + o.maxOpen, 9, C.dim, 'bold');
   if (!pos.length) text(box, 'no open positions', 11, C.dim);
   const sorted = pos.slice().sort((a, b) => (b.unrealisedPnl || 0) - (a.unrealisedPnl || 0));
-  sorted.slice(0, o.max).forEach((p) => {
+  sorted.slice(0, o.max).forEach((p, i) => {
     const mark = p.markPrice || p.entry;
+    if (i) box.addSpacer(o.gap);
     const row = box.addStack(); row.centerAlignContent();
     text(row, (p.bias > 0 ? '▲ ' : '▼ ') + short(p.symbol), 12, p.bias > 0 ? C.green : C.red, 'bold');
     row.addSpacer(5);
     text(row, stage(p) || (p.breakeven ? 'BE' : ''), 9, C.amber);
-    row.addSpacer(5);
-    if (o.bar) {
-      const img = row.addImage(progressBar(p, mark, 60, 10));
-      img.imageSize = new Size(60, 10);
-    }
     row.addSpacer();
-    text(row, money(p.unrealisedPnl || 0, 1), 12, col(p.unrealisedPnl || 0), 'mono');
     if (o.detail) {
       const d = distances(p, mark);
-      text(box.addStack(), 'stop ' + pct(-d.toStop) + '  ·  ' + d.nextName + ' ' + pct(d.toNext), 9, C.dim);
+      text(row, 'SL ' + pct(-d.toStop) + ' · ' + d.nextName + ' ' + pct(d.toNext), 9, C.dim);
+      row.addSpacer(8);
+    }
+    text(row, money(p.unrealisedPnl || 0, 1), 12, col(p.unrealisedPnl || 0), 'mono');
+    if (o.bar) {
+      box.addSpacer(2);
+      const bar = progressBar(p, mark, o.width, o.labels);
+      const img = box.addImage(bar.img);
+      img.imageSize = new Size(bar.w, bar.h);
     }
   });
-  if (pos.length > o.max) text(box, '+' + (pos.length - o.max) + ' more', 10, C.dim);
+  if (o.more !== false && pos.length > o.max) text(box, '+' + (pos.length - o.max) + ' more', 10, C.dim);
 }
 
 function strongRows(box, strong, pos, account, o) {
   text(box, 'SCORE ±' + MIN_SCORE + ' · NOT OPEN', 9, C.dim, 'bold');
   if (!strong.length) text(box, 'none right now', 11, C.dim);
-  strong.slice(0, o.max).forEach(([sym, s]) => {
+  const shown = strong.slice(0, o.max), per = o.perRow || 1;
+  for (let i = 0; i < shown.length; i += per) {
     const row = box.addStack(); row.centerAlignContent();
-    text(row, short(sym) + ' ', 11, C.text, 'bold');
-    text(row, (s.score > 0 ? '+' : '') + s.score, 11, s.score > 0 ? C.green : C.red, 'mono');
-    if (o.reason) {
-      row.addSpacer();
-      const r = readiness(s, pos, account);
-      text(row, o.long ? r.t : r.s, 10, r.c, r.s === 'READY' ? 'bold' : null);
-    }
-  });
+    shown.slice(i, i + per).forEach(([sym, s], k) => {
+      if (k) row.addSpacer(14);
+      const cell = row.addStack(); cell.centerAlignContent();
+      text(cell, short(sym) + ' ', 11, C.text, 'bold');
+      text(cell, (s.score > 0 ? '+' : '') + s.score, 11, s.score > 0 ? C.green : C.red, 'mono');
+      if (o.reason) {
+        cell.addSpacer(6);
+        const r = readiness(s, pos, account);
+        text(cell, per > 1 ? r.s : r.t, 10, r.c, r.s === 'READY' ? 'bold' : null);
+      }
+      if (per === 1) row.addSpacer();
+    });
+    if (per > 1) row.addSpacer();
+  }
   if (strong.length > o.max) text(box, '+' + (strong.length - o.max) + ' more', 10, C.dim);
 }
 
@@ -204,10 +251,10 @@ function build(data) {
   const w = new ListWidget();
   w.backgroundColor = C.bg;
   w.url = DASHBOARD;
-  w.setPadding(12, 14, 12, 14);
-  w.refreshAfterDate = new Date(Date.now() + 5 * 60 * 1000);
   const fam = config.widgetFamily || 'medium';
   const small = fam === 'small', large = fam === 'large' || fam === 'extraLarge';
+  w.setPadding(fam === 'medium' ? 10 : 12, 14, fam === 'medium' ? 10 : 12, 14);
+  w.refreshAfterDate = new Date(Date.now() + 5 * 60 * 1000);
 
   if (!data) {
     text(w, 'TradeBot', 15, C.text, 'bold');
@@ -239,31 +286,36 @@ function build(data) {
   sub.addSpacer(8);
   text(sub, 'today ' + money(R.today), 11, col(R.today), 'bold');
   sub.addSpacer();
-  if (start && !small) text(sub, pct((equity - start) / start * 100) + ' total', 10, C.dim);
+  if (fam === 'medium' && pos.length) {
+    const so = stopOutValue(pos, trades);
+    text(sub, (so < 0 ? 'risk ' : 'locked ') + money(so) + ' · ' + pos.length + '/' + maxOpen, 10, C.dim);
+  } else if (start && !small) text(sub, pct((equity - start) / start * 100) + ' total', 10, C.dim);
   if (large) text(w.addStack(), '7 days ' + money(R.week) + '  ·  realized ' + money(R.all), 10, C.dim);
   w.addSpacer(6);
 
+  const W = contentWidth();
   if (fam === 'medium') {
-    // two columns: positions left, strong coins right
-    const body = w.addStack(); body.layoutHorizontally();
-    const left = body.addStack(); left.layoutVertically();
-    body.addSpacer();
-    const right = body.addStack(); right.layoutVertically();
-    positionRows(left, pos, trades, { maxOpen, max: 3, bar: true, detail: false });
-    strongRows(right, strong, pos, account, { max: 3, reason: true, long: false });
+    positionRows(w, pos, trades, { maxOpen, max: 3, bar: true, labels: false, detail: false, width: W, gap: 3, more: false });
+    w.addSpacer(4);
+    // strong coins on one line, with the reason for the strongest
+    const line = w.addStack(); line.centerAlignContent();
+    text(line, '±' + MIN_SCORE + ' ', 10, C.dim, 'bold');
+    if (!strong.length) text(line, 'none', 10, C.dim);
+    strong.slice(0, 4).forEach(([sym, s]) => {
+      text(line, short(sym) + ' ', 10, C.text, 'bold');
+      text(line, (s.score > 0 ? '+' : '') + s.score + '  ', 10, s.score > 0 ? C.green : C.red, 'mono');
+    });
+    line.addSpacer();
+    if (strong.length) { const r = readiness(strong[0][1], pos, account); text(line, r.s, 10, r.c, r.s === 'READY' ? 'bold' : null); }
   } else {
-    positionRows(w, pos, trades, { maxOpen, max: small ? 2 : 6, bar: !small, detail: large });
+    positionRows(w, pos, trades, { label: true, maxOpen, max: small ? 2 : 5, bar: !small, labels: large, detail: large, width: W, gap: large ? 4 : 1 });
     w.addSpacer(6);
-    strongRows(w, strong, pos, account, { max: small ? 2 : 8, reason: !small, long: true });
+    strongRows(w, strong, pos, account, { max: small ? 2 : large ? 4 : 6, reason: !small, long: true, perRow: large ? 2 : 1 });
   }
 
   // money at risk: what the book is worth if every stop fills now (banked partials included)
-  if (pos.length && !small) {
-    let stopOut = 0;
-    for (const p of pos) {
-      const banked = trades.filter((t) => t.symbol === p.symbol && t.openedAt === p.openedAt).reduce((s, t) => s + t.pnl, 0);
-      stopOut += banked + p.qtyRemaining * (p.stop - p.entry) * p.bias;
-    }
+  if (pos.length && !small && fam !== 'medium') {
+    const stopOut = stopOutValue(pos, trades);
     w.addSpacer(4);
     const line = w.addStack(); line.centerAlignContent();
     text(line, stopOut < 0 ? 'at risk ' : 'locked in ', 10, C.dim);
@@ -272,6 +324,8 @@ function build(data) {
     line.addSpacer();
     text(line, (maxOpen - pos.length) + ' slot' + (maxOpen - pos.length === 1 ? '' : 's') + ' free', 10, C.dim);
   }
+
+  if (fam === 'medium') return w;
 
   // footer: BTC filter, next entry check, time
   w.addSpacer();

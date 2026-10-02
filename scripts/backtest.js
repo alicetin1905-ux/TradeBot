@@ -253,6 +253,8 @@ function simulate(series, symbols, times, rules) {
   const open = {};      // symbol -> position
   const pending = {};   // symbol -> resting limit entry
   const used = {};      // one trade per signal: symbol -> { bias, reset }
+  // btcCool: after BTC's score reaches +hi (or -hi), wait until it's back under +lo (above -lo) before new trades
+  const cool = { long: false, short: false };
   const trades = [];
   let missedLimits = 0;
   const h1idx = Object.fromEntries(symbols.map(s => [s, new Map(series[s].h1.map((c, i) => [c.t, i]))]));
@@ -364,6 +366,11 @@ function simulate(series, symbols, times, rules) {
 
     // 4) new entries, strongest |score| first
     const btc = series.BTCUSDT && series.BTCUSDT[sigKey].get(t);
+    if (R.btcCool && btc) {
+      const { hi, lo } = R.btcCool;
+      if (btc.score >= hi) cool.long = true; else if (btc.score < lo) cool.long = false;
+      if (btc.score <= -hi) cool.short = true; else if (btc.score > -lo) cool.short = false;
+    }
     const cands = [];
     for (const s of symbols) {
       if (open[s] || pending[s]) continue;
@@ -395,6 +402,10 @@ function simulate(series, symbols, times, rules) {
         if ((sig.bias === 1 ? down < up : up < down)) continue;
       }
       if (R.btcFilter && s !== 'BTCUSDT' && btc && btc.bias === -sig.bias) continue;
+      if (R.btcCool) {
+        const blockL = R.btcCool.all ? cool.long || cool.short : cool.long, blockS = R.btcCool.all ? cool.long || cool.short : cool.short;
+        if ((sig.bias === 1 && blockL) || (sig.bias === -1 && blockS)) continue;
+      }
       cands.push({ s, sig });
     }
     cands.sort((a, b) => Math.abs(b.sig.score) - Math.abs(a.sig.score));
@@ -582,6 +593,8 @@ const COMBO = args.includes('--combo');
 const SPLIT = args.includes('--split');
 // --slots: open-position and per-direction limits on the live setup. backtest/SLOTS.md.
 const SLOTS = args.includes('--slots');
+// --btc-cool: pause new trades after BTC's score runs to +/-hi until it cools back under lo. backtest/BTC_COOL.md.
+const BTC_COOL = args.includes('--btc-cool');
 const COINSET = args.includes('--coinset') ? String(args[args.indexOf('--coinset') + 1] || '').split(',').filter(Boolean).map(x => x.toUpperCase().replace(/USDT$/, '') + 'USDT') : null;
 const LAB_MODE = args.includes('--mode') ? args[args.indexOf('--mode') + 1] : 'classic';
 const LAB_MTF = args.includes('--mtf');
@@ -613,7 +626,7 @@ async function main() {
   }
   for (const s of symbols) {
     process.stderr.write(`scoring ${s}…\n`);
-    series[s].sig1 = SCORE_LAB ? new Map() : TF_COMPARE ? precompute(s, series[s].h1, 1, start) : SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB || RISK_GRID || LEV_GRID || DD_LAB || RISK_STARTS || COIN_WF || SCORE_MOM || LAB2 || LAB3 || TF_DAY || PER_CANDLE || COINSET || TUNE || COMBO || SPLIT || SLOTS ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
+    series[s].sig1 = SCORE_LAB ? new Map() : TF_COMPARE ? precompute(s, series[s].h1, 1, start) : SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB || RISK_GRID || LEV_GRID || DD_LAB || RISK_STARTS || COIN_WF || SCORE_MOM || LAB2 || LAB3 || TF_DAY || PER_CANDLE || COINSET || TUNE || COMBO || SPLIT || SLOTS || BTC_COOL ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
     series[s].sig4 = SCORE_LAB ? precompute(s, to4h(series[s].h1), 4, start, { h1: series[s].h1, mode: LAB_MODE, mtfTrim: LAB_MTF }) : precompute(s, to4h(series[s].h1), 4, start);
     if (TF_DAY) series[s].sigD = precompute(s, to1d(series[s].h1), 24, start, { entryTf: 'D' });
     addFilterInputs(series[s]);
@@ -630,6 +643,20 @@ async function main() {
   if (LEV_GRID) return levGrid(series, symbols, times, start, now);
   if (DD_LAB) return ddLab(series, symbols, times, start, now);
   if (RISK_STARTS) return riskStarts(series, symbols, times, start, now);
+  if (BTC_COOL) {
+    const M = { minScore: 65 };
+    return variantTable('BTC cool-down after a strong BTC score (entry score 65)', [
+      ['A  live: score 65, BTC filter', M],
+      ['BTC >= +65: no longs until BTC < +25 (mirror shorts)', { ...M, btcCool: { hi: 65, lo: 25 } }],
+      ['same, but no trades at all until it cools', { ...M, btcCool: { hi: 65, lo: 25, all: true } }],
+      ['BTC >= +75 -> wait under +25', { ...M, btcCool: { hi: 75, lo: 25 } }],
+      ['BTC >= +65 -> wait under +40', { ...M, btcCool: { hi: 65, lo: 40 } }],
+      ['BTC >= +55 -> wait under +25', { ...M, btcCool: { hi: 55, lo: 25 } }],
+      ['-- reference --', null],
+      ['score 50 (old live)', {}],
+      ['score 50 + BTC >= +65 -> under +25', { btcCool: { hi: 65, lo: 25 } }],
+    ], series, times, start, now, 'BTC_COOL.md', 'Cool-down: once BTC\'s 4H score reaches +hi, no new longs until it drops below +lo (shorts mirrored at -hi / -lo). Open trades are untouched.');
+  }
   if (SLOTS) return variantTable('Slot limits on the live setup', [
     ['A  live: 5 open, 4 per direction', {}],
     ['3 open, 2 per direction', { maxOpen: 3, maxSameDir: 2 }],

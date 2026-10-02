@@ -25,7 +25,7 @@
   "maxOpenPositions": 5,
   "mode": "demo",
   "fundingError": null,
-  "exchangeEquity": 1974.79937698,
+  "exchangeEquity": 1977.35337698,
   "settings": {
     "RISK_PCT": 2.5,
     "RISK_USDT": 100,
@@ -50,7 +50,7 @@
     "LOCK_T1_AFTER_T2": true,
     "FLIP_EXIT": true,
     "ENTRY_TF": "240",
-    "ENTRY_MIN_SCORE": 50,
+    "ENTRY_MIN_SCORE": 65,
     "ENTRY_MIN_SCORE_BY_SYMBOL": {},
     "MARKET_DATA": "bybit",
     "SCORE_MODE": "classic",
@@ -141,5 +141,5 @@
     "STATUS_EVERY_H": 4
   },
   "settingsErrors": [],
-  "updatedAt": 1790971285059
+  "updatedAt": 1790973605107
 }

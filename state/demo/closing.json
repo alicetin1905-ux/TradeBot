@@ -111,5 +111,43 @@
     "markPrice": 0.0045228,
     "unrealisedPnl": 15.60852,
     "closedDetectedAt": 1790941501952
+  },
+  "GALAUSDT": {
+    "symbol": "GALAUSDT",
+    "bias": 1,
+    "entry": 0.002302,
+    "stop": 0.00249,
+    "initialStop": 0.002179,
+    "t1": 0.00249,
+    "t2": 0.002616,
+    "t3": 0.002741,
+    "qtyTotal": 366504,
+    "qtyRemaining": 183252,
+    "qtyT1": 91626,
+    "qtyT2": 91626,
+    "qtyT3": 183252,
+    "margin": 84.3692208,
+    "notional": 843.6922079999999,
+    "riskAmt": 45.07999199999994,
+    "filled": {
+      "t1": true,
+      "t2": true,
+      "t3": false
+    },
+    "breakeven": true,
+    "beAfter": "t1",
+    "openedAt": 1790884877245,
+    "score": 50,
+    "orders": {
+      "entry": "1976a276-71b7-4800-a6a8-8a3dc524d415",
+      "t1": "67c69ae0-8322-4bf6-869d-12dc571c44d3",
+      "t2": "935baf09-0ed5-48b4-a758-bac53806b5f7",
+      "t3": "8ba9ea3f-ebb9-42c7-9c84-eba803e294cc"
+    },
+    "tickSize": 0.000001,
+    "markPrice": 0.002697,
+    "unrealisedPnl": 72.38454,
+    "lockedT1": true,
+    "closedDetectedAt": 1790948402209
   }
 }

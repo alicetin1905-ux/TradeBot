@@ -185,5 +185,43 @@
     "markPrice": 0.01658,
     "unrealisedPnl": -12.1557,
     "closedDetectedAt": 1790966401596
+  },
+  "DYDXUSDT": {
+    "symbol": "DYDXUSDT",
+    "bias": 1,
+    "entry": 0.14354,
+    "stop": 0.14354,
+    "initialStop": 0.13615,
+    "t1": 0.15472,
+    "t2": 0.16218,
+    "t3": 0.16963,
+    "qtyTotal": 6703.7,
+    "qtyRemaining": 5027.8,
+    "qtyT1": 1675.9,
+    "qtyT2": 1675.9,
+    "qtyT3": 3351.9,
+    "margin": 96.2249098,
+    "notional": 962.249098,
+    "riskAmt": 49.54034300000005,
+    "filled": {
+      "t1": true,
+      "t2": false,
+      "t3": false
+    },
+    "breakeven": true,
+    "beAfter": "t1",
+    "openedAt": 1790812876203,
+    "score": 75,
+    "orders": {
+      "entry": "2612a1cc-6675-4a70-a942-51317bd1872f",
+      "t1": "1bed5c37-00a8-4cb6-adfa-c60b59428156",
+      "t2": "def45dab-7c67-4fcc-9ddf-2ac88bea3808",
+      "t3": "5d3f7faa-125a-4e2e-8d04-ce282bc093c9"
+    },
+    "tickSize": 0.00001,
+    "markPrice": 0.14434,
+    "unrealisedPnl": 4.02224,
+    "funding": -0.19263083,
+    "closedDetectedAt": 1790966702007
   }
 }

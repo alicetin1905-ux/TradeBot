@@ -25,7 +25,7 @@
   "maxOpenPositions": 5,
   "mode": "demo",
   "fundingError": null,
-  "exchangeEquity": 2038.27698999,
+  "exchangeEquity": 2035.11672999,
   "settings": {
     "RISK_PCT": 2.5,
     "RISK_USDT": 100,
@@ -47,6 +47,7 @@
     ],
     "STOP_ATR": 1.5,
     "BREAKEVEN_AFTER": "t1",
+    "BREAKEVEN_BUFFER_PCT": 0.2,
     "LOCK_T1_AFTER_T2": true,
     "FLIP_EXIT": true,
     "ENTRY_TF": "240",
@@ -104,6 +105,7 @@
     ],
     "STOP_ATR": 1.5,
     "BREAKEVEN_AFTER": "t1",
+    "BREAKEVEN_BUFFER_PCT": 0.2,
     "LOCK_T1_AFTER_T2": true,
     "FLIP_EXIT": true,
     "ENTRY_TF": "240",
@@ -141,5 +143,5 @@
     "STATUS_EVERY_H": 4
   },
   "settingsErrors": [],
-  "updatedAt": 1791023405223
+  "updatedAt": 1791024906222
 }

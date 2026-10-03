@@ -32,7 +32,79 @@
       "t3": "f25e53d5-5128-4070-8daa-6166037f21be"
     },
     "tickSize": 0.0001,
-    "markPrice": 0.5614,
-    "unrealisedPnl": 24.9015
+    "markPrice": 0.5565,
+    "unrealisedPnl": 18.6442
+  },
+  "KAITOUSDT": {
+    "symbol": "KAITOUSDT",
+    "bias": -1,
+    "entry": 0.33,
+    "stop": 0.3536,
+    "initialStop": 0.3536,
+    "t1": 0.2949,
+    "t2": 0.2715,
+    "t3": 0.248,
+    "qtyTotal": 2107,
+    "qtyRemaining": 2107,
+    "qtyT1": 526,
+    "qtyT2": 526,
+    "qtyT3": 1055,
+    "margin": 69.531,
+    "notional": 695.3100000000001,
+    "riskAmt": 49.72520000000002,
+    "filled": {
+      "t1": false,
+      "t2": false,
+      "t3": false
+    },
+    "breakeven": false,
+    "beAfter": "t1",
+    "openedAt": 1791014474557,
+    "score": -71,
+    "orders": {
+      "entry": "538b7af0-e070-43d9-93fa-efb6602145f5",
+      "t1": "eb89a9c7-0f20-40db-a724-a69d87b3e534",
+      "t2": "6e01a2d5-f6e6-4bbd-bf62-744df8eafa1e",
+      "t3": "45d6561e-1ee4-41a1-a982-477c5176304b"
+    },
+    "tickSize": 0.0001,
+    "markPrice": 0.3302,
+    "unrealisedPnl": -0.4214
+  },
+  "CHZUSDT": {
+    "symbol": "CHZUSDT",
+    "bias": 1,
+    "entry": 0.01731,
+    "stop": 0.01644,
+    "initialStop": 0.01644,
+    "t1": 0.01862,
+    "t2": 0.0195,
+    "t3": 0.02037,
+    "qtyTotal": 56406,
+    "qtyRemaining": 56406,
+    "qtyT1": 14101,
+    "qtyT2": 14101,
+    "qtyT3": 28204,
+    "margin": 97.638786,
+    "notional": 976.3878599999999,
+    "riskAmt": 49.07321999999996,
+    "filled": {
+      "t1": false,
+      "t2": false,
+      "t3": false
+    },
+    "breakeven": false,
+    "beAfter": "t1",
+    "openedAt": 1791014474557,
+    "score": 67,
+    "orders": {
+      "entry": "c3c1d586-358b-4436-a60a-33df964ac8c9",
+      "t1": "b65b841c-eff4-4059-b91c-77d1f66ca6d7",
+      "t2": "d2794983-e159-4b85-95e8-3dce3c1ab47f",
+      "t3": "a1768af1-3763-46fa-8fab-bb5c7c26069a"
+    },
+    "tickSize": 0.00001,
+    "markPrice": 0.01732,
+    "unrealisedPnl": 0.56406
   }
 }

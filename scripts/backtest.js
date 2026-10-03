@@ -402,6 +402,12 @@ function simulate(series, symbols, times, rules) {
         if ((sig.bias === 1 ? down < up : up < down)) continue;
       }
       if (R.btcFilter && s !== 'BTCUSDT' && btc && btc.bias === -sig.bias) continue;
+      if (R.btcLine && s !== 'BTCUSDT' && btc) {
+        // stricter BTC filter: shorts need BTC's score below shortMax, longs need it above longMin
+        const { shortMax, longMin } = R.btcLine;
+        if (sig.bias === -1 && shortMax != null && !(btc.score < shortMax)) continue;
+        if (sig.bias === 1 && longMin != null && !(btc.score > longMin)) continue;
+      }
       if (R.btcCool) {
         const blockL = R.btcCool.all ? cool.long || cool.short : cool.long, blockS = R.btcCool.all ? cool.long || cool.short : cool.short;
         if ((sig.bias === 1 && blockL) || (sig.bias === -1 && blockS)) continue;
@@ -595,6 +601,8 @@ const SPLIT = args.includes('--split');
 const SLOTS = args.includes('--slots');
 // --btc-cool: pause new trades after BTC's score runs to +/-hi until it cools back under lo. backtest/BTC_COOL.md.
 const BTC_COOL = args.includes('--btc-cool');
+// --btc-line: stricter BTC filter (shorts only below a BTC score, longs only above). backtest/BTC_LINE.md.
+const BTC_LINE = args.includes('--btc-line');
 const COINSET = args.includes('--coinset') ? String(args[args.indexOf('--coinset') + 1] || '').split(',').filter(Boolean).map(x => x.toUpperCase().replace(/USDT$/, '') + 'USDT') : null;
 const LAB_MODE = args.includes('--mode') ? args[args.indexOf('--mode') + 1] : 'classic';
 const LAB_MTF = args.includes('--mtf');
@@ -626,7 +634,7 @@ async function main() {
   }
   for (const s of symbols) {
     process.stderr.write(`scoring ${s}…\n`);
-    series[s].sig1 = SCORE_LAB ? new Map() : TF_COMPARE ? precompute(s, series[s].h1, 1, start) : SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB || RISK_GRID || LEV_GRID || DD_LAB || RISK_STARTS || COIN_WF || SCORE_MOM || LAB2 || LAB3 || TF_DAY || PER_CANDLE || COINSET || TUNE || COMBO || SPLIT || SLOTS || BTC_COOL ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
+    series[s].sig1 = SCORE_LAB ? new Map() : TF_COMPARE ? precompute(s, series[s].h1, 1, start) : SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB || RISK_GRID || LEV_GRID || DD_LAB || RISK_STARTS || COIN_WF || SCORE_MOM || LAB2 || LAB3 || TF_DAY || PER_CANDLE || COINSET || TUNE || COMBO || SPLIT || SLOTS || BTC_COOL || BTC_LINE ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
     series[s].sig4 = SCORE_LAB ? precompute(s, to4h(series[s].h1), 4, start, { h1: series[s].h1, mode: LAB_MODE, mtfTrim: LAB_MTF }) : precompute(s, to4h(series[s].h1), 4, start);
     if (TF_DAY) series[s].sigD = precompute(s, to1d(series[s].h1), 24, start, { entryTf: 'D' });
     addFilterInputs(series[s]);
@@ -643,6 +651,19 @@ async function main() {
   if (LEV_GRID) return levGrid(series, symbols, times, start, now);
   if (DD_LAB) return ddLab(series, symbols, times, start, now);
   if (RISK_STARTS) return riskStarts(series, symbols, times, start, now);
+  if (BTC_LINE) {
+    const M = { minScore: 65 };
+    return variantTable('Stricter BTC filter (entry score 65)', [
+      ['A  live: blocks only when BTC points against (|BTC| >= 25)', M],
+      ['shorts only when BTC < 0 (longs as live)', { ...M, btcLine: { shortMax: 0 } }],
+      ['shorts only when BTC <= -25 (longs as live)', { ...M, btcLine: { shortMax: -25 } }],
+      ['shorts BTC < 0, longs BTC > 0', { ...M, btcLine: { shortMax: 0, longMin: 0 } }],
+      ['BTC must agree: shorts <= -25, longs >= +25', { ...M, btcLine: { shortMax: -25, longMin: 25 } }],
+      ['shorts BTC < +10, longs BTC > -10', { ...M, btcLine: { shortMax: 10, longMin: -10 } }],
+      ['-- reference --', null],
+      ['BTC filter off', { ...M, btcFilter: false }],
+    ], series, times, start, now, 'BTC_LINE.md', 'Live filter: no trade against BTC when BTC\'s 4H score is beyond +/-25 (neutral BTC allows both). Variants add a line BTC must be on.');
+  }
   if (BTC_COOL) {
     const M = { minScore: 65 };
     return variantTable('BTC cool-down after a strong BTC score (entry score 65)', [

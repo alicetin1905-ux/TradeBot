@@ -403,6 +403,22 @@ function simulate(series, symbols, times, rules) {
         if ((sig.bias === 1 ? down < up : up < down)) continue;
       }
       if (R.btcFilter && s !== 'BTCUSDT' && btc && btc.bias === -sig.bias) continue;
+      if (R.noWeekend || R.skipCloseHours) {
+        // the signal candle's close (UTC): t is its last 1H candle
+        const close = new Date(t + HOUR), day = close.getUTCDay();
+        if (R.noWeekend && (day === 0 || day === 6)) continue;
+        if (R.skipCloseHours && R.skipCloseHours.includes(close.getUTCHours())) continue;
+      }
+      if (R.volBand) {
+        // this candle's ATR% vs the coin's own average ATR% over the last n signal candles
+        const { lo, hi, n } = R.volBand, step = R.tf === '4H' ? 4 * HOUR : HOUR;
+        let sum = 0, k = 0;
+        for (let j = 1; j <= n; j++) { const r = series[s][sigKey].get(t - j * step); if (r && r.atr && r.close) { sum += r.atr / r.close; k++; } }
+        if (k >= n / 2 && sig.atr && sig.close) {
+          const rel = (sig.atr / sig.close) / (sum / k);
+          if ((hi != null && rel > hi) || (lo != null && rel < lo)) continue;
+        }
+      }
       if (R.btcLine && s !== 'BTCUSDT' && btc) {
         // stricter BTC filter: shorts need BTC's score below shortMax, longs need it above longMin
         const { shortMax, longMin } = R.btcLine;
@@ -610,6 +626,8 @@ const TIME_STOP = args.includes('--time-stop');
 const SCORE_JUMP = args.includes('--score-jump');
 // --score-jump-rob: robustness check around the +40 jump. backtest/SCORE_JUMP_ROBUST.md.
 const SCORE_JUMP_ROB = args.includes('--score-jump-rob');
+// --pf-lab: pullback limit entries, volatility band, weekend / time-of-day filters. backtest/PF_LAB.md.
+const PF_LAB = args.includes('--pf-lab');
 const COINSET = args.includes('--coinset') ? String(args[args.indexOf('--coinset') + 1] || '').split(',').filter(Boolean).map(x => x.toUpperCase().replace(/USDT$/, '') + 'USDT') : null;
 const LAB_MODE = args.includes('--mode') ? args[args.indexOf('--mode') + 1] : 'classic';
 const LAB_MTF = args.includes('--mtf');
@@ -641,7 +659,7 @@ async function main() {
   }
   for (const s of symbols) {
     process.stderr.write(`scoring ${s}…\n`);
-    series[s].sig1 = SCORE_LAB ? new Map() : TF_COMPARE ? precompute(s, series[s].h1, 1, start) : SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB || RISK_GRID || LEV_GRID || DD_LAB || RISK_STARTS || COIN_WF || SCORE_MOM || LAB2 || LAB3 || TF_DAY || PER_CANDLE || COINSET || TUNE || COMBO || SPLIT || SLOTS || BTC_COOL || BTC_LINE || TIME_STOP || SCORE_JUMP || SCORE_JUMP_ROB ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
+    series[s].sig1 = SCORE_LAB ? new Map() : TF_COMPARE ? precompute(s, series[s].h1, 1, start) : SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB || RISK_GRID || LEV_GRID || DD_LAB || RISK_STARTS || COIN_WF || SCORE_MOM || LAB2 || LAB3 || TF_DAY || PER_CANDLE || COINSET || TUNE || COMBO || SPLIT || SLOTS || BTC_COOL || BTC_LINE || TIME_STOP || SCORE_JUMP || SCORE_JUMP_ROB || PF_LAB ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
     series[s].sig4 = SCORE_LAB ? precompute(s, to4h(series[s].h1), 4, start, { h1: series[s].h1, mode: LAB_MODE, mtfTrim: LAB_MTF }) : precompute(s, to4h(series[s].h1), 4, start);
     if (TF_DAY) series[s].sigD = precompute(s, to1d(series[s].h1), 24, start, { entryTf: 'D' });
     addFilterInputs(series[s]);
@@ -658,6 +676,26 @@ async function main() {
   if (LEV_GRID) return levGrid(series, symbols, times, start, now);
   if (DD_LAB) return ddLab(series, symbols, times, start, now);
   if (RISK_STARTS) return riskStarts(series, symbols, times, start, now);
+  if (PF_LAB) {
+    const M = { minScore: 65 };
+    return variantTable('PF lab: pullback entry, volatility filter, time filter (entry score 65)', [
+      ['A  live: market entry, no filters', M],
+      ['-- 1. pullback limit entry --', null],
+      ['limit 0.25 ATR better, valid 4h', { ...M, limit: { atr: 0.25, hours: 4 } }],
+      ['limit 0.5 ATR better, valid 4h', { ...M, limit: { atr: 0.5, hours: 4 } }],
+      ['limit 0.5 ATR better, valid 12h', { ...M, limit: { atr: 0.5, hours: 12 } }],
+      ['limit 1 ATR better, valid 12h', { ...M, limit: { atr: 1, hours: 12 } }],
+      ['-- 2. volatility (ATR% vs coin\'s 50-candle average) --', null],
+      ['skip when ATR > 1.5x normal', { ...M, volBand: { hi: 1.5, n: 50 } }],
+      ['skip when ATR > 2x normal', { ...M, volBand: { hi: 2, n: 50 } }],
+      ['skip when ATR < 0.7x normal', { ...M, volBand: { lo: 0.7, n: 50 } }],
+      ['only 0.7x - 1.5x normal', { ...M, volBand: { lo: 0.7, hi: 1.5, n: 50 } }],
+      ['-- 3. time --', null],
+      ['no weekend entries (Sat/Sun UTC)', { ...M, noWeekend: true }],
+      ['skip 00 + 04 UTC closes (night)', { ...M, skipCloseHours: [0, 4] }],
+      ['skip 20 + 00 UTC closes (US evening)', { ...M, skipCloseHours: [20, 0] }],
+    ], series, times, start, now, 'PF_LAB.md', 'Limit entries fill at the limit price with maker fee; unfilled ones expire. Volatility = the coin\'s 4H ATR% against its own average of the previous 50 signal candles. Time filters use the signal candle\'s close in UTC (your time = UTC+2).');
+  }
   if (SCORE_JUMP_ROB) {
     return variantTable('Robustness of the +40 score jump', [
       ['A  live: score >= 65', { entryFn: (n) => n >= 65 }],

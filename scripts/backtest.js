@@ -168,6 +168,9 @@ function precomputeTf(symbol, candles, tfHours, fromMs, opts) {
           chase: Math.abs(analysis.price - analysis.plan.entry) <= config.MAX_CHASE_ATR * analysis.atr,
         };
         rec.ratio = { stop: p.stop / e, t1: p.t1 / e, t2: p.t2 / e, t3: p.t3 / e };
+        // stop = max(STOP_ATR x ATR, Chandelier stop): parts kept so --stop-lab can vary STOP_ATR
+        const ce = analysis.ce && analysis.ce.dir === analysis.bias && (analysis.ce.stop - e) * analysis.bias < 0 ? Math.abs(e - analysis.ce.stop) / e : 0;
+        rec.stopParts = { atr: analysis.atr / e, ce };
         rec.liq = heaviestClusters(closed, e);
       }
     }
@@ -302,7 +305,17 @@ function simulate(series, symbols, times, rules) {
     }
   }
 
+  // stop distance as a fraction of entry; R.stopAtr re-sizes it like a different STOP_ATR
+  function stopDist(sig) {
+    if (R.stopAtr != null && sig.stopParts) return Math.max(R.stopAtr * sig.stopParts.atr, sig.stopParts.ce);
+    return Math.abs(1 - sig.ratio.stop);
+  }
+
   function levels(entry, sig) {
+    if (R.stopAtr != null && sig.stopParts && R.targetsR) {
+      const d = stopDist(sig), at = (m) => entry * (1 + sig.bias * d * m);
+      return { stop: entry * (1 - sig.bias * d), t1: at(R.targetsR[0]), t2: at(R.targetsR[1]), t3: at(R.targetsR[2]) };
+    }
     if (!R.targetsR) return { stop: entry * sig.ratio.stop, t1: entry * sig.ratio.t1, t2: entry * sig.ratio.t2, t3: entry * sig.ratio.t3 };
     const dist = Math.abs(1 - sig.ratio.stop);
     const at = (m) => entry * (1 + sig.bias * dist * m);
@@ -356,6 +369,8 @@ function simulate(series, symbols, times, rules) {
       }
       const sig = series[p.symbol][sigKey].get(t);
       if (sig && sig.bias !== 0 && sig.bias !== p.bias) closeFill(p, p.qtyRemaining, series[p.symbol].h1[i].c, 'signal flip', FEE_TAKER, t);
+      else if (R.neutralExit && sig && sig.bias === 0 && (R.neutralExit === 'all' || !p.filled.t1))
+        closeFill(p, p.qtyRemaining, series[p.symbol].h1[i].c, 'score neutral', FEE_TAKER, t); // score back inside +/-25
     }
 
     // 3) one-trade-per-signal memory (only on candles that carry a signal)
@@ -444,7 +459,7 @@ function simulate(series, symbols, times, rules) {
       if (R.ddThrottle && curDD >= R.ddThrottle.at) risk *= R.ddThrottle.factor;
       if (R.riskUsd || R.riskPct) {
         if (!(risk > 0)) continue;
-        margin = Math.min(risk / Math.abs(1 - sig.ratio.stop), R.margin * R.leverage) / R.leverage;
+        margin = Math.min(risk / stopDist(sig), R.margin * R.leverage) / R.leverage;
       }
       if (balance - usedMargin() < margin * 0.99) continue; // full-size trades only
       used[s] = { bias: sig.bias, reset: false };
@@ -634,6 +649,8 @@ const SCORE_RISE = args.includes('--score-rise');
 const LIMIT_ROB = args.includes('--limit-rob');
 // --live-now: the current live setup against the earlier ones. backtest/LIVE_NOW.md.
 const LIVE_NOW = args.includes('--live-now');
+// --stop-lab: stop width, exit on a neutral score, pause after losing streaks. backtest/STOP_LAB.md.
+const STOP_LAB = args.includes('--stop-lab');
 const COINSET = args.includes('--coinset') ? String(args[args.indexOf('--coinset') + 1] || '').split(',').filter(Boolean).map(x => x.toUpperCase().replace(/USDT$/, '') + 'USDT') : null;
 const LAB_MODE = args.includes('--mode') ? args[args.indexOf('--mode') + 1] : 'classic';
 const LAB_MTF = args.includes('--mtf');
@@ -665,7 +682,7 @@ async function main() {
   }
   for (const s of symbols) {
     process.stderr.write(`scoring ${s}…\n`);
-    series[s].sig1 = SCORE_LAB ? new Map() : TF_COMPARE ? precompute(s, series[s].h1, 1, start) : SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB || RISK_GRID || LEV_GRID || DD_LAB || RISK_STARTS || COIN_WF || SCORE_MOM || LAB2 || LAB3 || TF_DAY || PER_CANDLE || COINSET || TUNE || COMBO || SPLIT || SLOTS || BTC_COOL || BTC_LINE || TIME_STOP || SCORE_JUMP || SCORE_JUMP_ROB || PF_LAB || SCORE_RISE || LIMIT_ROB || LIVE_NOW ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
+    series[s].sig1 = SCORE_LAB ? new Map() : TF_COMPARE ? precompute(s, series[s].h1, 1, start) : SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB || RISK_GRID || LEV_GRID || DD_LAB || RISK_STARTS || COIN_WF || SCORE_MOM || LAB2 || LAB3 || TF_DAY || PER_CANDLE || COINSET || TUNE || COMBO || SPLIT || SLOTS || BTC_COOL || BTC_LINE || TIME_STOP || SCORE_JUMP || SCORE_JUMP_ROB || PF_LAB || SCORE_RISE || LIMIT_ROB || LIVE_NOW || STOP_LAB ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
     series[s].sig4 = SCORE_LAB ? precompute(s, to4h(series[s].h1), 4, start, { h1: series[s].h1, mode: LAB_MODE, mtfTrim: LAB_MTF }) : precompute(s, to4h(series[s].h1), 4, start);
     if (TF_DAY) series[s].sigD = precompute(s, to1d(series[s].h1), 24, start, { entryTf: 'D' });
     addFilterInputs(series[s]);
@@ -682,6 +699,30 @@ async function main() {
   if (LEV_GRID) return levGrid(series, symbols, times, start, now);
   if (DD_LAB) return ddLab(series, symbols, times, start, now);
   if (RISK_STARTS) return riskStarts(series, symbols, times, start, now);
+  if (STOP_LAB) {
+    const NOW = { minScore: 65, limit: { atr: 0.3, hours: 4 }, beBufferPct: 0.2 };
+    const A = config.SYMBOLS.slice(0, 11), B = config.SYMBOLS.slice(11);
+    return variantTable('Stop width, neutral-score exit, losing-streak pause (live setup)', [
+      ['A  live now (stop 1.5 ATR)', NOW],
+      ['-- 1. stop width (x ATR, or the Chandelier stop if wider) --', null],
+      ['stop 1.5 ATR (same rule, re-sized: check)', { ...NOW, stopAtr: 1.5 }],
+      ['stop 1.25 ATR', { ...NOW, stopAtr: 1.25 }],
+      ['stop 2 ATR', { ...NOW, stopAtr: 2 }],
+      ['stop 2.5 ATR', { ...NOW, stopAtr: 2.5 }],
+      ['-- 2. close when the score falls back inside +/-25 --', null],
+      ['neutral score closes the trade', { ...NOW, neutralExit: 'all' }],
+      ['neutral score closes it only before T1', { ...NOW, neutralExit: 'beforeT1' }],
+      ['-- 3. pause after losing streaks --', null],
+      ['3 losses in a row -> 24h pause', { ...NOW, streakPause: { n: 3, hours: 24 } }],
+      ['4 losses in a row -> 24h pause', { ...NOW, streakPause: { n: 4, hours: 24 } }],
+      ['5 losses in a row -> 48h pause', { ...NOW, streakPause: { n: 5, hours: 48 } }],
+      ['-- each half of the coin list (live / stop 2 ATR) --', null],
+      ['live, first half', { ...NOW, coins: A }],
+      ['stop 2 ATR, first half', { ...NOW, stopAtr: 2, coins: A }],
+      ['live, second half', { ...NOW, coins: B }],
+      ['stop 2 ATR, second half', { ...NOW, stopAtr: 2, coins: B }],
+    ], series, times, start, now, 'STOP_LAB.md', 'Same dollar risk per trade in every row: a wider stop means a smaller position. Targets stay at 1.5/2.5/3.5 x the (new) stop distance.');
+  }
   if (LIVE_NOW) {
     const NOW = { minScore: 65, limit: { atr: 0.3, hours: 4 }, beBufferPct: 0.2 };
     return variantTable('Current live setup (score 65, pullback limit 0.3 ATR / 4h, breakeven +0.2%)', [

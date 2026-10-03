@@ -289,7 +289,7 @@ function simulate(series, symbols, times, rules) {
       p.filled[k] = true;
       closeFill(p, q, p[k], k.toUpperCase(), FEE_MAKER, t);
       if (!open[p.symbol]) return;
-      if (k === R.breakevenAfter) { p.stop = p.entry; p.breakeven = true; }
+      if (k === R.breakevenAfter) { p.stop = p.entry * (1 + p.bias * (R.beBufferPct || 0) / 100); p.breakeven = true; } // BREAKEVEN_BUFFER_PCT
       if (k === 't2' && R.lockT1AfterT2) { p.stop = p.t1; p.lockedT1 = true; p.breakeven = false; }
     }
     // Trailing stop for the rest once `after` has filled: best close since
@@ -632,6 +632,8 @@ const PF_LAB = args.includes('--pf-lab');
 const SCORE_RISE = args.includes('--score-rise');
 // --limit-rob: robustness of the 0.25 ATR pullback limit entry. backtest/LIMIT_ROBUST.md.
 const LIMIT_ROB = args.includes('--limit-rob');
+// --live-now: the current live setup against the earlier ones. backtest/LIVE_NOW.md.
+const LIVE_NOW = args.includes('--live-now');
 const COINSET = args.includes('--coinset') ? String(args[args.indexOf('--coinset') + 1] || '').split(',').filter(Boolean).map(x => x.toUpperCase().replace(/USDT$/, '') + 'USDT') : null;
 const LAB_MODE = args.includes('--mode') ? args[args.indexOf('--mode') + 1] : 'classic';
 const LAB_MTF = args.includes('--mtf');
@@ -663,7 +665,7 @@ async function main() {
   }
   for (const s of symbols) {
     process.stderr.write(`scoring ${s}…\n`);
-    series[s].sig1 = SCORE_LAB ? new Map() : TF_COMPARE ? precompute(s, series[s].h1, 1, start) : SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB || RISK_GRID || LEV_GRID || DD_LAB || RISK_STARTS || COIN_WF || SCORE_MOM || LAB2 || LAB3 || TF_DAY || PER_CANDLE || COINSET || TUNE || COMBO || SPLIT || SLOTS || BTC_COOL || BTC_LINE || TIME_STOP || SCORE_JUMP || SCORE_JUMP_ROB || PF_LAB || SCORE_RISE || LIMIT_ROB ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
+    series[s].sig1 = SCORE_LAB ? new Map() : TF_COMPARE ? precompute(s, series[s].h1, 1, start) : SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB || RISK_GRID || LEV_GRID || DD_LAB || RISK_STARTS || COIN_WF || SCORE_MOM || LAB2 || LAB3 || TF_DAY || PER_CANDLE || COINSET || TUNE || COMBO || SPLIT || SLOTS || BTC_COOL || BTC_LINE || TIME_STOP || SCORE_JUMP || SCORE_JUMP_ROB || PF_LAB || SCORE_RISE || LIMIT_ROB || LIVE_NOW ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
     series[s].sig4 = SCORE_LAB ? precompute(s, to4h(series[s].h1), 4, start, { h1: series[s].h1, mode: LAB_MODE, mtfTrim: LAB_MTF }) : precompute(s, to4h(series[s].h1), 4, start);
     if (TF_DAY) series[s].sigD = precompute(s, to1d(series[s].h1), 24, start, { entryTf: 'D' });
     addFilterInputs(series[s]);
@@ -680,6 +682,24 @@ async function main() {
   if (LEV_GRID) return levGrid(series, symbols, times, start, now);
   if (DD_LAB) return ddLab(series, symbols, times, start, now);
   if (RISK_STARTS) return riskStarts(series, symbols, times, start, now);
+  if (LIVE_NOW) {
+    const NOW = { minScore: 65, limit: { atr: 0.3, hours: 4 }, beBufferPct: 0.2 };
+    return variantTable('Current live setup (score 65, pullback limit 0.3 ATR / 4h, breakeven +0.2%)', [
+      ['LIVE NOW: 65 + limit 0.3 ATR 4h + BE +0.2%', NOW],
+      ['-- earlier setups --', null],
+      ['score 50, market entry (setup of 30 Sep)', { beBufferPct: 0 }],
+      ['score 65, market entry', { minScore: 65 }],
+      ['score 65 + limit 0.3 ATR 4h (BE at entry)', { minScore: 65, limit: { atr: 0.3, hours: 4 } }],
+      ['-- live now with more slots --', null],
+      ['live now, 6 open / 4 per direction', { ...NOW, maxOpen: 6, maxSameDir: 4 }],
+      ['live now, 6 open / 5 per direction', { ...NOW, maxOpen: 6, maxSameDir: 5 }],
+      ['live now, 7 open / 5 per direction', { ...NOW, maxOpen: 7, maxSameDir: 5 }],
+      ['live now, 8 open / 6 per direction', { ...NOW, maxOpen: 8, maxSameDir: 6 }],
+      ['-- live now, each half of the coin list --', null],
+      ['live now, first half', { ...NOW, coins: config.SYMBOLS.slice(0, 11) }],
+      ['live now, second half', { ...NOW, coins: config.SYMBOLS.slice(11) }],
+    ], series, times, start, now, 'LIVE_NOW.md', 'All rows: 21 coins (unless noted), 2.5% risk, max 5 open / 4 per direction / 3 per candle, targets 1.5/2.5/3.5R closing 25/25/50%, stop to breakeven after T1 and to T1 after T2, BTC filter, fees.');
+  }
   if (LIMIT_ROB) {
     const M = { minScore: 65 }, L = (atr, hours) => ({ ...M, limit: { atr, hours } });
     const A = config.SYMBOLS.slice(0, 11), B = config.SYMBOLS.slice(11);

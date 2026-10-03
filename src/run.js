@@ -72,6 +72,7 @@ function loadState() {
   return {
     account: readJson('account', null) || freshAccount(),
     positions: readJson('positions', {}),
+    pending: readJson('pending', {}),           // resting pullback limit entries (LIMIT_ENTRY_ATR)
     trades: readJson('trades', []),
     flipEntries: readJson('flipEntries', {}),
     scores: readJson('scores', {}),
@@ -100,7 +101,7 @@ function saveState(st) {
   st.account.maxOpenPositions = P.MAX_OPEN_POSITIONS;
   st.account.mode = MODE;
   st.account.updatedAt = Date.now();
-  for (const k of ['account', 'positions', 'trades', 'flipEntries', 'scores', 'closing', 'seenOrderIds', 'usedSignals', 'shadow', 'summary', 'commandsDone', 'liqlog']) writeJson(k, st[k]);
+  for (const k of ['account', 'positions', 'pending', 'trades', 'flipEntries', 'scores', 'closing', 'seenOrderIds', 'usedSignals', 'shadow', 'summary', 'commandsDone', 'liqlog']) writeJson(k, st[k]);
 }
 
 /* ---------------- one run ---------------- */
@@ -145,7 +146,7 @@ function entryCandidates(signals, st, events, blocked = [], now = Date.now()) {
   const out = [];
   for (const sig of Object.values(signals)) {
     const { symbol, data, analysis } = sig;
-    if (st.positions[symbol] || !config.SYMBOLS.includes(symbol)) continue;
+    if (st.positions[symbol] || (st.pending && st.pending[symbol]) || !config.SYMBOLS.includes(symbol)) continue;
     if (analysis.bias === 0 || !analysis.plan) {
       events.push({ symbol, type: 'flat', reason: analysis.bias === 0 ? 'score inside the stand-aside band' : 'no plan', score: analysis.score });
       continue;
@@ -228,7 +229,7 @@ async function runCommands(client, st, events) {
       events.push(...evs);
       if (evs.some(e => e.type === 'error')) continue; // retried next sync
       st.account = freshAccount();
-      st.positions = {}; st.closing = {}; st.flipEntries = {}; st.scores = {}; st.usedSignals = {};
+      st.positions = {}; st.pending = {}; st.closing = {}; st.flipEntries = {}; st.scores = {}; st.usedSignals = {};
       st.summary = null;
       if (c.clearHistory) { st.trades = []; st.shadow = shadow.empty(); }
       await notify.push([{
@@ -259,7 +260,7 @@ async function run() {
   // One trade per signal: note which signals reset since last run (a coin
   // whose position Bybit closed since then re-arms one run later, once the
   // reconcile inside runExchange has dropped it).
-  strategy.rememberSignals(st.usedSignals, signals, st.positions);
+  strategy.rememberSignals(st.usedSignals, signals, { ...st.pending, ...st.positions });
   const blocked = [];
   const candidates = entryCandidates(signals, st, events, blocked);
   await exchange.runExchange({ client, st, signals, candidates, events, halt });
@@ -270,7 +271,7 @@ async function run() {
     liqdata.sample(st.liqlog, signals, TF_MS);
   } catch (err) { console.log('liquidation tracking:', err.message); }
   const daily = summary.due(st);
-  strategy.rememberSignals(st.usedSignals, {}, st.positions); // mark what just opened
+  strategy.rememberSignals(st.usedSignals, {}, { ...st.pending, ...st.positions }); // mark what just opened (or is waiting to fill)
 
   saveState(st);
   printSummary(events, st);
@@ -287,7 +288,7 @@ async function syncOnExchange() {
   const st = loadState();
   // Live mark/P&L fields change constantly; only real changes (fills,
   // closes, stop moves) should trigger a save and upload.
-  const snapshot = () => JSON.stringify([st.positions, st.trades, st.closing, st.account.balance],
+  const snapshot = () => JSON.stringify([st.positions, st.pending, st.trades, st.closing, st.account.balance],
     (k, v) => (k === 'markPrice' || k === 'unrealisedPnl' ? undefined : v));
   const before = snapshot();
   const events = [];
@@ -317,6 +318,7 @@ function reset() {
   const st = loadState();
   st.account = freshAccount();
   st.positions = {};
+  st.pending = {};
   st.flipEntries = {};
   st.scores = {};
   st.closing = {};
@@ -332,6 +334,8 @@ function printSummary(events, st) {
   for (const ev of events) {
     if (ev.type === 'enter') {
       console.log(`[${ev.symbol}] ENTER ${ev.bias === 1 ? 'LONG' : 'SHORT'} @ ${px(ev.entry)} | score ${ev.score} | SL ${px(ev.stop)} T1 ${px(ev.t1)} T2 ${px(ev.t2)} T3 ${px(ev.t3)} | qty ${ev.qty} margin $${fmt(ev.margin)} risk $${fmt(ev.riskAmt)}`);
+    } else if (ev.type === 'order') {
+      console.log(`[${ev.symbol}] LIMIT ${ev.bias === 1 ? 'LONG' : 'SHORT'} @ ${px(ev.price)} (mark ${px(ev.mark)}) | score ${ev.score} | SL ${px(ev.stop)} | qty ${ev.qty} | valid ${ev.hours}h`);
     } else if (ev.type === 'partial' || ev.type === 'exit') {
       console.log(`[${ev.symbol}] ${ev.type === 'exit' ? 'EXIT — ' : ''}${ev.reason} | pnl ${money(ev.pnl)}${ev.price ? ' @ ' + px(ev.price) : ''}`);
     } else {
@@ -341,6 +345,7 @@ function printSummary(events, st) {
   const open = Object.values(st.positions);
   console.log(`\nbalance $${fmt(st.account.balance)} (started $${fmt(st.account.startingBalance)}) · ${open.length}/${P.MAX_OPEN_POSITIONS} open · margin used $${fmt(exchange.usedMargin(st.positions))}`);
   for (const p of open) console.log(`  ${p.symbol.padEnd(9)} ${p.bias === 1 ? 'long ' : 'short'} @ ${px(p.entry)}  SL ${px(p.stop)}  margin $${fmt(p.margin)}`);
+  for (const o of Object.values(st.pending || {})) console.log(`  ${o.symbol.padEnd(9)} ${o.bias === 1 ? 'long ' : 'short'} limit @ ${px(o.price)} waiting until ${new Date(o.expiresAt).toISOString().slice(11, 16)} UTC`);
 }
 function fmt(x) { return (Math.round(x * 100) / 100).toLocaleString('en-US'); }
 // Prices keep enough decimals to tell levels apart on cheap coins (DOGE, XRP).

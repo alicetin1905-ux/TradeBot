@@ -151,10 +151,14 @@ window. Limit entries and breakeven-after-T2 didn't help.
 
 ## How it trades on Bybit
 
-- **Entry:** market order with the **stop attached to the position** in the
-  same request, then three reduce-only limit orders for T1/T2/T3
-  (40/35/25%). Stops and targets live on Bybit, so they keep working if the
-  machine running the bot is off.
+- **Entry (pullback):** a limit order 0.3×ATR better than the price at the
+  signal (`LIMIT_ENTRY_ATR`), with the **stop attached**. It holds a slot while
+  it waits; if it hasn't filled within 4 h (`LIMIT_ENTRY_HOURS`) it's
+  cancelled (a partial fill keeps what filled). Once filled, three reduce-only
+  limit orders go out for T1/T2/T3 (25/25/50%). `LIMIT_ENTRY_ATR: null` =
+  market entry. backtest/LIMIT_ROBUST.md: PF 1.34 → 1.40, worst drop 37% → 29%,
+  slightly fewer trades. Stops and targets live on Bybit, so they keep working
+  if the machine running the bot is off.
 - **Levels:** the strategy reads Bybit mainnet candles and flow data
   (`src/bybitMarket.js`: 400 closed candles per timeframe, like the backtest;
   if Bybit fails, the candles come from OKX as one set and each flow feed

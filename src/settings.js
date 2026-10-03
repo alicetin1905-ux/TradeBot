@@ -40,6 +40,8 @@ const FIELDS = {
   TARGET_SPLIT: { at: ['TARGET_SPLIT'], check: split, label: 'Share closed at T1 / T2 / T3 (sums to 1)' },
   STOP_ATR: { at: ['STOP_ATR'], check: num(0.5, 5), label: 'Stop distance (x ATR, before the Chandelier Exit check)' },
   BREAKEVEN_AFTER: { at: ['BREAKEVEN_AFTER'], check: oneOf('t1', 't2', 'off'), label: 'Move the stop to breakeven after ("t1", "t2" or "off")' },
+  LIMIT_ENTRY_ATR: { at: ['LIMIT_ENTRY_ATR'], check: num(0, 2, { nullable: true }), label: 'Pullback entry: limit this many ATRs better than the signal price (null = market)' },
+  LIMIT_ENTRY_HOURS: { at: ['LIMIT_ENTRY_HOURS'], check: num(1, 24), label: 'Pullback entry: cancel the limit order after this many hours' },
   BREAKEVEN_BUFFER_PCT: { at: ['BREAKEVEN_BUFFER_PCT'], check: num(0, 1), label: 'Breakeven stop: % past entry, to cover fees (0 = entry)' },
   LOCK_T1_AFTER_T2: { at: ['LOCK_T1_AFTER_T2'], check: bool, label: 'Move the stop to T1 once T2 fills' },
   FLIP_EXIT: { at: ['FLIP_EXIT'], check: bool, label: 'Close when the score flips against the trade' },

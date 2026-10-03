@@ -25,6 +25,7 @@ config.PORTFOLIO.RISK_USDT = null;
 config.PORTFOLIO.RISK_PCT = null;
 config.TARGETS_R = null;
 config.LOCK_T1_AFTER_T2 = false;
+config.LIMIT_ENTRY_ATR = null; // market entries unless a test turns pullback limits on
 
 const INST = {
   BTCUSDT: { qtyStep: 0.001, minOrderQty: 0.001, minNotional: 5, tickSize: 0.1 },
@@ -50,6 +51,16 @@ function fakeBybit({ equity = 10000, marks = {} } = {}) {
       delete ex.orders[orderId];
       if (p.size <= 0) delete ex.positions[o.symbol];
     },
+    // a resting limit entry fills (fully, or qty of it) at its limit price
+    fillEntry(orderId, qty = null) {
+      const o = ex.orders[orderId];
+      const q = qty == null ? o.qty - o.filled : qty;
+      o.filled = +(o.filled + q).toFixed(8);
+      const p = ex.positions[o.symbol];
+      if (p) p.size = +(p.size + q).toFixed(8);
+      else ex.positions[o.symbol] = { symbol: o.symbol, bias: o.bias, size: q, avgPrice: o.price, stopLoss: o.stopLoss, markPrice: o.price };
+      o.status = o.filled >= o.qty ? 'Filled' : 'PartiallyFilled';
+    },
     hitStop(symbol, at = Date.now()) {
       const p = ex.positions[symbol];
       ex.closedPnl.push({ symbol, orderId: ex.id(), qty: p.size, exit: p.stopLoss, pnl: (p.stopLoss - p.avgPrice) * p.bias * p.size, at });
@@ -69,6 +80,21 @@ function fakeBybit({ equity = 10000, marks = {} } = {}) {
       ex.calls.push(['openMarket', symbol, bias, qty, stopLoss]);
       ex.positions[symbol] = { symbol, bias, size: qty, avgPrice: ex.marks[symbol], stopLoss, markPrice: ex.marks[symbol] };
       return ex.id();
+    },
+    async openLimit({ symbol, bias, qty, price, stopLoss }) {
+      const id = ex.id();
+      ex.orders[id] = { symbol, bias, qty, price, stopLoss, entry: true, filled: 0, status: 'New' };
+      ex.calls.push(['openLimit', symbol, bias, qty, price, stopLoss]);
+      return id;
+    },
+    async getOrder(symbol, orderId) {
+      const o = ex.orders[orderId];
+      return o ? { status: o.status, filledQty: o.filled } : null;
+    },
+    async cancelOrder(symbol, orderId) {
+      const o = ex.orders[orderId];
+      if (o && o.status !== 'Filled') o.status = 'Cancelled';
+      ex.calls.push(['cancelOrder', symbol, orderId]);
     },
     async placeTakeProfit({ symbol, bias, qty, price }) {
       const id = ex.id();
@@ -900,4 +926,68 @@ test('close-all: a coin the exchange rejects (nothing open) does not block the r
   assert.ok(!events.some(e => e.type === 'error'));          // the reset would go ahead
   assert.ok(events.some(e => e.symbol === 'XRPUSDT' && e.type === 'info'));
   assert.ok(!st.positions.SOLUSDT && st.closing.SOLUSDT);
+});
+
+test('pullback limit entry: rests 0.3 ATR better, holds a slot, sets up targets once filled', async () => {
+  const saved = [config.LIMIT_ENTRY_ATR, config.LIMIT_ENTRY_HOURS, config.PORTFOLIO.MAX_OPEN_POSITIONS];
+  config.LIMIT_ENTRY_ATR = 0.3; config.LIMIT_ENTRY_HOURS = 4; config.PORTFOLIO.MAX_OPEN_POSITIONS = 1;
+  try {
+    const { ex, client } = fakeBybit({ marks });
+    const st = freshState();
+    const xrp = candidate('XRPUSDT', 1, 80, 2.5, 0.02);
+    xrp.analysis.atr = 0.05; // 2% of price -> limit 0.6% below
+    const sol = candidate('SOLUSDT', 1, 70, 200, 0.02);
+    sol.analysis.atr = 4;
+    const t0 = Date.now();
+    let events = [];
+    await exchange.runExchange({ client, st, signals: {}, candidates: [xrp, sol], events, now: t0 });
+    const o = st.pending.XRPUSDT;
+    assert.ok(o, 'limit order is tracked as pending');
+    assert.equal(o.price, 2.485);
+    assert.equal(Object.keys(ex.positions).length, 0, 'nothing filled yet');
+    assert.ok(events.some(e => e.type === 'order' && e.symbol === 'XRPUSDT'));
+    assert.ok(events.some(e => e.symbol === 'SOLUSDT' && /slots in use/.test(e.reason)), 'the waiting order holds the only slot');
+    assert.ok(o.stopLoss < o.price);
+
+    // still waiting an hour later
+    events = [];
+    await exchange.runExchange({ client, st, signals: {}, candidates: [], events, now: t0 + 3600000 });
+    assert.ok(st.pending.XRPUSDT);
+
+    // fills: the position is tracked with targets at the strategy's distances from the fill
+    ex.fillEntry(o.orderId);
+    events = [];
+    await exchange.runExchange({ client, st, signals: {}, candidates: [], events, now: t0 + 2 * 3600000 });
+    assert.equal(st.pending.XRPUSDT, undefined);
+    const pos = st.positions.XRPUSDT;
+    assert.equal(pos.entry, 2.485);
+    assert.ok(pos.t1 > pos.entry && pos.t2 > pos.t1 && pos.t3 > pos.t2);
+    assert.ok(pos.orders.t1 && pos.orders.t2 && pos.orders.t3, 'three reduce-only targets placed');
+    const ev = events.find(e => e.type === 'enter');
+    assert.ok(ev && /limit entry filled/.test(ev.note));
+  } finally { [config.LIMIT_ENTRY_ATR, config.LIMIT_ENTRY_HOURS, config.PORTFOLIO.MAX_OPEN_POSITIONS] = saved; }
+});
+
+test('pullback limit entry: cancelled after LIMIT_ENTRY_HOURS; a partial fill keeps what filled', async () => {
+  const saved = [config.LIMIT_ENTRY_ATR, config.LIMIT_ENTRY_HOURS];
+  config.LIMIT_ENTRY_ATR = 0.3; config.LIMIT_ENTRY_HOURS = 4;
+  try {
+    const { ex, client } = fakeBybit({ marks });
+    const st = freshState();
+    const xrp = candidate('XRPUSDT', 1, 80, 2.5, 0.02); xrp.analysis.atr = 0.05;
+    const sol = candidate('SOLUSDT', -1, -70, 200, 0.02); sol.analysis.atr = 4;
+    const t0 = Date.now();
+    await exchange.runExchange({ client, st, signals: {}, candidates: [xrp, sol], events: [], now: t0 });
+    assert.equal(st.pending.SOLUSDT.price, 201.2, 'a short rests 0.3 ATR above the price');
+    ex.fillEntry(st.pending.XRPUSDT.orderId, 100); // part of XRP fills, SOL never does
+    const xrpId = st.pending.XRPUSDT.orderId, solId = st.pending.SOLUSDT.orderId;
+    const events = [];
+    await exchange.runExchange({ client, st, signals: {}, candidates: [], events, now: t0 + 4 * 3600000 + 60000 });
+    assert.deepEqual(st.pending, {});
+    assert.ok(ex.calls.some(c => c[0] === 'cancelOrder' && c[2] === solId));
+    assert.ok(ex.calls.some(c => c[0] === 'cancelOrder' && c[2] === xrpId));
+    assert.ok(events.some(e => e.type === 'expired' && e.symbol === 'SOLUSDT'));
+    assert.equal(st.positions.XRPUSDT.qtyTotal, 100, 'the filled part is kept and managed');
+    assert.equal(st.positions.SOLUSDT, undefined);
+  } finally { [config.LIMIT_ENTRY_ATR, config.LIMIT_ENTRY_HOURS] = saved; }
 });

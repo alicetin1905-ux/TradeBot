@@ -147,6 +147,31 @@ function createClient({ apiKey, apiSecret, env = 'demo', fetchImpl = fetch }) {
       return r.orderId;
     },
 
+    // Limit entry (pullback): rests until filled, cancelled or expired by the
+    // bot. The stop rides along and is set on the position as soon as it fills.
+    async openLimit({ symbol, bias, qty, price, stopLoss }) {
+      const r = await request('POST', '/v5/order/create', {
+        category: 'linear', symbol, side: bias === 1 ? 'Buy' : 'Sell', orderType: 'Limit',
+        qty: String(qty), price: String(price), timeInForce: 'GTC', positionIdx: 0,
+        tpslMode: 'Full', stopLoss: String(stopLoss), slTriggerBy: 'MarkPrice',
+      });
+      return r.orderId;
+    },
+
+    // { status, filledQty } of one order (open or recently closed); null if unknown.
+    async getOrder(symbol, orderId) {
+      for (const p of ['/v5/order/realtime', '/v5/order/history']) {
+        const r = await request('GET', p, { category: 'linear', symbol, orderId });
+        const o = r.list && r.list[0];
+        if (o) return { status: o.orderStatus, filledQty: num(o.cumExecQty) };
+      }
+      return null;
+    },
+
+    async cancelOrder(symbol, orderId) {
+      await request('POST', '/v5/order/cancel', { category: 'linear', symbol, orderId });
+    },
+
     // Reduce-only resting limit order — one per take-profit target.
     async placeTakeProfit({ symbol, bias, qty, price }) {
       const r = await request('POST', '/v5/order/create', {

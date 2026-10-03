@@ -209,6 +209,10 @@ function positionRows(box, pos, trades, o) {
       img.imageSize = new Size(bar.w, bar.h);
     }
   });
+  for (const w of o.pending || []) {
+    const row = box.addStack(); row.centerAlignContent();
+    text(row, '⏳ ' + short(w.symbol) + ' ' + (w.bias > 0 ? 'long' : 'short') + ' limit ' + fmtPrice(w, w.price), 10, C.amber);
+  }
   if (o.more !== false && pos.length > o.max) text(box, '+' + (pos.length - o.max) + ' more', 10, C.dim);
 }
 
@@ -315,6 +319,7 @@ function build(data) {
   const trades = Array.isArray(tradesFile) ? tradesFile : (tradesFile && tradesFile.trades) || [];
   const upnl = pos.reduce((s, p) => s + (pnlOf(p)), 0);
   const equity = account.balance + upnl; // same as the dashboard: balance + live open P&L
+  const pend = (data.pending || []).slice(0, large ? 3 : 1);
   const start = account.startingBalance || 0;
   const R = realized(trades);
   const maxOpen = (account.settings && account.settings.MAX_OPEN_POSITIONS) || 5;
@@ -344,7 +349,7 @@ function build(data) {
 
   const W = contentWidth();
   if (fam === 'medium') {
-    positionRows(w, pos, trades, { maxOpen, max: 3, bar: true, labels: false, detail: false, price: true, width: W, gap: 3, more: false });
+    positionRows(w, pos, trades, { maxOpen, max: 3, bar: true, labels: false, detail: false, price: true, width: W, gap: 3, more: false, pending: pos.length < 3 ? pend : [] });
     w.addSpacer(4);
     // strong coins on one line, with the reason for the strongest
     const line = w.addStack(); line.centerAlignContent();
@@ -357,7 +362,7 @@ function build(data) {
     line.addSpacer();
     if (strong.length) { const r = readiness(strong[0][1], pos, account); text(line, r.s, 10, r.c, r.s === 'READY' ? 'bold' : null); }
   } else {
-    positionRows(w, pos, trades, { label: true, maxOpen, max: small ? 2 : 5, bar: !small, labels: large, detail: large, price: !small, width: W, gap: large ? 4 : 1 });
+    positionRows(w, pos, trades, { label: true, maxOpen, max: small ? 2 : 5, bar: !small, labels: large, detail: large, price: !small, pending: small ? [] : pend, width: W, gap: large ? 4 : 1 });
     riskLine(w, pos, trades, maxOpen, small);
     // strong coins sit at the bottom; the fewer positions are open, the more of them fit
     w.addSpacer();
@@ -380,8 +385,8 @@ function build(data) {
 
 let data = null;
 try {
-  const [account, positions, scores, tradesFile] = await Promise.all([load('account'), load('positions'), load('scores'), load('trades')]);
-  data = { account, positions, scores, tradesFile };
+  const [account, positions, scores, tradesFile, pending] = await Promise.all([load('account'), load('positions'), load('scores'), load('trades'), load('pending').catch(() => ({}))]);
+  data = { account, positions, scores, tradesFile, pending: Object.values(pending || {}) };
   await Promise.all(Object.values(positions || {}).map(async (p) => { p._mark = await liveMark(p.symbol); }));
   if (account.settings && account.settings.ENTRY_MIN_SCORE) MIN_SCORE = account.settings.ENTRY_MIN_SCORE;
 } catch (e) { console.error(e); }

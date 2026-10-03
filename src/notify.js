@@ -28,10 +28,19 @@ function messagesFor(events, st) {
     if (ev.type === 'enter') {
       const dir = ev.bias === 1 ? 'LONG' : 'SHORT';
       out.push({
-        title: `${coin} ${dir} opened`,
+        title: `${coin} ${dir} opened${ev.note ? ' (limit filled)' : ''}`,
         message: `Entry ${px(ev.entry)} · SL ${px(ev.stop)}\nT1 ${px(ev.t1)} · T2 ${px(ev.t2)} · T3 ${px(ev.t3)}\nMargin $${ev.margin.toFixed(0)} · loss at stop $${ev.riskAmt.toFixed(0)} · score ${ev.score}`,
         tags: [ev.bias === 1 ? 'chart_with_upwards_trend' : 'chart_with_downwards_trend'],
       });
+    } else if (ev.type === 'order') {
+      const dir = ev.bias === 1 ? 'LONG' : 'SHORT';
+      out.push({
+        title: `${coin} ${dir} limit order placed`,
+        message: `Waiting for a pullback to ${px(ev.price)} (now ${px(ev.mark)}) · valid ${ev.hours}h · SL ${px(ev.stop)} · score ${ev.score}`,
+        tags: ['hourglass_flowing_sand'],
+      });
+    } else if (ev.type === 'expired') {
+      out.push({ title: `${coin} limit entry cancelled`, message: ev.reason, tags: ['heavy_multiplication_x'] });
     } else if (ev.type === 'partial') {
       out.push({
         title: `${coin} ${ev.reason.split(',')[0]} ${money(ev.pnl)}`,

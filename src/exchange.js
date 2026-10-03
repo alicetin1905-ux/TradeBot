@@ -9,6 +9,9 @@
 //   2. Open new positions into free slots (strongest |score| first):
 //      margin = MARGIN_USDT (or MARGIN_PCT of the balance), x LEVERAGE, market entry
 //      with the stop attached, then reduce-only limit orders for T1/T2/T3.
+//      With LIMIT_ENTRY_ATR set, the entry is a resting limit order that much
+//      better than the price instead (pullback entry); it holds a slot until
+//      it fills (targets are placed then) or expires after LIMIT_ENTRY_HOURS.
 //
 // The stop and targets live ON the exchange, so they still work if this
 // machine goes down between runs. The strategy's levels come from OKX
@@ -231,6 +234,81 @@ function dailyLossHit(st, now) {
   return today < 0 && -today >= startOfDay * config.EXECUTION.DAILY_LOSS_LIMIT_PCT / 100;
 }
 
+// After an entry fills (market, or a pullback limit): place the T1/T2/T3
+// reduce-only orders at the strategy's % distances from the real fill price
+// and start tracking the position. ratios = { t1, t2, t3 } as fractions of entry.
+async function trackPosition({ client, st, sym, bias, score, live, ratios, inst, stopLoss, orders, now, events, note }) {
+  const entry = live.avgPrice;
+  const tp = [ratios.t1, ratios.t2, ratios.t3].map(r => roundStep(entry * r, inst.tickSize));
+  const [q1, q2, q3] = splitTargets(live.size, inst);
+  const slices = [['t1', q1, tp[0]], ['t2', q2, tp[1]], ['t3', q3, tp[2]]];
+  for (const [k, q, price] of slices) {
+    if (q <= 0) continue;
+    try {
+      orders[k] = await client.placeTakeProfit({ symbol: sym, bias, qty: q, price });
+    } catch (err) {
+      events.push({ symbol: sym, type: 'error', reason: `${k.toUpperCase()} order failed (stop is still in place): ${err.message}` });
+    }
+  }
+  const posMargin = (live.size * entry) / P.LEVERAGE;
+  st.positions[sym] = {
+    symbol: sym, bias, entry, stop: stopLoss, initialStop: stopLoss,
+    t1: tp[0], t2: tp[1], t3: tp[2],
+    qtyTotal: live.size, qtyRemaining: live.size, qtyT1: q1, qtyT2: q2, qtyT3: q3,
+    margin: posMargin, notional: live.size * entry, riskAmt: live.size * Math.abs(entry - stopLoss),
+    filled: { t1: q1 === 0, t2: q2 === 0, t3: false }, breakeven: false, beAfter: config.BREAKEVEN_AFTER || 't1',
+    openedAt: now, score, orders, tickSize: inst.tickSize,
+    markPrice: live.markPrice || entry, unrealisedPnl: live.unrealisedPnl || 0,
+  };
+  events.push({
+    symbol: sym, type: 'enter', bias, score, entry, stop: stopLoss,
+    t1: tp[0], t2: tp[1], t3: tp[2], qty: live.size, margin: posMargin, riskAmt: st.positions[sym].riskAmt, note,
+  });
+  return posMargin;
+}
+
+// Resting pullback limit entries: once filled, set up the targets and track
+// the position; past their expiry, cancel (a partly filled order keeps what
+// filled); cancelled/rejected on the exchange, forget them.
+async function processPending({ client, st, exPos, events, now }) {
+  for (const [sym, o] of Object.entries(st.pending || {})) {
+    try {
+      const live = exPos[sym];
+      const ord = await client.getOrder(sym, o.orderId);
+      const status = ord ? ord.status : null;
+      const resting = status === 'New' || status === 'PartiallyFilled' || status === 'Untriggered';
+      if (resting && now < o.expiresAt) continue;
+      if (resting) {
+        try { await client.cancelOrder(sym, o.orderId); } catch (err) { /* filled or gone meanwhile */ }
+      }
+      if (live && live.bias === o.bias && !st.positions[sym]) {
+        delete st.pending[sym];
+        await trackPosition({
+          client, st, sym, bias: o.bias, score: o.score, live, ratios: o.ratios, inst: o.inst,
+          stopLoss: live.stopLoss || o.stopLoss, orders: { entry: o.orderId }, now, events,
+          note: `limit entry filled (${o.price})${resting ? ' — partly, rest cancelled' : ''}`,
+        });
+        exPos[sym] = live;
+        continue;
+      }
+      delete st.pending[sym];
+      if (status === 'Filled') {
+        // Filled and already closed again between two syncs: book it.
+        const pos = { symbol: sym, bias: o.bias, entry: o.price, orders: { entry: o.orderId }, openedAt: o.placedAt, score: o.score, filled: {}, closedDetectedAt: now };
+        st.closing[sym] = pos;
+        events.push({ symbol: sym, type: 'info', reason: 'limit entry filled and closed again before the next sync' });
+      } else {
+        events.push({ symbol: sym, type: 'expired', bias: o.bias, price: o.price,
+          reason: resting ? `limit entry at ${o.price} not filled within ${config.LIMIT_ENTRY_HOURS}h — cancelled` : `limit entry order ${status || 'not found'} on Bybit — dropped` });
+      }
+    } catch (err) {
+      events.push({ symbol: sym, type: 'error', reason: `pending entry: ${err.message}` });
+    }
+  }
+}
+
+function pendingMargin(st) { return Object.values(st.pending || {}).reduce((s, o) => s + o.margin, 0); }
+
 async function openEntries({ client, st, exPos, wallet, candidates, events, halt, now }) {
   if (!candidates.length) return;
   const block =
@@ -255,12 +333,15 @@ async function openEntries({ client, st, exPos, wallet, candidates, events, halt
     const hold = (reason) => events.push({ symbol: sym, type: 'hold', reason, score: c.analysis.score });
     try {
       if (exPos[sym]) { hold('a position is already open on the exchange for this coin'); continue; }
+      if (st.pending[sym]) { hold('a limit entry order is already waiting for this coin'); continue; }
       if (P.MAX_NEW_PER_CANDLE != null && newThisCandle >= P.MAX_NEW_PER_CANDLE) {
         hold(`already ${newThisCandle} new trade${newThisCandle === 1 ? '' : 's'} on this candle (max ${P.MAX_NEW_PER_CANDLE})`);
         continue;
       }
-      if (Object.keys(exPos).length >= P.MAX_OPEN_POSITIONS) { hold(`all ${P.MAX_OPEN_POSITIONS} position slots in use`); continue; }
-      const sameDir = Object.values(exPos).filter(p => p.bias === c.analysis.bias).length;
+      // waiting limit entries hold their slot like an open position
+      const waiting = Object.values(st.pending).filter(o => !exPos[o.symbol]);
+      if (Object.keys(exPos).length + waiting.length >= P.MAX_OPEN_POSITIONS) { hold(`all ${P.MAX_OPEN_POSITIONS} position slots in use`); continue; }
+      const sameDir = Object.values(exPos).filter(p => p.bias === c.analysis.bias).length + waiting.filter(o => o.bias === c.analysis.bias).length;
       if (P.MAX_SAME_DIRECTION != null && sameDir >= P.MAX_SAME_DIRECTION) {
         hold(`already ${sameDir} ${c.analysis.bias === 1 ? 'longs' : 'shorts'} open (max ${P.MAX_SAME_DIRECTION} in one direction)`);
         continue;
@@ -281,7 +362,7 @@ async function openEntries({ client, st, exPos, wallet, candidates, events, halt
       // (e.g. older, bigger positions still hold it), wait for a close instead
       // of opening an odd, undersized position.
       const margin = marginPerTrade(base, Math.abs(1 - ratio(lv.stop)));
-      const free = Math.min(base - usedMargin(st.positions), available * 0.95);
+      const free = Math.min(base - usedMargin(st.positions) - pendingMargin(st), available * 0.95);
       if (free < margin * 0.99) { hold(`not enough free margin for a full $${margin.toFixed(0)} trade ($${Math.max(0, free).toFixed(0)} free)`); continue; }
 
       const inst = await client.getInstrument(sym);
@@ -293,43 +374,36 @@ async function openEntries({ client, st, exPos, wallet, candidates, events, halt
       if ((stopLoss - mark) * c.analysis.bias >= 0) { hold('stop would be on the wrong side of the Bybit price'); continue; }
 
       await client.setLeverage(sym, P.LEVERAGE);
-      const entryId = await client.openMarket({ symbol: sym, bias: c.analysis.bias, qty, stopLoss });
+      const ratios = { t1: ratio(lv.t1), t2: ratio(lv.t2), t3: ratio(lv.t3) };
+      const bias = c.analysis.bias;
 
+      // Pullback entry: a resting limit order LIMIT_ENTRY_ATR x ATR better than now.
+      const atrFrac = c.analysis.atr > 0 && c.analysis.price > 0 ? c.analysis.atr / c.analysis.price : 0;
+      if (config.LIMIT_ENTRY_ATR > 0 && atrFrac > 0) {
+        const price = roundStep(mark * (1 - bias * config.LIMIT_ENTRY_ATR * atrFrac), inst.tickSize);
+        const lq = fixStep(floorStep((margin * P.LEVERAGE) / price, inst.qtyStep), inst.qtyStep);
+        const sl = roundStep(price * ratio(lv.stop), inst.tickSize);
+        if (lq < inst.minOrderQty) { hold(`size ${lq} is below Bybit's minimum order`); continue; }
+        const orderId = await client.openLimit({ symbol: sym, bias, qty: lq, price, stopLoss: sl });
+        const hours = config.LIMIT_ENTRY_HOURS || 4;
+        st.pending[sym] = {
+          symbol: sym, bias, score: c.analysis.score, orderId, price, qty: lq, stopLoss: sl, ratios,
+          inst, margin: (lq * price) / P.LEVERAGE, placedAt: now, expiresAt: now + hours * 3600000,
+        };
+        available -= st.pending[sym].margin;
+        newThisCandle++;
+        events.push({ symbol: sym, type: 'order', bias, score: c.analysis.score, price, mark, stop: sl, qty: lq, hours });
+        continue;
+      }
+
+      const entryId = await client.openMarket({ symbol: sym, bias, qty, stopLoss });
       const after = await client.getPositions();
       const live = after[sym];
       if (!live) { events.push({ symbol: sym, type: 'error', reason: `entry order ${entryId} sent but no position showed up` }); continue; }
-
-      const entry = live.avgPrice;
-      const tp = [lv.t1, lv.t2, lv.t3].map(t => roundStep(entry * ratio(t), inst.tickSize));
-      const [q1, q2, q3] = splitTargets(live.size, inst);
-      const orders = { entry: entryId };
-      const slices = [['t1', q1, tp[0]], ['t2', q2, tp[1]], ['t3', q3, tp[2]]];
-      for (const [k, q, price] of slices) {
-        if (q <= 0) continue;
-        try {
-          orders[k] = await client.placeTakeProfit({ symbol: sym, bias: c.analysis.bias, qty: q, price });
-        } catch (err) {
-          events.push({ symbol: sym, type: 'error', reason: `${k.toUpperCase()} order failed (stop is still in place): ${err.message}` });
-        }
-      }
-
-      const posMargin = (live.size * entry) / P.LEVERAGE;
-      st.positions[sym] = {
-        symbol: sym, bias: c.analysis.bias, entry, stop: stopLoss, initialStop: stopLoss,
-        t1: tp[0], t2: tp[1], t3: tp[2],
-        qtyTotal: live.size, qtyRemaining: live.size, qtyT1: q1, qtyT2: q2, qtyT3: q3,
-        margin: posMargin, notional: live.size * entry, riskAmt: live.size * Math.abs(entry - stopLoss),
-        filled: { t1: q1 === 0, t2: q2 === 0, t3: false }, breakeven: false, beAfter: config.BREAKEVEN_AFTER || 't1',
-        openedAt: now, score: c.analysis.score, orders, tickSize: inst.tickSize,
-        markPrice: live.markPrice || entry, unrealisedPnl: live.unrealisedPnl || 0,
-      };
+      const posMargin = await trackPosition({ client, st, sym, bias, score: c.analysis.score, live, ratios, inst, stopLoss, orders: { entry: entryId }, now, events });
       exPos[sym] = live;
       available -= posMargin;
       newThisCandle++;
-      events.push({
-        symbol: sym, type: 'enter', bias: c.analysis.bias, score: c.analysis.score, entry, stop: stopLoss,
-        t1: tp[0], t2: tp[1], t3: tp[2], qty: live.size, margin: posMargin, riskAmt: st.positions[sym].riskAmt,
-      });
     } catch (err) {
       events.push({ symbol: sym, type: 'error', reason: err.message });
     }
@@ -371,6 +445,8 @@ async function runExchange({ client, st, signals, candidates, events, halt = fal
   const exPos = await client.getPositions();
   await reconcile({ client, st, exPos, signals, events, now });
   await recordFunding(client, st, events, now);
+  if (!st.pending) st.pending = {};
+  await processPending({ client, st, exPos, events, now });
   await openEntries({ client, st, exPos, wallet, candidates, events, halt, now });
   st.account.exchangeEquity = wallet.equity;
 }
@@ -390,6 +466,7 @@ async function closeAll({ client, st, events, now = Date.now() }) {
         if (!live) { events.push({ symbol: sym, type: 'info', reason: `no orders cancelled: ${err.message}` }); continue; }
         throw err;
       }
+      if (st.pending) delete st.pending[sym]; // its limit order went with cancelAll
       if (!live) continue;
       const id = await client.closeMarket({ symbol: sym, bias: live.bias, qty: live.size });
       events.push({ symbol: sym, type: 'info', reason: `closed ${live.size} at market` });

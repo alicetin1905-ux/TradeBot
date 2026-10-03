@@ -66,6 +66,13 @@ const config = module.exports = {
   // isn't a plan" from ATLAS's own flip-entry comment, capped at 1x ATR.
   MAX_CHASE_ATR: 1,
 
+  // Pullback entry: instead of buying/selling at market, rest a limit order
+  // this many ATRs better than the price at the signal, for LIMIT_ENTRY_HOURS;
+  // unfilled orders are cancelled. null = market entry.
+  // backtest/LIMIT_ROBUST.md: 0.3 ATR / 4h -> PF 1.34 -> 1.40, worst drop 37% -> 29%.
+  LIMIT_ENTRY_ATR: 0.3,
+  LIMIT_ENTRY_HOURS: 4,
+
   // Scaled exit ladder — close part of the position at each target instead
   // of all-or-nothing, and move the stop to breakeven once T1 fills so a
   // full round-trip back to entry can't turn a winner into a loser.

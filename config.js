@@ -77,6 +77,10 @@ const config = module.exports = {
   STOP_ATR: 1.5,
   // Move the stop to entry once this target fills: 't1', 't2' or 'off'.
   BREAKEVEN_AFTER: 't1',
+  // "Breakeven" stop = entry moved this % into profit, so the round-trip fees
+  // (0.055% taker in + out) and a little slippage are covered and a breakeven
+  // stop nets about $0 instead of a small loss. 0 = exactly the entry price.
+  BREAKEVEN_BUFFER_PCT: 0.2,
   // After T2 fills, move the stop up to T1 (locks T1's profit on the rest).
   LOCK_T1_AFTER_T2: true,
   // Close at market when the score flips firmly against an open trade.

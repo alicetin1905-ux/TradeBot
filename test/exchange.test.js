@@ -168,7 +168,7 @@ test('T1 fill moves the exchange stop to breakeven; T2/T3 fills book P&L and clo
   let events = [];
   await exchange.runExchange({ client, st, signals: {}, candidates: [], events });
   assert.equal(st.positions.XRPUSDT.breakeven, true);
-  assert.equal(ex.positions.XRPUSDT.stopLoss, 2.5);
+  assert.equal(ex.positions.XRPUSDT.stopLoss, 2.505); // entry 2.5 + 0.2% fee buffer
   assert.ok(Math.abs(st.account.balance - 1020) < 1e-6); // 400 * 0.05
   assert.equal(st.trades.at(-1).reason, 'T1 hit, stop moved to breakeven');
 
@@ -229,7 +229,7 @@ test('BREAKEVEN_AFTER t2: stop stays put after T1, moves to entry after T2', asy
   ex.fillOrder(pos.orders.t2);
   await exchange.runExchange({ client, st, signals: {}, candidates: [], events: [] });
   assert.equal(st.positions.XRPUSDT.breakeven, true);
-  assert.equal(ex.positions.XRPUSDT.stopLoss, 2.5);
+  assert.equal(ex.positions.XRPUSDT.stopLoss, 2.505); // entry 2.5 + 0.2% fee buffer
   assert.equal(st.trades.at(-1).reason, 'T2 hit, stop moved to breakeven');
 });
 
@@ -720,7 +720,7 @@ test('LOCK_T1_AFTER_T2: after T2 fills the exchange stop moves up to T1; a stop 
     ex.marks.XRPUSDT = 2.56;
     ex.fillOrder(pos.orders.t1);
     await exchange.runExchange({ client, st, signals: {}, candidates: [], events: [] });
-    assert.equal(ex.positions.XRPUSDT.stopLoss, 2.5);          // breakeven after T1
+    assert.equal(ex.positions.XRPUSDT.stopLoss, 2.505);        // breakeven (entry + 0.2% fee buffer) after T1
     ex.marks.XRPUSDT = 2.61;
     ex.fillOrder(pos.orders.t2);
     await exchange.runExchange({ client, st, signals: {}, candidates: [], events: [] });

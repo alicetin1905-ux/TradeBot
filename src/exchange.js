@@ -142,7 +142,9 @@ async function reconcile({ client, st, exPos, signals, events, now }) {
       const be = beAfter(pos);
       if (be !== 'off' && pos.filled[be] && !pos.breakeven) {
         try {
-          const bePrice = pos.tickSize ? roundStep(pos.entry, pos.tickSize) : pos.entry;
+          // entry plus a small buffer into profit so fees are covered (BREAKEVEN_BUFFER_PCT)
+          const raw = pos.entry * (1 + pos.bias * (config.BREAKEVEN_BUFFER_PCT || 0) / 100);
+          const bePrice = pos.tickSize ? roundStep(raw, pos.tickSize) : raw;
           await client.setStopLoss(sym, bePrice);
           pos.stop = bePrice;
           pos.breakeven = true;

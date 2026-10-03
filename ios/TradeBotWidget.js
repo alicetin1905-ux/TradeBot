@@ -15,6 +15,32 @@ const C = {
   green: new Color('#3fb950'), red: new Color('#f85149'), amber: new Color('#d29922'),
 };
 
+// Live mark price per open coin — the same source the dashboard uses (Bybit,
+// OKX as fallback), so the widget's P&L matches it instead of the bot's last
+// sync (which can be up to 5 minutes old).
+const OKX_ALIAS = { '1000PEPEUSDT': { id: 'PEPE-USDT-SWAP', mult: 1000 } };
+async function liveMark(sym) {
+  try {
+    const r = new Request('https://api.bybit.com/v5/market/tickers?category=linear&symbol=' + sym);
+    r.timeoutInterval = 8;
+    const d = await r.loadJSON();
+    const t = d.retCode === 0 && d.result && d.result.list && d.result.list[0];
+    if (t && +t.markPrice > 0) return +t.markPrice;
+  } catch (e) { /* try OKX */ }
+  try {
+    const a = OKX_ALIAS[sym] || { id: sym.replace(/USDT$/, '') + '-USDT-SWAP', mult: 1 };
+    const r = new Request('https://www.okx.com/api/v5/public/mark-price?instType=SWAP&instId=' + a.id);
+    r.timeoutInterval = 8;
+    const d = await r.loadJSON();
+    if (d.code === '0' && d.data && d.data[0]) return +d.data[0].markPx * a.mult;
+  } catch (e) { /* keep the bot's last value */ }
+  return null;
+}
+
+const markOf = (p) => p._mark || p.markPrice || p.entry;
+// P&L the way the dashboard computes it: (mark − entry) × direction × open size
+const pnlOf = (p) => p._mark ? (p._mark - p.entry) * p.bias * p.qtyRemaining : (p.unrealisedPnl || 0);
+
 async function load(name) {
   const r = new Request(RAW + name + '.json?_=' + Date.now());
   r.timeoutInterval = 15;
@@ -151,9 +177,9 @@ function readiness(s, pos, account) {
 function positionRows(box, pos, trades, o) {
   if (o.label) text(box, 'OPEN ' + pos.length + '/' + o.maxOpen, 9, C.dim, 'bold');
   if (!pos.length) text(box, 'no open positions', 11, C.dim);
-  const sorted = pos.slice().sort((a, b) => (b.unrealisedPnl || 0) - (a.unrealisedPnl || 0));
+  const sorted = pos.slice().sort((a, b) => pnlOf(b) - pnlOf(a));
   sorted.slice(0, o.max).forEach((p, i) => {
-    const mark = p.markPrice || p.entry;
+    const mark = markOf(p);
     if (i) box.addSpacer(o.gap);
     const row = box.addStack(); row.centerAlignContent();
     text(row, (p.bias > 0 ? '▲ ' : '▼ ') + short(p.symbol), 12, p.bias > 0 ? C.green : C.red, 'bold');
@@ -165,7 +191,7 @@ function positionRows(box, pos, trades, o) {
       text(row, 'SL ' + pct(-d.toStop) + ' · ' + d.nextName + ' ' + pct(d.toNext), 9, C.dim);
       row.addSpacer(8);
     }
-    text(row, money(p.unrealisedPnl || 0, 1), 12, col(p.unrealisedPnl || 0), 'mono');
+    text(row, money(pnlOf(p), 1), 12, col(pnlOf(p)), 'mono');
     if (o.bar) {
       box.addSpacer(2);
       const bar = progressBar(p, mark, o.width, o.labels);
@@ -217,8 +243,8 @@ function buildLock(fam, data) {
   const { account, positions, scores, tradesFile } = data;
   const pos = Object.values(positions || {});
   const trades = Array.isArray(tradesFile) ? tradesFile : (tradesFile && tradesFile.trades) || [];
-  const upnl = pos.reduce((s, p) => s + (p.unrealisedPnl || 0), 0);
-  const equity = account.exchangeEquity != null ? account.exchangeEquity : account.balance;
+  const upnl = pos.reduce((s, p) => s + (pnlOf(p)), 0);
+  const equity = account.balance + upnl; // same as the dashboard: balance + live open P&L
   const maxOpen = (account.settings && account.settings.MAX_OPEN_POSITIONS) || 5;
   const traded = new Set((account.settings && account.settings.SYMBOLS) || Object.keys(scores));
   const open = new Set(pos.map((p) => p.symbol));
@@ -238,11 +264,11 @@ function buildLock(fam, data) {
     // rectangular: equity + open P&L, open coins, strong coins (3 short lines)
     const R = realized(trades);
     t(w, '$' + equity.toFixed(0) + '  open ' + money(upnl) + '  day ' + money(R.today), 12, 'bold');
-    const openTxt = pos.slice().sort((x, y) => (y.unrealisedPnl || 0) - (x.unrealisedPnl || 0)).slice(0, 3)
-      .map((p) => (p.bias > 0 ? '▲' : '▼') + short(p.symbol) + ' ' + money(p.unrealisedPnl || 0).replace('$', '')).join(' ');
+    const openTxt = pos.slice().sort((x, y) => pnlOf(y) - pnlOf(x)).slice(0, 3)
+      .map((p) => (p.bias > 0 ? '▲' : '▼') + short(p.symbol) + ' ' + money(pnlOf(p)).replace('$', '')).join(' ');
     t(w, openTxt || 'no open positions', 11);
     const strongTxt = strong.slice(0, 3).map(([sym, s]) => short(sym) + ' ' + (s.score > 0 ? '+' : '') + s.score).join('  ');
-    t(w, '≥50: ' + (strongTxt || 'none'), 11);
+    t(w, '≥' + MIN_SCORE + ': ' + (strongTxt || 'none'), 11);
   }
   return w;
 }
@@ -277,8 +303,8 @@ function build(data) {
   const { account, positions, scores, tradesFile } = data;
   const pos = Object.values(positions || {});
   const trades = Array.isArray(tradesFile) ? tradesFile : (tradesFile && tradesFile.trades) || [];
-  const upnl = pos.reduce((s, p) => s + (p.unrealisedPnl || 0), 0);
-  const equity = account.exchangeEquity != null ? account.exchangeEquity : account.balance;
+  const upnl = pos.reduce((s, p) => s + (pnlOf(p)), 0);
+  const equity = account.balance + upnl; // same as the dashboard: balance + live open P&L
   const start = account.startingBalance || 0;
   const R = realized(trades);
   const maxOpen = (account.settings && account.settings.MAX_OPEN_POSITIONS) || 5;
@@ -346,6 +372,7 @@ let data = null;
 try {
   const [account, positions, scores, tradesFile] = await Promise.all([load('account'), load('positions'), load('scores'), load('trades')]);
   data = { account, positions, scores, tradesFile };
+  await Promise.all(Object.values(positions || {}).map(async (p) => { p._mark = await liveMark(p.symbol); }));
   if (account.settings && account.settings.ENTRY_MIN_SCORE) MIN_SCORE = account.settings.ENTRY_MIN_SCORE;
 } catch (e) { console.error(e); }
 

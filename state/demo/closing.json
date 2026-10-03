@@ -110,5 +110,42 @@
     "unrealisedPnl": 4.02224,
     "funding": -0.19263083,
     "closedDetectedAt": 1790966702007
+  },
+  "KAITOUSDT": {
+    "symbol": "KAITOUSDT",
+    "bias": -1,
+    "entry": 0.33,
+    "stop": 0.3536,
+    "initialStop": 0.3536,
+    "t1": 0.2949,
+    "t2": 0.2715,
+    "t3": 0.248,
+    "qtyTotal": 2107,
+    "qtyRemaining": 2107,
+    "qtyT1": 526,
+    "qtyT2": 526,
+    "qtyT3": 1055,
+    "margin": 69.531,
+    "notional": 695.3100000000001,
+    "riskAmt": 49.72520000000002,
+    "filled": {
+      "t1": false,
+      "t2": false,
+      "t3": false
+    },
+    "breakeven": false,
+    "beAfter": "t1",
+    "openedAt": 1791014474557,
+    "score": -71,
+    "orders": {
+      "entry": "538b7af0-e070-43d9-93fa-efb6602145f5",
+      "t1": "eb89a9c7-0f20-40db-a724-a69d87b3e534",
+      "t2": "6e01a2d5-f6e6-4bbd-bf62-744df8eafa1e",
+      "t3": "45d6561e-1ee4-41a1-a982-477c5176304b"
+    },
+    "tickSize": 0.0001,
+    "markPrice": 0.3533,
+    "unrealisedPnl": -49.0931,
+    "closedDetectedAt": 1791047102150
   }
 }

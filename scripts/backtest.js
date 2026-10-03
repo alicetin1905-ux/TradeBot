@@ -630,6 +630,8 @@ const SCORE_JUMP_ROB = args.includes('--score-jump-rob');
 const PF_LAB = args.includes('--pf-lab');
 // --score-rise: score >= 65 and still rising (long) / falling (short). backtest/SCORE_RISE.md.
 const SCORE_RISE = args.includes('--score-rise');
+// --limit-rob: robustness of the 0.25 ATR pullback limit entry. backtest/LIMIT_ROBUST.md.
+const LIMIT_ROB = args.includes('--limit-rob');
 const COINSET = args.includes('--coinset') ? String(args[args.indexOf('--coinset') + 1] || '').split(',').filter(Boolean).map(x => x.toUpperCase().replace(/USDT$/, '') + 'USDT') : null;
 const LAB_MODE = args.includes('--mode') ? args[args.indexOf('--mode') + 1] : 'classic';
 const LAB_MTF = args.includes('--mtf');
@@ -661,7 +663,7 @@ async function main() {
   }
   for (const s of symbols) {
     process.stderr.write(`scoring ${s}…\n`);
-    series[s].sig1 = SCORE_LAB ? new Map() : TF_COMPARE ? precompute(s, series[s].h1, 1, start) : SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB || RISK_GRID || LEV_GRID || DD_LAB || RISK_STARTS || COIN_WF || SCORE_MOM || LAB2 || LAB3 || TF_DAY || PER_CANDLE || COINSET || TUNE || COMBO || SPLIT || SLOTS || BTC_COOL || BTC_LINE || TIME_STOP || SCORE_JUMP || SCORE_JUMP_ROB || PF_LAB || SCORE_RISE ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
+    series[s].sig1 = SCORE_LAB ? new Map() : TF_COMPARE ? precompute(s, series[s].h1, 1, start) : SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB || RISK_GRID || LEV_GRID || DD_LAB || RISK_STARTS || COIN_WF || SCORE_MOM || LAB2 || LAB3 || TF_DAY || PER_CANDLE || COINSET || TUNE || COMBO || SPLIT || SLOTS || BTC_COOL || BTC_LINE || TIME_STOP || SCORE_JUMP || SCORE_JUMP_ROB || PF_LAB || SCORE_RISE || LIMIT_ROB ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
     series[s].sig4 = SCORE_LAB ? precompute(s, to4h(series[s].h1), 4, start, { h1: series[s].h1, mode: LAB_MODE, mtfTrim: LAB_MTF }) : precompute(s, to4h(series[s].h1), 4, start);
     if (TF_DAY) series[s].sigD = precompute(s, to1d(series[s].h1), 24, start, { entryTf: 'D' });
     addFilterInputs(series[s]);
@@ -678,6 +680,23 @@ async function main() {
   if (LEV_GRID) return levGrid(series, symbols, times, start, now);
   if (DD_LAB) return ddLab(series, symbols, times, start, now);
   if (RISK_STARTS) return riskStarts(series, symbols, times, start, now);
+  if (LIMIT_ROB) {
+    const M = { minScore: 65 }, L = (atr, hours) => ({ ...M, limit: { atr, hours } });
+    const A = config.SYMBOLS.slice(0, 11), B = config.SYMBOLS.slice(11);
+    return variantTable('Robustness of the pullback limit entry (entry score 65)', [
+      ['A  live: market entry', M],
+      ['limit 0.2 ATR, valid 4h', L(0.2, 4)],
+      ['limit 0.25 ATR, valid 4h', L(0.25, 4)],
+      ['limit 0.3 ATR, valid 4h', L(0.3, 4)],
+      ['limit 0.25 ATR, valid 2h', L(0.25, 2)],
+      ['limit 0.25 ATR, valid 8h', L(0.25, 8)],
+      ['-- each half of the coin list --', null],
+      ['market entry, first half', { ...M, coins: A }],
+      ['limit 0.25 ATR 4h, first half', { ...L(0.25, 4), coins: A }],
+      ['market entry, second half', { ...M, coins: B }],
+      ['limit 0.25 ATR 4h, second half', { ...L(0.25, 4), coins: B }],
+    ], series, times, start, now, 'LIMIT_ROBUST.md', 'Limit entries: an order 0.2-0.3 x ATR better than the signal close, filled with maker fee if price trades through it before it expires.');
+  }
   if (SCORE_RISE) {
     // n / p1 / p2 = score now, 1 and 2 candles ago, in the trade's direction (a short's falling score counts as rising)
     return variantTable('Score >= 65 and still moving the trade\'s way', [

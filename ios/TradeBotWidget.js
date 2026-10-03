@@ -37,6 +37,12 @@ async function liveMark(sym) {
   return null;
 }
 
+// price with the coin's own decimals (from its tick size), e.g. 0.5565 / 0.01732
+function fmtPrice(p, x) {
+  const dec = p.tickSize ? Math.max(0, Math.round(-Math.log10(p.tickSize))) : (x >= 100 ? 2 : x >= 1 ? 4 : 6);
+  return x.toFixed(Math.min(dec, 8));
+}
+
 const markOf = (p) => p._mark || p.markPrice || p.entry;
 // P&L the way the dashboard computes it: (mark − entry) × direction × open size
 const pnlOf = (p) => p._mark ? (p._mark - p.entry) * p.bias * p.qtyRemaining : (p.unrealisedPnl || 0);
@@ -183,6 +189,10 @@ function positionRows(box, pos, trades, o) {
     if (i) box.addSpacer(o.gap);
     const row = box.addStack(); row.centerAlignContent();
     text(row, (p.bias > 0 ? '▲ ' : '▼ ') + short(p.symbol), 12, p.bias > 0 ? C.green : C.red, 'bold');
+    if (o.price) {
+      row.addSpacer(6);
+      text(row, fmtPrice(p, mark), 11, C.text, 'mono');
+    }
     row.addSpacer(5);
     text(row, stage(p) || (p.breakeven ? 'BE' : ''), 9, C.amber);
     row.addSpacer();
@@ -334,7 +344,7 @@ function build(data) {
 
   const W = contentWidth();
   if (fam === 'medium') {
-    positionRows(w, pos, trades, { maxOpen, max: 3, bar: true, labels: false, detail: false, width: W, gap: 3, more: false });
+    positionRows(w, pos, trades, { maxOpen, max: 3, bar: true, labels: false, detail: false, price: true, width: W, gap: 3, more: false });
     w.addSpacer(4);
     // strong coins on one line, with the reason for the strongest
     const line = w.addStack(); line.centerAlignContent();
@@ -347,7 +357,7 @@ function build(data) {
     line.addSpacer();
     if (strong.length) { const r = readiness(strong[0][1], pos, account); text(line, r.s, 10, r.c, r.s === 'READY' ? 'bold' : null); }
   } else {
-    positionRows(w, pos, trades, { label: true, maxOpen, max: small ? 2 : 5, bar: !small, labels: large, detail: large, width: W, gap: large ? 4 : 1 });
+    positionRows(w, pos, trades, { label: true, maxOpen, max: small ? 2 : 5, bar: !small, labels: large, detail: large, price: !small, width: W, gap: large ? 4 : 1 });
     riskLine(w, pos, trades, maxOpen, small);
     // strong coins sit at the bottom; the fewer positions are open, the more of them fit
     w.addSpacer();

@@ -349,7 +349,8 @@ function simulate(series, symbols, times, rules) {
       if (i == null || t <= p.openedAt) continue;
       manage(p, series[p.symbol].h1[i], t);
       if (!open[p.symbol]) continue;
-      if (R.timeStopH && !p.filled.t1 && t - p.openedAt >= R.timeStopH * HOUR) {
+      if (R.timeStopH && !p.filled.t1 && t - p.openedAt >= R.timeStopH * HOUR &&
+          (!R.timeStopLossOnly || (series[p.symbol].h1[i].c - p.entry) * p.bias < 0)) {
         closeFill(p, p.qtyRemaining, series[p.symbol].h1[i].c, 'time stop', FEE_TAKER, t);
         continue;
       }
@@ -603,6 +604,8 @@ const SLOTS = args.includes('--slots');
 const BTC_COOL = args.includes('--btc-cool');
 // --btc-line: stricter BTC filter (shorts only below a BTC score, longs only above). backtest/BTC_LINE.md.
 const BTC_LINE = args.includes('--btc-line');
+// --time-stop: close a trade that hasn't reached T1 after N hours. backtest/TIME_STOP.md.
+const TIME_STOP = args.includes('--time-stop');
 const COINSET = args.includes('--coinset') ? String(args[args.indexOf('--coinset') + 1] || '').split(',').filter(Boolean).map(x => x.toUpperCase().replace(/USDT$/, '') + 'USDT') : null;
 const LAB_MODE = args.includes('--mode') ? args[args.indexOf('--mode') + 1] : 'classic';
 const LAB_MTF = args.includes('--mtf');
@@ -634,7 +637,7 @@ async function main() {
   }
   for (const s of symbols) {
     process.stderr.write(`scoring ${s}…\n`);
-    series[s].sig1 = SCORE_LAB ? new Map() : TF_COMPARE ? precompute(s, series[s].h1, 1, start) : SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB || RISK_GRID || LEV_GRID || DD_LAB || RISK_STARTS || COIN_WF || SCORE_MOM || LAB2 || LAB3 || TF_DAY || PER_CANDLE || COINSET || TUNE || COMBO || SPLIT || SLOTS || BTC_COOL || BTC_LINE ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
+    series[s].sig1 = SCORE_LAB ? new Map() : TF_COMPARE ? precompute(s, series[s].h1, 1, start) : SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB || RISK_GRID || LEV_GRID || DD_LAB || RISK_STARTS || COIN_WF || SCORE_MOM || LAB2 || LAB3 || TF_DAY || PER_CANDLE || COINSET || TUNE || COMBO || SPLIT || SLOTS || BTC_COOL || BTC_LINE || TIME_STOP ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
     series[s].sig4 = SCORE_LAB ? precompute(s, to4h(series[s].h1), 4, start, { h1: series[s].h1, mode: LAB_MODE, mtfTrim: LAB_MTF }) : precompute(s, to4h(series[s].h1), 4, start);
     if (TF_DAY) series[s].sigD = precompute(s, to1d(series[s].h1), 24, start, { entryTf: 'D' });
     addFilterInputs(series[s]);
@@ -651,6 +654,20 @@ async function main() {
   if (LEV_GRID) return levGrid(series, symbols, times, start, now);
   if (DD_LAB) return ddLab(series, symbols, times, start, now);
   if (RISK_STARTS) return riskStarts(series, symbols, times, start, now);
+  if (TIME_STOP) {
+    const M = { minScore: 65 };
+    return variantTable('Time stop: close when T1 not reached after N hours (entry score 65)', [
+      ['A  live: no time stop', M],
+      ['close after 12h without T1', { ...M, timeStopH: 12 }],
+      ['close after 24h without T1', { ...M, timeStopH: 24 }],
+      ['close after 36h without T1', { ...M, timeStopH: 36 }],
+      ['close after 48h without T1', { ...M, timeStopH: 48 }],
+      ['close after 72h without T1', { ...M, timeStopH: 72 }],
+      ['-- only when the trade is in loss --', null],
+      ['24h without T1 and in loss', { ...M, timeStopH: 24, timeStopLossOnly: true }],
+      ['48h without T1 and in loss', { ...M, timeStopH: 48, timeStopLossOnly: true }],
+    ], series, times, start, now, 'TIME_STOP.md', 'Time stop: a trade still short of T1 after N hours is closed at market (taker fee). Checked hourly, like the live bot.');
+  }
   if (BTC_LINE) {
     const M = { minScore: 65 };
     return variantTable('Stricter BTC filter (entry score 65)', [

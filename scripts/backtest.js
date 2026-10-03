@@ -606,6 +606,8 @@ const BTC_COOL = args.includes('--btc-cool');
 const BTC_LINE = args.includes('--btc-line');
 // --time-stop: close a trade that hasn't reached T1 after N hours. backtest/TIME_STOP.md.
 const TIME_STOP = args.includes('--time-stop');
+// --score-jump: enter when the score jumps N+ points in one 4H candle. backtest/SCORE_JUMP.md.
+const SCORE_JUMP = args.includes('--score-jump');
 const COINSET = args.includes('--coinset') ? String(args[args.indexOf('--coinset') + 1] || '').split(',').filter(Boolean).map(x => x.toUpperCase().replace(/USDT$/, '') + 'USDT') : null;
 const LAB_MODE = args.includes('--mode') ? args[args.indexOf('--mode') + 1] : 'classic';
 const LAB_MTF = args.includes('--mtf');
@@ -637,7 +639,7 @@ async function main() {
   }
   for (const s of symbols) {
     process.stderr.write(`scoring ${s}…\n`);
-    series[s].sig1 = SCORE_LAB ? new Map() : TF_COMPARE ? precompute(s, series[s].h1, 1, start) : SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB || RISK_GRID || LEV_GRID || DD_LAB || RISK_STARTS || COIN_WF || SCORE_MOM || LAB2 || LAB3 || TF_DAY || PER_CANDLE || COINSET || TUNE || COMBO || SPLIT || SLOTS || BTC_COOL || BTC_LINE || TIME_STOP ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
+    series[s].sig1 = SCORE_LAB ? new Map() : TF_COMPARE ? precompute(s, series[s].h1, 1, start) : SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB || RISK_GRID || LEV_GRID || DD_LAB || RISK_STARTS || COIN_WF || SCORE_MOM || LAB2 || LAB3 || TF_DAY || PER_CANDLE || COINSET || TUNE || COMBO || SPLIT || SLOTS || BTC_COOL || BTC_LINE || TIME_STOP || SCORE_JUMP ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
     series[s].sig4 = SCORE_LAB ? precompute(s, to4h(series[s].h1), 4, start, { h1: series[s].h1, mode: LAB_MODE, mtfTrim: LAB_MTF }) : precompute(s, to4h(series[s].h1), 4, start);
     if (TF_DAY) series[s].sigD = precompute(s, to1d(series[s].h1), 24, start, { entryTf: 'D' });
     addFilterInputs(series[s]);
@@ -654,6 +656,19 @@ async function main() {
   if (LEV_GRID) return levGrid(series, symbols, times, start, now);
   if (DD_LAB) return ddLab(series, symbols, times, start, now);
   if (RISK_STARTS) return riskStarts(series, symbols, times, start, now);
+  if (SCORE_JUMP) {
+    // entryFn(now, 1 candle ago, 2 candles ago): scores in the trade's direction
+    return variantTable('Score jump: enter when the score rises N+ in one 4H candle', [
+      ['A  live: score >= 65', { entryFn: (n) => n >= 65 }],
+      ['jump +30 in 1 candle (score >= 25)', { entryFn: (n, p1) => n - p1 >= 30 }],
+      ['jump +20 in 1 candle', { entryFn: (n, p1) => n - p1 >= 20 }],
+      ['jump +40 in 1 candle', { entryFn: (n, p1) => n - p1 >= 40 }],
+      ['jump +30 and score >= 50', { entryFn: (n, p1) => n - p1 >= 30 && n >= 50 }],
+      ['jump +30 and score >= 65', { entryFn: (n, p1) => n - p1 >= 30 && n >= 65 }],
+      ['score >= 65 OR jump +30', { entryFn: (n, p1) => n >= 65 || n - p1 >= 30 }],
+      ['score >= 65 OR (jump +30 and score >= 50)', { entryFn: (n, p1) => n >= 65 || (n - p1 >= 30 && n >= 50) }],
+    ], series, times, start, now, 'SCORE_JUMP.md', 'Scores are taken in the trade direction (a short\'s score counted positive). "jump" = this 4H candle\'s score minus the previous one.');
+  }
   if (TIME_STOP) {
     const M = { minScore: 65 };
     return variantTable('Time stop: close when T1 not reached after N hours (entry score 65)', [

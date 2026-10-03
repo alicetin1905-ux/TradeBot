@@ -628,6 +628,8 @@ const SCORE_JUMP = args.includes('--score-jump');
 const SCORE_JUMP_ROB = args.includes('--score-jump-rob');
 // --pf-lab: pullback limit entries, volatility band, weekend / time-of-day filters. backtest/PF_LAB.md.
 const PF_LAB = args.includes('--pf-lab');
+// --score-rise: score >= 65 and still rising (long) / falling (short). backtest/SCORE_RISE.md.
+const SCORE_RISE = args.includes('--score-rise');
 const COINSET = args.includes('--coinset') ? String(args[args.indexOf('--coinset') + 1] || '').split(',').filter(Boolean).map(x => x.toUpperCase().replace(/USDT$/, '') + 'USDT') : null;
 const LAB_MODE = args.includes('--mode') ? args[args.indexOf('--mode') + 1] : 'classic';
 const LAB_MTF = args.includes('--mtf');
@@ -659,7 +661,7 @@ async function main() {
   }
   for (const s of symbols) {
     process.stderr.write(`scoring ${s}…\n`);
-    series[s].sig1 = SCORE_LAB ? new Map() : TF_COMPARE ? precompute(s, series[s].h1, 1, start) : SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB || RISK_GRID || LEV_GRID || DD_LAB || RISK_STARTS || COIN_WF || SCORE_MOM || LAB2 || LAB3 || TF_DAY || PER_CANDLE || COINSET || TUNE || COMBO || SPLIT || SLOTS || BTC_COOL || BTC_LINE || TIME_STOP || SCORE_JUMP || SCORE_JUMP_ROB || PF_LAB ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
+    series[s].sig1 = SCORE_LAB ? new Map() : TF_COMPARE ? precompute(s, series[s].h1, 1, start) : SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB || RISK_GRID || LEV_GRID || DD_LAB || RISK_STARTS || COIN_WF || SCORE_MOM || LAB2 || LAB3 || TF_DAY || PER_CANDLE || COINSET || TUNE || COMBO || SPLIT || SLOTS || BTC_COOL || BTC_LINE || TIME_STOP || SCORE_JUMP || SCORE_JUMP_ROB || PF_LAB || SCORE_RISE ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
     series[s].sig4 = SCORE_LAB ? precompute(s, to4h(series[s].h1), 4, start, { h1: series[s].h1, mode: LAB_MODE, mtfTrim: LAB_MTF }) : precompute(s, to4h(series[s].h1), 4, start);
     if (TF_DAY) series[s].sigD = precompute(s, to1d(series[s].h1), 24, start, { entryTf: 'D' });
     addFilterInputs(series[s]);
@@ -676,6 +678,20 @@ async function main() {
   if (LEV_GRID) return levGrid(series, symbols, times, start, now);
   if (DD_LAB) return ddLab(series, symbols, times, start, now);
   if (RISK_STARTS) return riskStarts(series, symbols, times, start, now);
+  if (SCORE_RISE) {
+    // n / p1 / p2 = score now, 1 and 2 candles ago, in the trade's direction (a short's falling score counts as rising)
+    return variantTable('Score >= 65 and still moving the trade\'s way', [
+      ['A  live: score >= 65', { entryFn: (n) => n >= 65 }],
+      ['>= 65 and higher than 1 candle ago', { entryFn: (n, p1) => n >= 65 && n > p1 }],
+      ['>= 65 and not lower than 1 candle ago', { entryFn: (n, p1) => n >= 65 && n >= p1 }],
+      ['>= 65 and up 5+ vs 1 candle ago', { entryFn: (n, p1) => n >= 65 && n - p1 >= 5 }],
+      ['>= 65 and up 10+ vs 1 candle ago', { entryFn: (n, p1) => n >= 65 && n - p1 >= 10 }],
+      ['>= 65 and rising 2 candles in a row', { entryFn: (n, p1, p2) => n >= 65 && n > p1 && p1 > p2 }],
+      ['>= 65 and higher than 2 candles ago', { entryFn: (n, p1, p2) => n >= 65 && n > p2 }],
+      ['-- opposite (control) --', null],
+      ['>= 65 but lower than 1 candle ago', { entryFn: (n, p1) => n >= 65 && n < p1 }],
+    ], series, times, start, now, 'SCORE_RISE.md', 'Scores in the trade direction: for a short, a score going from -60 to -75 counts as rising. The control row takes only the trades the rule would skip.');
+  }
   if (PF_LAB) {
     const M = { minScore: 65 };
     return variantTable('PF lab: pullback entry, volatility filter, time filter (entry score 65)', [

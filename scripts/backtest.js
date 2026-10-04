@@ -1056,11 +1056,22 @@ async function main() {
   process.stderr.write(`\nwrote backtest/results.json and backtest/REPORT.md\n`);
 }
 
+// A value from control/settings.json (the live overrides), else config.js.
+function liveSetting(k) {
+  try { const v = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'control', 'settings.json'), 'utf8'))[k]; if (v !== undefined) return v; } catch (e) { /* no file */ }
+  return config[k];
+}
+
 function analyze(series, allSymbols, times, start, end) {
   const symbols = config.SYMBOLS.filter(s => series[s]); // BTC may be loaded for the BTC filter only
   const live = VARIANTS.find(v => v.focus);
   const P = config.PORTFOLIO;
-  const rules = { ...live.rules, start: P.STARTING_BALANCE, riskUsd: P.RISK_PCT != null ? null : P.RISK_USDT, riskPct: P.RISK_PCT, margin: P.MARGIN_USDT, leverage: P.LEVERAGE, maxSameDir: P.MAX_SAME_DIRECTION, maxOpen: P.MAX_OPEN_POSITIONS };
+  const rules = { ...live.rules, start: P.STARTING_BALANCE, riskUsd: P.RISK_PCT != null ? null : P.RISK_USDT, riskPct: P.RISK_PCT, margin: P.MARGIN_USDT, leverage: P.LEVERAGE, maxSameDir: P.MAX_SAME_DIRECTION, maxOpen: P.MAX_OPEN_POSITIONS,
+    // the live entry rules (control/settings.json wins over config.js; the
+    // backtest otherwise ignores that file): min score, pullback limit entry, breakeven buffer
+    minScore: liveSetting('ENTRY_MIN_SCORE'), beBufferPct: liveSetting('BREAKEVEN_BUFFER_PCT') || 0,
+    limit: liveSetting('LIMIT_ENTRY_ATR') > 0 ? { atr: liveSetting('LIMIT_ENTRY_ATR'), hours: liveSetting('LIMIT_ENTRY_HOURS') || 4 } : null };
+  process.stderr.write(`analysis rules: min score ${rules.minScore}, limit ${JSON.stringify(rules.limit)}, BE buffer ${rules.beBufferPct}%\n`);
   const r = simulate(series, symbols, times, rules);
   const T = [...r.tradeList].sort((a, b) => a.closedAt - b.closedAt);
   const $ = (x) => (x < 0 ? '-$' : '$') + Math.abs(x).toLocaleString('en-US', { maximumFractionDigits: 0 });

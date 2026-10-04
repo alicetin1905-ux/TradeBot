@@ -1,25 +1,25 @@
 {
-  "AXSUSDT": {
-    "symbol": "AXSUSDT",
+  "SOLUSDT": {
+    "symbol": "SOLUSDT",
     "bias": 1,
-    "score": 78,
-    "orderId": "975bcc38-d5d2-47ad-9b70-8879f4f0c8ff",
-    "price": 1.3022,
-    "qty": 412,
-    "stopLoss": 1.1843,
+    "score": 66,
+    "orderId": "08279470-d7dc-4a62-990a-8e8402b0cd1e",
+    "price": 120.58,
+    "qty": 19,
+    "stopLoss": 118.04,
     "ratios": {
-      "t1": 1.135751146959547,
-      "t2": 1.226251911599245,
-      "t3": 1.316752676238943
+      "t1": 1.0316414541178747,
+      "t2": 1.0527357568631244,
+      "t3": 1.073830059608374
     },
     "inst": {
       "qtyStep": 0.1,
       "minOrderQty": 0.1,
       "minNotional": 5,
-      "tickSize": 0.0001
+      "tickSize": 0.01
     },
-    "margin": 53.650639999999996,
-    "placedAt": 1791086474875,
-    "expiresAt": 1791100874875
+    "margin": 229.102,
+    "placedAt": 1791100878199,
+    "expiresAt": 1791115278199
   }
 }

@@ -1,1 +1,39 @@
-{}
+{
+  "BLURUSDT": {
+    "symbol": "BLURUSDT",
+    "bias": 1,
+    "entry": 0.021861,
+    "stop": 0.020821,
+    "initialStop": 0.020821,
+    "t1": 0.023422,
+    "t2": 0.024462,
+    "t3": 0.025502,
+    "qtyTotal": 46676,
+    "qtyRemaining": 46676,
+    "qtyT1": 11669,
+    "qtyT2": 11669,
+    "qtyT3": 23338,
+    "margin": 102.0384036,
+    "notional": 1020.3840359999999,
+    "riskAmt": 48.54303999999996,
+    "filled": {
+      "t1": false,
+      "t2": false,
+      "t3": false
+    },
+    "breakeven": false,
+    "beAfter": "t1",
+    "openedAt": 1791127802119,
+    "score": 75,
+    "orders": {
+      "entry": "46458b8c-f4b5-45fe-81c1-423869f96c65",
+      "t1": "4022624f-e1d4-4715-943f-a6d4b0637741",
+      "t2": "c9c5d7f8-7978-40c9-ba54-b6806975deb3",
+      "t3": "e4134a3a-df51-46dc-8e52-df4bd8c19d63"
+    },
+    "tickSize": 0.000001,
+    "markPrice": 0.020953,
+    "unrealisedPnl": -42.381808,
+    "closedDetectedAt": 1791210901952
+  }
+}

@@ -100,6 +100,17 @@
   .trade .sym{ font-weight:700; width:64px; flex:0 0 auto; }
   .trade .reason{ color:var(--text-secondary); flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .trade .pnl{ font-family:var(--mono); font-weight:600; flex:0 0 auto; }
+  .cpos{ padding:10px 12px; border-bottom:1px solid var(--border); font-size:12px; }
+  .cpos:last-child{ border-bottom:0; }
+  .cpos .top{ display:flex; align-items:center; gap:8px; }
+  .cpos .top .sym{ font-weight:700; }
+  .cpos .top .dir{ font-size:10px; font-weight:700; letter-spacing:0.06em; padding:1px 6px; border-radius:6px; border:1px solid currentColor; }
+  .cpos .top .pnl{ margin-left:auto; font-family:var(--mono); font-weight:700; font-size:13px; }
+  .cpos .when, .cpos .exits{ color:var(--text-secondary); font-size:11px; margin-top:3px; line-height:1.5; }
+  .cpos .lv{ display:flex; flex-wrap:wrap; gap:4px 12px; margin-top:4px; font-family:var(--mono); font-size:11px; color:var(--text-secondary); }
+  .cpos .lv b{ color:var(--text-primary); font-weight:600; }
+  .cpos .lv .hit{ color:var(--up); }
+  .cpos .lv .sl{ color:var(--down); }
   .tradesCard{ background:var(--panel); border:1px solid var(--border); border-radius:12px; overflow:hidden; }
   .empty{ padding:16px 12px; color:var(--text-tertiary); font-size:12px; text-align:center; }
 
@@ -261,7 +272,7 @@
 <h2>Per coin</h2>
 <div class="statCard" id="coinStatsCard"><div class="empty">Loading…</div></div>
 
-<h2>Recent trades</h2>
+<h2>Closed positions</h2>
 <div class="tradesCard" id="tradeLog"><div class="empty">Loading…</div></div>
 
 <h2>Settings</h2>
@@ -754,18 +765,61 @@
   }
   var lastMarkPrices = {};
 
-  function renderTrades(trades) {
-    if (!trades.length) { els.tradeLog.innerHTML = '<div class="empty">No closed trades yet.</div>'; return; }
-    var recent = trades.slice(-25).reverse();
-    els.tradeLog.innerHTML = recent.map(function (t) {
-      var label = (SYMBOLS.find(function (s) { return s.id === t.symbol; }) || { label: t.symbol }).label;
-      return (
-        '<div class="trade">' +
-          '<span class="sym">' + label + '</span>' +
-          '<span class="reason">' + t.reason + '</span>' +
-          '<span class="pnl ' + pnlClass(t.pnl) + '">' + fmtSigned(t.pnl) + '</span>' +
-        '</div>'
-      );
+  // Closed positions: trades.json's per-fill records (T1/T2 partials + the
+  // final exit) grouped back into one card per position, with its plan
+  // (entry, SL, T1/T2/T3) and every exit. Positions Bybit closed whose P&L
+  // record hasn't arrived yet (closing.json) are listed as pending.
+  function renderTrades(trades, closing, levels, open) {
+    var groups = {};
+    trades.forEach(function (t) {
+      var key = t.symbol + ':' + t.openedAt;
+      var g = groups[key] || (groups[key] = { symbol: t.symbol, bias: t.bias, entry: t.entry, openedAt: t.openedAt, closedAt: 0, score: t.score, pnl: 0, fills: [], lv: null });
+      g.fills.push(t);
+      g.pnl += t.pnl;
+      if (t.closedAt > g.closedAt) g.closedAt = t.closedAt;
+      if (t.t1 != null) g.lv = { stop: t.stop, t1: t.t1, t2: t.t2, t3: t.t3 };
+    });
+    // a still-open position's banked partials (e.g. T1) belong to Open positions, not here
+    var isOpen = function (g) { var p = open && open[g.symbol]; return !!p && p.openedAt === g.openedAt; };
+    var list = Object.keys(groups).filter(function (k) { return !isOpen(groups[k]); }).map(function (k) {
+      var g = groups[k];
+      if (!g.lv && levels[k]) g.lv = levels[k];
+      return g;
+    });
+    Object.keys(closing || {}).forEach(function (sym) {
+      var c = closing[sym];
+      if (groups[sym + ':' + c.openedAt]) return; // already booked
+      list.push({ symbol: sym, bias: c.bias, entry: c.entry, openedAt: c.openedAt, closedAt: c.closedDetectedAt, score: c.score, pnl: null, fills: [],
+        lv: c.t1 != null ? { stop: c.initialStop != null ? c.initialStop : c.stop, t1: c.t1, t2: c.t2, t3: c.t3 } : null, pending: true });
+    });
+    if (!list.length) { els.tradeLog.innerHTML = '<div class="empty">No closed trades yet.</div>'; return; }
+    list.sort(function (a, b) { return b.closedAt - a.closedAt; });
+    var when = function (ms) {
+      var d = new Date(ms);
+      return d.toLocaleDateString([], { day: '2-digit', month: '2-digit' }) + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    };
+    var dur = function (ms) { var h = Math.round(ms / 3600000); return h >= 48 ? Math.round(h / 24) + 'd' : h + 'h'; };
+    els.tradeLog.innerHTML = list.slice(0, 30).map(function (g) {
+      var label = (SYMBOLS.find(function (s) { return s.id === g.symbol; }) || { label: g.symbol.replace('USDT', '') }).label;
+      var reasons = g.fills.map(function (f) { return f.reason; }).join(' ');
+      var hit = { t1: /T1 hit/.test(reasons), t2: /T2 hit/.test(reasons), t3: /T3 hit/.test(reasons) };
+      var lv = g.lv;
+      var lvHtml = '<span>Entry <b>' + fmtPrice(g.entry) + '</b></span>' + (lv ?
+        '<span class="sl">SL ' + fmtPrice(lv.stop) + '</span>' +
+        ['t1', 't2', 't3'].map(function (k) { return '<span class="' + (hit[k] ? 'hit' : '') + '">' + k.toUpperCase() + ' ' + fmtPrice(lv[k]) + (hit[k] ? ' ✓' : '') + '</span>'; }).join('') : '');
+      var exits = g.pending ? 'Closed on Bybit — P&amp;L record not in yet'
+        : g.fills.slice().sort(function (a, b) { return a.closedAt - b.closedAt; }).map(function (f) {
+          return f.reason.split(',')[0] + ' @ ' + fmtPrice(f.exit) + ' (' + fmtSigned(f.pnl) + ', ' + when(f.closedAt) + ')';
+        }).join(' · ');
+      return '<div class="cpos">' +
+        '<div class="top"><span class="sym">' + label + '</span>' +
+          '<span class="dir ' + (g.bias === 1 ? 'up' : 'down') + '">' + (g.bias === 1 ? 'LONG' : 'SHORT') + '</span>' +
+          (g.score != null ? '<span class="flat">score ' + g.score + '</span>' : '') +
+          '<span class="pnl ' + (g.pending ? 'flat' : pnlClass(g.pnl)) + '">' + (g.pending ? 'pending' : fmtSigned(g.pnl)) + '</span></div>' +
+        '<div class="when">Opened ' + when(g.openedAt) + ' → closed ' + when(g.closedAt) + ' · ' + dur(g.closedAt - g.openedAt) + '</div>' +
+        '<div class="lv">' + lvHtml + '</div>' +
+        '<div class="exits">' + exits + '</div>' +
+      '</div>';
     }).join('');
   }
 
@@ -1035,6 +1089,8 @@
         fetchJson('scores').catch(function () { return {}; }),
         fetchJson('flipEntries').catch(function () { return {}; }),
         fetchJson('pending').catch(function () { return {}; }),
+        fetchJson('closing').catch(function () { return {}; }),
+        fetchJson('tradeLevels').catch(function () { return {}; }),
       ]);
       var account = results[0], positions = results[1], trades = results[2], scores = results[3];
       sigData = { flips: results[4] || {}, scores: scores || {}, chase: (account.settings && account.settings.MAX_CHASE_ATR) || 1 };
@@ -1053,7 +1109,7 @@
       renderOpenPositions(positions, markPrices, results[5] || {});
       renderPerformance(trades, started);
       renderCoinStats(trades);
-      renderTrades(trades);
+      renderTrades(trades, results[6] || {}, results[7] || {}, positions);
       if (watch.on) checkNewEntries(positions);
       else lastPositions = positions;
 

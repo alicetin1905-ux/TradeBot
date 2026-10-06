@@ -94,6 +94,8 @@ async function recordFills(client, st, pos, events, { until = Infinity, skipIds 
     st.trades.push({
       symbol: pos.symbol, bias: pos.bias, entry: pos.entry, exit: r.exit, qty: r.qty, pnl: r.pnl,
       reason, openedAt: pos.openedAt, closedAt: r.at, score: pos.score,
+      // the trade's plan, for the dashboard's closed-positions list
+      stop: pos.initialStop != null ? pos.initialStop : pos.stop, t1: pos.t1, t2: pos.t2, t3: pos.t3, qtyTotal: pos.qtyTotal,
     });
     events.push({ symbol: pos.symbol, type: /T[12] hit/.test(reason) ? 'partial' : 'exit', reason, pnl: r.pnl, price: r.exit });
     st.account.balance += r.pnl;

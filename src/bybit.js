@@ -219,8 +219,17 @@ function createClient({ apiKey, apiSecret, env = 'demo', fetchImpl = fetch }) {
       return out;
     },
 
+    // startTime null = Bybit's default window (the last 7 days). With a
+    // startTime, endTime is sent too (now, at most 7 days later) so the
+    // window is explicit rather than left to the API's defaults.
     async getClosedPnl(symbol, startTime) {
-      const r = await request('GET', '/v5/position/closed-pnl', { category: 'linear', symbol, startTime: String(startTime), limit: '100' });
+      const params = { category: 'linear', symbol, limit: '100' };
+      if (startTime != null) {
+        const end = Date.now(), start = Math.max(startTime, end - 7 * 86400000 + 60000);
+        params.startTime = String(start);
+        params.endTime = String(end);
+      }
+      const r = await request('GET', '/v5/position/closed-pnl', params);
       return (r.list || []).map(x => ({
         orderId: x.orderId, qty: num(x.closedSize), exit: num(x.avgExitPrice),
         pnl: num(x.closedPnl), at: num(x.updatedTime),

@@ -84,7 +84,12 @@ function reasonFor(pos, orderId) {
 // that belong to a newer trade on the same coin.
 async function recordFills(client, st, pos, events, { until = Infinity, skipIds = [] } = {}) {
   const seen = new Set([...st.seenOrderIds, ...skipIds]);
-  const records = await client.getClosedPnl(pos.symbol, pos.openedAt - 60000);
+  let records = await client.getClosedPnl(pos.symbol, pos.openedAt - 60000);
+  // A close whose record didn't come back for that window (seen live: BLUR,
+  // 5 Oct): ask again with Bybit's default last-7-days window.
+  if (pos.closedDetectedAt && !records.some(r => r.at >= pos.openedAt - 60000 && r.at <= until && !seen.has(r.orderId))) {
+    records = records.concat(await client.getClosedPnl(pos.symbol, null));
+  }
   let added = 0;
   for (const r of records.sort((a, b) => a.at - b.at)) {
     if (seen.has(r.orderId) || r.at < pos.openedAt - 60000 || r.at > until) continue;
@@ -117,7 +122,10 @@ async function reconcile({ client, st, exPos, signals, events, now }) {
       until: (pos.closedDetectedAt || now) + CLOSE_GRACE_MS,
       skipIds: newer && newer.orders ? Object.values(newer.orders) : [],
     });
-    if (now - pos.closedDetectedAt > DAY_MS) delete st.closing[sym];
+    // Forget it a day after the close once its P&L is booked; one still
+    // without any booked record is retried for up to 7 days.
+    const booked = st.trades.some(t => t.symbol === sym && t.openedAt === pos.openedAt);
+    if (now - pos.closedDetectedAt > (booked ? DAY_MS : 7 * DAY_MS)) delete st.closing[sym];
   }
 
   for (const sym of Object.keys(st.positions)) {

@@ -136,6 +136,9 @@
   .posGrid{ display:grid; grid-template-columns:1fr; gap:10px; }
   @media (min-width:560px){ .posGrid{ grid-template-columns:repeat(2, 1fr); } }
   .posCard{ background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:14px; }
+  /* open position in profit / in loss (live P&L) */
+  .posCard.pnlUp, .coin.pnlUp{ box-shadow:0 0 0 2px var(--up); }
+  .posCard.pnlDown, .coin.pnlDown{ box-shadow:0 0 0 2px var(--down); }
   .posCard .posHead{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
   .posCard .posSymWrap{ display:flex; align-items:center; gap:7px; }
   .posCard .posSym{ font-weight:700; font-size:14px; }
@@ -457,7 +460,8 @@
       }
       var scoreTxt = sc ? (sc.score > 0 ? '+' : '') + sc.score : '—';
       return (
-        '<div class="coin' + (pos ? ' inPos' : '') + (account && account.settings && account.settings.SYMBOLS && account.settings.SYMBOLS.indexOf(s.id) < 0 ? '' : ringClass(sc, s.id, account)) + '">' +
+        '<div class="coin' + (pos ? ' inPos' : '') + (pos && upnl != null ? (upnl > 0 ? ' pnlUp' : upnl < 0 ? ' pnlDown' : '')
+          : account && account.settings && account.settings.SYMBOLS && account.settings.SYMBOLS.indexOf(s.id) < 0 ? '' : ringClass(sc, s.id, account)) + '">' +
           '<div class="px" data-px="' + s.id + '">' + pxHtml(s.id) + '</div>' +
           '<div class="sym">' + s.label + '</div>' +
           '<div class="bal">score ' + scoreTxt + '</div>' +
@@ -717,9 +721,10 @@
       var dir = pos.bias === 1 ? 'long' : 'short';
       var mark = markPrices[pos.symbol];
 
-      var markHtml;
+      var markHtml, ring = '';
       if (mark != null) {
         var pnl = (mark - pos.entry) * pos.bias * pos.qtyRemaining;
+        ring = pnl > 0 ? ' pnlUp' : pnl < 0 ? ' pnlDown' : '';
         var pnlPct = pos.margin ? (pnl / pos.margin) * 100 : 0;
         var moveCls = pos.bias === 1 ? (mark >= pos.entry ? 'up' : 'down') : (mark <= pos.entry ? 'up' : 'down');
         markHtml =
@@ -737,7 +742,7 @@
       };
 
       return (
-        '<div class="posCard">' +
+        '<div class="posCard' + ring + '">' +
           '<div class="posHead">' +
             '<div class="posSymWrap"><span class="posSym">' + e.s.label + '</span><span class="posBadge ' + dir + '">' + dir.toUpperCase() + '</span></div>' +
             '<span class="posAge">' + timeAgo(pos.openedAt) + '</span>' +
@@ -1107,7 +1112,8 @@
       renderRules(account, openSymbols.length);
       renderSettings(account);
       renderCoins(positions, scores, markPrices, account);
-      renderOpenPositions(positions, markPrices, results[5] || {});
+      live.pending = results[5] || {};
+      renderOpenPositions(positions, markPrices, live.pending);
       renderPerformance(trades, started);
       renderCoinStats(trades);
       renderTrades(trades, results[6] || {}, results[7] || {}, positions);
@@ -1228,7 +1234,7 @@
     if (!live.dirty || !live.account || !live.positions) return;
     live.dirty = false;
     renderTotals(live.account, live.positions, lastMarkPrices);
-    renderOpenPositions(live.positions, lastMarkPrices);
+    renderOpenPositions(live.positions, lastMarkPrices, live.pending);
   }, 1000);
 
   // iOS pauses pages in the background: reload and reconnect when it comes back.

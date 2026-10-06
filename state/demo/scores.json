@@ -1,67 +1,68 @@
 {
   "SOLUSDT": {
-    "score": 17,
+    "score": 14,
     "bias": 0,
-    "at": 1791252062120,
+    "at": 1791255662822,
     "src": "bybit",
     "atr": 1.60281
   },
   "DOGEUSDT": {
-    "score": 24,
-    "bias": 0,
-    "at": 1791252063002,
+    "score": 26,
+    "bias": 1,
+    "at": 1791255663236,
     "src": "bybit",
-    "atr": 0.00160683
+    "atr": 0.00160683,
+    "wait": "weak"
   },
   "SUIUSDT": {
-    "score": 30,
-    "bias": 1,
-    "at": 1791252063403,
+    "score": 19,
+    "bias": 0,
+    "at": 1791255663786,
     "src": "bybit",
     "atr": 0.0387675
   },
   "ENAUSDT": {
-    "score": 46,
+    "score": 49,
     "bias": 1,
-    "at": 1791252063816,
+    "at": 1791255664203,
     "src": "bybit",
     "atr": 0.00953376,
     "wait": "weak"
   },
   "WLDUSDT": {
-    "score": 23,
-    "bias": 0,
-    "at": 1791252064222,
+    "score": 25,
+    "bias": 1,
+    "at": 1791255664918,
     "src": "bybit",
     "atr": 0.0214019
   },
   "DYDXUSDT": {
-    "score": 60,
+    "score": 62,
     "bias": 1,
-    "at": 1791252064611,
+    "at": 1791255665459,
     "src": "bybit",
     "atr": 0.00442638,
     "wait": "weak"
   },
   "GALAUSDT": {
-    "score": -4,
+    "score": 1,
     "bias": 0,
-    "at": 1791252065010,
+    "at": 1791255665863,
     "src": "bybit",
     "atr": 0.0000936872
   },
   "EGLDUSDT": {
-    "score": 44,
+    "score": 41,
     "bias": 1,
-    "at": 1791252065402,
+    "at": 1791255666407,
     "src": "bybit",
     "atr": 0.115804,
     "wait": "weak"
   },
   "NEARUSDT": {
-    "score": 79,
+    "score": 82,
     "bias": 1,
-    "at": 1791252065949,
+    "at": 1791255667143,
     "src": "bybit",
     "atr": 0.200003,
     "wait": "stale"
@@ -69,50 +70,50 @@
   "XLMUSDT": {
     "score": -27,
     "bias": -1,
-    "at": 1791252066346,
+    "at": 1791255667704,
     "src": "bybit",
     "atr": 0.00471289,
     "wait": "weak"
   },
   "BLURUSDT": {
-    "score": 5,
+    "score": 3,
     "bias": 0,
-    "at": 1791252066753,
+    "at": 1791255668562,
     "src": "bybit",
     "atr": 0.000571196
   },
   "SANDUSDT": {
-    "score": -14,
+    "score": -17,
     "bias": 0,
-    "at": 1791252067322,
+    "at": 1791255669464,
     "src": "bybit",
     "atr": 0.00474735
   },
   "AXSUSDT": {
-    "score": 11,
+    "score": 1,
     "bias": 0,
-    "at": 1791252068185,
+    "at": 1791255670354,
     "src": "bybit",
     "atr": 0.0458213
   },
   "ZILUSDT": {
-    "score": 69,
+    "score": 68,
     "bias": 1,
-    "at": 1791252068916,
-    "src": "bybit",
-    "atr": 0.000074638
+    "at": 1791255671124,
+    "src": "okx",
+    "atr": 0.0000744469
   },
   "CHZUSDT": {
-    "score": 14,
+    "score": 17,
     "bias": 0,
-    "at": 1791252069815,
+    "at": 1791255672003,
     "src": "bybit",
     "atr": 0.000384696
   },
   "POPCATUSDT": {
-    "score": 39,
+    "score": 42,
     "bias": 1,
-    "at": 1791252070527,
+    "at": 1791255672901,
     "src": "bybit",
     "atr": 0.00135251,
     "wait": "weak"
@@ -126,44 +127,45 @@
     "wait": "stale"
   },
   "GRAMUSDT": {
-    "score": -21,
+    "score": -16,
     "bias": 0,
-    "at": 1791252071239,
+    "at": 1791255673457,
     "src": "bybit",
     "atr": 0.0276541
   },
   "AEROUSDT": {
-    "score": 12,
+    "score": 7,
     "bias": 0,
-    "at": 1791252071643,
+    "at": 1791255674350,
     "src": "bybit",
     "atr": 0.0233772
   },
   "1000PEPEUSDT": {
-    "score": 22,
-    "bias": 0,
-    "at": 1791252072039,
+    "score": 25,
+    "bias": 1,
+    "at": 1791255674746,
     "src": "bybit",
-    "atr": 0.000102204
+    "atr": 0.000102204,
+    "wait": "weak"
   },
   "BTCUSDT": {
-    "score": 46,
+    "score": 49,
     "bias": 1,
-    "at": 1791252073492,
+    "at": 1791255676936,
     "src": "bybit",
     "atr": 773.223
   },
   "KAITOUSDT": {
-    "score": -1,
+    "score": -6,
     "bias": 0,
-    "at": 1791252072602,
+    "at": 1791255675305,
     "src": "bybit",
     "atr": 0.00919023
   },
   "XRPUSDT": {
     "score": 12,
     "bias": 0,
-    "at": 1791252073096,
+    "at": 1791255675867,
     "src": "bybit",
     "atr": 0.0207939
   }

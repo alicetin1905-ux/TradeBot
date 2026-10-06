@@ -1,39 +1,17 @@
 {
-  "open": {
-    "WLDUSDT": {
+  "open": {},
+  "closed": [
+    {
       "symbol": "WLDUSDT",
       "bias": 1,
       "entry": 0.5348,
-      "stop": 0.5348,
-      "t1": 0.6068739266548531,
-      "t2": 0.6549232110914216,
-      "t3": 0.7029724955279903,
-      "qty": 1017.802,
-      "qtyRemaining": 763.3515,
-      "split": {
-        "t1": 0.25,
-        "t2": 0.25,
-        "t3": 0.5
-      },
-      "filled": {
-        "t1": true,
-        "t2": false,
-        "t3": false
-      },
-      "breakeven": true,
-      "beAfter": "t1",
-      "pnl": 18.339246674290678,
-      "score": 50,
       "openedAt": 1790913600000,
-      "lastCandle": 1791288000000,
+      "closedAt": 1791288000000,
+      "pnl": 33.071930624290665,
+      "exitReason": "signal-flip",
+      "score": 50,
       "blockedBy": "down 15.9%"
     }
-  },
-  "closed": [],
-  "used": {
-    "WLDUSDT": {
-      "bias": 1,
-      "reset": true
-    }
-  }
+  ],
+  "used": {}
 }

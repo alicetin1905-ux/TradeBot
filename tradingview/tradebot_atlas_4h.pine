@@ -8,17 +8,21 @@
 //   - ATLAS score (-100..+100) on the closed 4H candle from the same
 //     price/volume indicators and weights. |score| >= 25 = long/short signal.
 //   - Signal price = close of the candle where the signal flipped.
-//   - Entry when |score| >= 50, not traded on this signal yet, price within
+//   - Entry when |score| >= 65, not traded on this signal yet, price within
 //     1x ATR of the signal price, Fibonacci check passes, BTC's own score
-//     doesn't point the other way. Fills at the next candle's open.
+//     doesn't point the other way.
+//   - Pullback entry: a limit order 0.3x ATR better than the close, valid
+//     4 hours (one 4H candle); cancelled if it doesn't fill. 0 = market entry
+//     at the next candle's open.
 //   - Stop 1.5x ATR from the signal price (widened to the Chandelier Exit
-//     stop), carried over to the fill price as a %; risk 3.75% of equity,
+//     stop), carried over to the fill price as a %; risk 2.5% of equity,
 //     max $400 margin at 10x.
-//   - Targets 1.5R / 3R / 4.5R closing 20% / 30% / 50%; stop to entry after
-//     T1, to T1 after T2; close everything when the signal flips.
+//   - Targets 1.5R / 2.5R / 3.5R closing 25% / 25% / 50%; stop to breakeven
+//     (entry + 0.2% for the fees) after T1, to T1 after T2; close everything
+//     when the signal flips.
 // Not possible on one chart (the bot does these across all coins): the
 // order-flow inputs (funding, open interest, long/short ratio, order book,
-// taker tape — ~20% of the live score's weight), 7 slots / max 4 per
+// taker tape — ~20% of the live score's weight), 5 slots / max 4 per
 // direction / max 3 new per candle, the daily loss limit, and the small
 // liquidation-cluster stop nudge. So this matches the repo's backtest more
 // closely than the live bot.
@@ -29,7 +33,7 @@ strategy("TradeBot ATLAS 4H", overlay = true, initial_capital = 2000, currency =
 
 // ---------------- inputs ----------------
 grpS = "Signal"
-minScore = input.int(50, "Min |score| to enter", minval = 25, maxval = 100, group = grpS)
+minScore = input.int(65, "Min |score| to enter", minval = 25, maxval = 100, group = grpS)
 biasTh   = input.int(25, "Signal threshold (long / short)", minval = 1, maxval = 100, group = grpS)
 chaseAtr = input.float(1.0, "Max distance from signal price (x ATR)", minval = 0.1, maxval = 5, group = grpS)
 useFib   = input.bool(true, "Fibonacci check", group = grpS)
@@ -41,16 +45,19 @@ btcSym   = input.symbol("BYBIT:BTCUSDT.P", "BTC symbol", group = grpS)
 grpE = "Exits"
 stopAtr  = input.float(1.5, "Stop (x ATR, widened to Chandelier Exit)", minval = 0.5, maxval = 5, group = grpE)
 r1       = input.float(1.5, "T1 (R)", minval = 0.25, group = grpE)
-r2       = input.float(3.0, "T2 (R)", minval = 0.25, group = grpE)
-r3       = input.float(4.5, "T3 (R)", minval = 0.25, group = grpE)
-pct1     = input.float(20, "Close at T1 (%)", minval = 0, maxval = 100, group = grpE)
-pct2     = input.float(30, "Close at T2 (%)", minval = 0, maxval = 100, group = grpE)
-beAfter1 = input.bool(true, "Stop to entry after T1", group = grpE)
+r2       = input.float(2.5, "T2 (R)", minval = 0.25, group = grpE)
+r3       = input.float(3.5, "T3 (R)", minval = 0.25, group = grpE)
+pct1     = input.float(25, "Close at T1 (%)", minval = 0, maxval = 100, group = grpE)
+pct2     = input.float(25, "Close at T2 (%)", minval = 0, maxval = 100, group = grpE)
+beAfter1 = input.bool(true, "Stop to breakeven after T1", group = grpE)
+beBuf    = input.float(0.2, "Breakeven = entry + this % (fees)", minval = 0, maxval = 1, step = 0.05, group = grpE)
+limitAtr = input.float(0.3, "Pullback entry: limit x ATR better (0 = market)", minval = 0, maxval = 2, step = 0.05, group = grpE)
+limitHrs = input.int(4, "Pullback entry: cancel after (hours)", minval = 1, maxval = 48, group = grpE)
 lockT1   = input.bool(true, "Stop to T1 after T2", group = grpE)
 flipExit = input.bool(true, "Close when the signal flips", group = grpE)
 
 grpM = "Money"
-riskPct   = input.float(3.75, "Risk per trade (% of equity)", minval = 0.1, maxval = 20, group = grpM)
+riskPct   = input.float(2.5, "Risk per trade (% of equity)", minval = 0.1, maxval = 20, group = grpM)
 maxMargin = input.float(400, "Max margin per trade (USDT)", minval = 10, group = grpM)
 lev       = input.int(10, "Leverage", minval = 1, maxval = 25, group = grpM)
 
@@ -314,7 +321,7 @@ if strategy.position_size != 0
     if not t1Done and sz <= entryQty - q1 * 0.999
         t1Done := true
         if beAfter1
-            stopLvl := entryPx
+            stopLvl := entryPx * (1 + posBias * beBuf / 100)
     if not t2Done and sz <= entryQty - (q1 + q2) * 0.999
         t2Done := true
         if lockT1
@@ -328,13 +335,26 @@ if strategy.position_size != 0
             strategy.exit("T2", "ATLAS", qty = q2, limit = t2, stop = stopLvl, comment_profit = "T2", comment_loss = t1Done ? "BE / lock" : "stop")
         strategy.exit("T3", "ATLAS", qty = q3, limit = t3, stop = stopLvl, comment_profit = "T3", comment_loss = t1Done ? "BE / lock" : "stop")
 
+// ---------------- pullback limit entry: cancel after limitHrs ----------------
+var bool pendingOn = false
+var int pendingBars = 0
+int limitBars = math.max(1, math.round(limitHrs * 3600 / timeframe.in_seconds(timeframe.period)))
+if pendingOn
+    if strategy.position_size != 0
+        pendingOn := false
+    else
+        pendingBars += 1
+        if pendingBars >= limitBars
+            strategy.cancel("ATLAS")
+            pendingOn := false
+
 // ---------------- entries ----------------
 bool chaseOk = not na(flipPrice) and math.abs(close - flipPrice) <= chaseAtr * atr14
 bool btcOk = not useBtc or isBtc or btcBias != -bias
 // Heikin Ashi / Renko etc. candles are averages, not real prices: the score and
 // fills would be wrong (far too good), so the strategy only trades on normal candles.
 bool stdChart = chart.is_standard
-bool baseOk = stdChart and strategy.position_size == 0 and bias != 0 and math.abs(score) >= minScore and not signalUsed and chaseOk and btcOk
+bool baseOk = stdChart and strategy.position_size == 0 and not pendingOn and bias != 0 and math.abs(score) >= minScore and not signalUsed and chaseOk and btcOk
 bool fibOk = true
 if baseOk and useFib
     fibOk := f_fibAgrees(bias, fibTh, 12, 300, 6, 0.618)
@@ -349,23 +369,30 @@ if baseOk and fibOk
     stopFrac := math.abs(1 - stopRef / flipPrice)
     float riskUsd = strategy.equity * riskPct / 100
     float notional = math.min(riskUsd / stopFrac, maxMargin * lev)
-    float qty = f_step(notional / close)
+    // entry price: the pullback limit (limitAtr x ATR better than now), or the close for a market entry
+    float px = limitAtr > 0 ? close - bias * limitAtr * atr14 : close
+    float qty = f_step(notional / px)
     if qty > 0
         usedBias := bias
         usedReset := false
-        // provisional levels from this close; reset to the real fill price next bar
-        float R0 = close * stopFrac
-        stopLvl := close - bias * R0
-        t1 := close + bias * R0 * r1
-        t2 := close + bias * R0 * r2
-        t3 := close + bias * R0 * r3
+        // provisional levels from the entry price; reset to the real fill price once filled
+        float R0 = px * stopFrac
+        stopLvl := px - bias * R0
+        t1 := px + bias * R0 * r1
+        t2 := px + bias * R0 * r2
+        t3 := px + bias * R0 * r3
         q1 := f_step(qty * pct1 / 100)
         q2 := f_step(qty * pct2 / 100)
         q3 := qty - q1 - q2
         entryQty := qty
         t1Done := false
         t2Done := false
-        strategy.entry("ATLAS", bias == 1 ? strategy.long : strategy.short, qty = qty, comment = (bias == 1 ? "LONG " : "SHORT ") + str.tostring(score))
+        if limitAtr > 0
+            strategy.entry("ATLAS", bias == 1 ? strategy.long : strategy.short, qty = qty, limit = px, comment = (bias == 1 ? "LONG " : "SHORT ") + str.tostring(score))
+            pendingOn := true
+            pendingBars := 0
+        else
+            strategy.entry("ATLAS", bias == 1 ? strategy.long : strategy.short, qty = qty, comment = (bias == 1 ? "LONG " : "SHORT ") + str.tostring(score))
         strategy.exit("T1", "ATLAS", qty = q1, limit = t1, stop = stopLvl, comment_profit = "T1", comment_loss = "stop")
         strategy.exit("T2", "ATLAS", qty = q2, limit = t2, stop = stopLvl, comment_profit = "T2", comment_loss = "stop")
         strategy.exit("T3", "ATLAS", qty = q3, limit = t3, stop = stopLvl, comment_profit = "T3", comment_loss = "stop")

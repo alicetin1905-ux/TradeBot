@@ -11,14 +11,16 @@
 2. Pine Editor → paste the whole file → **Add to chart**.
 3. Results are in **Strategy Tester** (TradingView's own backtest on that coin).
 
-Settings (gear icon) match the bot: min score 50, signal at ±25, max 1× ATR
-from the signal price, Fibonacci check, BTC filter, stop 1.5× ATR (widened to
-the Chandelier Exit), targets 1.5/3/4.5R closing 20/30/50%, stop to entry
-after T1 and to T1 after T2, close on a signal flip, 3.75% risk, max $400
-margin at 10x, Bybit taker fee 0.055%.
+Settings (gear icon) match the live bot: min score 65, signal at ±25, max 1×
+ATR from the signal price, Fibonacci check, BTC filter, **pullback entry**
+(limit order 0.3× ATR better than the close, cancelled after 4 h; set it to 0
+for market entries), stop 1.5× ATR (widened to the Chandelier Exit), targets
+1.5/2.5/3.5R closing 25/25/50%, stop to breakeven (entry + 0.2%) after T1 and
+to T1 after T2, close on a signal flip, 2.5% risk, max $400 margin at 10x,
+Bybit taker fee 0.055% (also charged on limit fills, so slightly pessimistic).
 
 On the chart: stop (red) and targets (teal) while in a trade, the signal
-price (grey dots), a green/red background when |score| ≥ 50, and a table with
+price (grey dots), a green/red background when |score| ≥ 65, and a table with
 the coin's score, BTC's score and whether price is still in entry range.
 Alerts: create an alert on the strategy to get entries on your phone.
 

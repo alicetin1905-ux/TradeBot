@@ -655,6 +655,8 @@ const STOP_LAB = args.includes('--stop-lab');
 const STREAK_ROB = args.includes('--streak-rob');
 // --score-now: entry score 50-70 on the current live setup. backtest/SCORE_NOW.md.
 const SCORE_NOW = args.includes('--score-now');
+// --new-coins --candidates A,B,...: candidate coins on the live setup, alone and added to the coin list. backtest/NEW_COINS_LIVE.md.
+const NEW_COINS = args.includes('--new-coins');
 const COINSET = args.includes('--coinset') ? String(args[args.indexOf('--coinset') + 1] || '').split(',').filter(Boolean).map(x => x.toUpperCase().replace(/USDT$/, '') + 'USDT') : null;
 const LAB_MODE = args.includes('--mode') ? args[args.indexOf('--mode') + 1] : 'classic';
 const LAB_MTF = args.includes('--mtf');
@@ -686,7 +688,7 @@ async function main() {
   }
   for (const s of symbols) {
     process.stderr.write(`scoring ${s}…\n`);
-    series[s].sig1 = SCORE_LAB ? new Map() : TF_COMPARE ? precompute(s, series[s].h1, 1, start) : SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB || RISK_GRID || LEV_GRID || DD_LAB || RISK_STARTS || COIN_WF || SCORE_MOM || LAB2 || LAB3 || TF_DAY || PER_CANDLE || COINSET || TUNE || COMBO || SPLIT || SLOTS || BTC_COOL || BTC_LINE || TIME_STOP || SCORE_JUMP || SCORE_JUMP_ROB || PF_LAB || SCORE_RISE || LIMIT_ROB || LIVE_NOW || STOP_LAB || STREAK_ROB || SCORE_NOW ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
+    series[s].sig1 = SCORE_LAB ? new Map() : TF_COMPARE ? precompute(s, series[s].h1, 1, start) : SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB || RISK_GRID || LEV_GRID || DD_LAB || RISK_STARTS || COIN_WF || SCORE_MOM || LAB2 || LAB3 || TF_DAY || PER_CANDLE || COINSET || TUNE || COMBO || SPLIT || SLOTS || BTC_COOL || BTC_LINE || TIME_STOP || SCORE_JUMP || SCORE_JUMP_ROB || PF_LAB || SCORE_RISE || LIMIT_ROB || LIVE_NOW || STOP_LAB || STREAK_ROB || SCORE_NOW || NEW_COINS ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
     series[s].sig4 = SCORE_LAB ? precompute(s, to4h(series[s].h1), 4, start, { h1: series[s].h1, mode: LAB_MODE, mtfTrim: LAB_MTF }) : precompute(s, to4h(series[s].h1), 4, start);
     if (TF_DAY) series[s].sigD = precompute(s, to1d(series[s].h1), 24, start, { entryTf: 'D' });
     addFilterInputs(series[s]);
@@ -703,6 +705,7 @@ async function main() {
   if (LEV_GRID) return levGrid(series, symbols, times, start, now);
   if (DD_LAB) return ddLab(series, symbols, times, start, now);
   if (RISK_STARTS) return riskStarts(series, symbols, times, start, now);
+  if (NEW_COINS) return newCoinsLive(series, symbols.filter(s => CANDIDATES.includes(s) && !config.SYMBOLS.includes(s)), times, start, now);
   if (SCORE_NOW) {
     const L = (minScore, coins) => ({ minScore, limit: { atr: 0.3, hours: 4 }, beBufferPct: 0.2, ...(coins ? { coins } : {}) });
     const A = config.SYMBOLS.slice(0, 11), B = config.SYMBOLS.slice(11);
@@ -1463,6 +1466,53 @@ function variantTable(title, V, series, times, start, end, file, note) {
   console.log(out);
   fs.mkdirSync(OUT, { recursive: true });
   fs.writeFileSync(path.join(OUT, file), `# ${title}\n\n\`\`\`\n` + out + '\n\`\`\`\n');
+}
+
+// Candidate coins on the current live setup (score 65, pullback limit 0.3 ATR
+// / 4h, breakeven +0.2%): 1) each alone, $100 fixed risk; 2) the strongest
+// ones added one by one to the live coin list, compounding at the live risk.
+function newCoinsLive(series, cands, times, start, end) {
+  const live = VARIANTS.find(v => v.focus);
+  const P = config.PORTFOLIO;
+  const NOW = { minScore: 65, limit: { atr: 0.3, hours: 4 }, beBufferPct: 0.2 };
+  const base = { ...live.rules, start: P.STARTING_BALANCE, margin: P.MARGIN_USDT, leverage: P.LEVERAGE, maxOpen: P.MAX_OPEN_POSITIONS, maxSameDir: P.MAX_SAME_DIRECTION, ...NOW };
+  const pad = (x, n) => String(x).padStart(n);
+  const pf = (r) => { let w = 0, l = 0; for (const t of r.tradeList) { if (t.pnl > 0) w += t.pnl; else l -= t.pnl; } return l ? w / l : 0; };
+  const split = Date.UTC(2024, 0, 1);
+  const tA = times.filter(t => t < split), tB = times.filter(t => t >= split);
+  const L = [];
+  L.push(`Candidate coins on the live setup (score 65, limit 0.3 ATR 4h, BE +0.2%) · ${new Date(start).toISOString().slice(0, 10)} -> ${new Date(end).toISOString().slice(0, 10)}`, '');
+  L.push('1) Each coin alone · $100 fixed risk per trade · 2000 start · since its listing', '');
+  L.push('coin'.padEnd(10) + pad('since', 9) + pad('trades', 8) + pad('net $', 9) + pad('PF', 6) + pad('win%', 6) + pad('drop', 7) + pad('20-23 $', 9) + pad('24-26 $', 9));
+  const rows = [];
+  for (const s of cands) {
+    process.stderr.write(`alone ${s}\n`);
+    const R = { ...base, riskUsd: 100, riskPct: null };
+    const r = simulate(series, [s], times, R);
+    const a = simulate(series, [s], tA, R), b = simulate(series, [s], tB, R);
+    const first = series[s].h1.find(c => c.t >= start);
+    rows.push({ s, since: first ? new Date(first.t).toISOString().slice(0, 7) : '?', n: r.trades, net: r.net, pf: pf(r), win: r.winRate * 100, dd: r.maxDDPct, a: a.net, b: b.net });
+  }
+  rows.sort((x, y) => y.pf - x.pf);
+  for (const r of rows) L.push(r.s.replace('USDT', '').padEnd(10) + pad(r.since, 9) + pad(r.n, 8) + pad(r.net.toFixed(0), 9) + pad(r.pf.toFixed(2), 6) + pad(r.win.toFixed(0), 6) + pad(r.dd.toFixed(0) + '%', 7) + pad(r.a.toFixed(0), 9) + pad(r.b.toFixed(0), 9));
+  // the strongest: enough trades, profitable in 2024-26, PF >= 1.3 (best 8)
+  const best = rows.filter(r => r.n >= 25 && r.b > 0 && r.pf >= 1.3).slice(0, 8);
+  L.push('', `2) Added to the ${config.SYMBOLS.length} live coins one at a time · compounding from 2000 at ${P.RISK_PCT}% risk · whole period`, '');
+  L.push('coin list'.padEnd(26) + pad('end $', 10) + pad('PF', 6) + pad('drop', 8) + pad('trades', 8) + pad('24-26 $', 10));
+  const port = (coins, label) => {
+    process.stderr.write(`portfolio ${label}\n`);
+    const R = { ...base, riskUsd: null, riskPct: P.RISK_PCT };
+    const c = simulate(series, coins, times, R), b = simulate(series, coins, tB, { ...base, riskUsd: 100, riskPct: null });
+    L.push(label.padEnd(26) + pad(Math.round(P.STARTING_BALANCE + c.net).toLocaleString('en-US'), 10) + pad(pf(c).toFixed(2), 6) + pad(c.maxDDPct.toFixed(1) + '%', 8) + pad(c.trades, 8) + pad(b.net.toFixed(0), 10));
+  };
+  port(config.SYMBOLS, `live ${config.SYMBOLS.length} coins`);
+  for (const r of best) port([...config.SYMBOLS, r.s], `+ ${r.s.replace('USDT', '')}`);
+  if (best.length > 1) port([...config.SYMBOLS, ...best.slice(0, 3).map(r => r.s)], '+ best 3 together');
+  L.push('', '"24-26 $" in part 2: $100 fixed risk from 2024 on, the recent-years check. A coin is only worth adding if the whole list gets better, not just because it does well alone.');
+  const out = L.join('\n');
+  console.log(out);
+  fs.mkdirSync(OUT, { recursive: true });
+  fs.writeFileSync(path.join(OUT, 'NEW_COINS_LIVE.md'), '# New coin candidates (live setup)\n\n```\n' + out + '\n```\n');
 }
 
 function scoreMom(series, symbols, times, start, end) {

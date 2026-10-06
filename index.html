@@ -793,7 +793,8 @@
         lv: c.t1 != null ? { stop: c.initialStop != null ? c.initialStop : c.stop, t1: c.t1, t2: c.t2, t3: c.t3 } : null, pending: true });
     });
     if (!list.length) { els.tradeLog.innerHTML = '<div class="empty">No closed trades yet.</div>'; return; }
-    list.sort(function (a, b) { return b.closedAt - a.closedAt; });
+    // newest first by the date the trade was opened (the first date on each card), then by close
+    list.sort(function (a, b) { return (b.openedAt - a.openedAt) || (b.closedAt - a.closedAt); });
     var when = function (ms) {
       var d = new Date(ms);
       return d.toLocaleDateString([], { day: '2-digit', month: '2-digit' }) + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });

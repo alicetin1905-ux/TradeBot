@@ -35,5 +35,43 @@
     "markPrice": 0.020953,
     "unrealisedPnl": -42.381808,
     "closedDetectedAt": 1791210901952
+  },
+  "CHZUSDT": {
+    "symbol": "CHZUSDT",
+    "bias": 1,
+    "entry": 0.01731,
+    "stop": 0.01644,
+    "initialStop": 0.01644,
+    "t1": 0.01862,
+    "t2": 0.0195,
+    "t3": 0.02037,
+    "qtyTotal": 56406,
+    "qtyRemaining": 56406,
+    "qtyT1": 14101,
+    "qtyT2": 14101,
+    "qtyT3": 28204,
+    "margin": 97.638786,
+    "notional": 976.3878599999999,
+    "riskAmt": 49.07321999999996,
+    "filled": {
+      "t1": false,
+      "t2": false,
+      "t3": false
+    },
+    "breakeven": false,
+    "beAfter": "t1",
+    "openedAt": 1791014474557,
+    "score": 67,
+    "orders": {
+      "entry": "c3c1d586-358b-4436-a60a-33df964ac8c9",
+      "t1": "b65b841c-eff4-4059-b91c-77d1f66ca6d7",
+      "t2": "d2794983-e159-4b85-95e8-3dce3c1ab47f",
+      "t3": "a1768af1-3763-46fa-8fab-bb5c7c26069a",
+      "close": "33a9569c-6449-4fc7-8d0d-f2158a9a6f3b"
+    },
+    "tickSize": 0.00001,
+    "markPrice": 0.01665,
+    "unrealisedPnl": -37.22796,
+    "closedDetectedAt": 1791266471819
   }
 }

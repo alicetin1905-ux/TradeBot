@@ -1,41 +1,4 @@
 {
-  "ZILUSDT": {
-    "symbol": "ZILUSDT",
-    "bias": 1,
-    "entry": 0.003606,
-    "stop": 0.003493,
-    "initialStop": 0.003493,
-    "t1": 0.003775,
-    "t2": 0.003887,
-    "t3": 0.004,
-    "qtyTotal": 420720,
-    "qtyRemaining": 420720,
-    "qtyT1": 105180,
-    "qtyT2": 105180,
-    "qtyT3": 210360,
-    "margin": 151.71163199999998,
-    "notional": 1517.1163199999999,
-    "riskAmt": 47.541359999999926,
-    "filled": {
-      "t1": false,
-      "t2": false,
-      "t3": false
-    },
-    "breakeven": false,
-    "beAfter": "t1",
-    "openedAt": 1791246602267,
-    "score": 65,
-    "orders": {
-      "entry": "89350f82-23ee-4718-8e18-c5dc622d11fa",
-      "t1": "86e5a23d-2d1f-4e40-9893-d84c122ee608",
-      "t2": "6c035e55-f6f6-44ff-b4eb-e5056060f2b9",
-      "t3": "5611fe5b-efb8-4487-93f5-1f67c7c999a3"
-    },
-    "tickSize": 0.000001,
-    "markPrice": 0.003517,
-    "unrealisedPnl": -37.44408,
-    "closedDetectedAt": 1791314701964
-  },
   "SUIUSDT": {
     "symbol": "SUIUSDT",
     "bias": 1,

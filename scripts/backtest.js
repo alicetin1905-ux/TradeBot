@@ -657,6 +657,8 @@ const STREAK_ROB = args.includes('--streak-rob');
 const SCORE_NOW = args.includes('--score-now');
 // --new-coins --candidates A,B,...: candidate coins on the live setup, alone and added to the coin list. backtest/NEW_COINS_LIVE.md.
 const NEW_COINS = args.includes('--new-coins');
+// --add-check --candidates A,B: adding those coins to the live list, together and per coin-list half. backtest/ADD_CHECK.md.
+const ADD_CHECK = args.includes('--add-check');
 const COINSET = args.includes('--coinset') ? String(args[args.indexOf('--coinset') + 1] || '').split(',').filter(Boolean).map(x => x.toUpperCase().replace(/USDT$/, '') + 'USDT') : null;
 const LAB_MODE = args.includes('--mode') ? args[args.indexOf('--mode') + 1] : 'classic';
 const LAB_MTF = args.includes('--mtf');
@@ -688,7 +690,7 @@ async function main() {
   }
   for (const s of symbols) {
     process.stderr.write(`scoring ${s}…\n`);
-    series[s].sig1 = SCORE_LAB ? new Map() : TF_COMPARE ? precompute(s, series[s].h1, 1, start) : SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB || RISK_GRID || LEV_GRID || DD_LAB || RISK_STARTS || COIN_WF || SCORE_MOM || LAB2 || LAB3 || TF_DAY || PER_CANDLE || COINSET || TUNE || COMBO || SPLIT || SLOTS || BTC_COOL || BTC_LINE || TIME_STOP || SCORE_JUMP || SCORE_JUMP_ROB || PF_LAB || SCORE_RISE || LIMIT_ROB || LIVE_NOW || STOP_LAB || STREAK_ROB || SCORE_NOW || NEW_COINS ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
+    series[s].sig1 = SCORE_LAB ? new Map() : TF_COMPARE ? precompute(s, series[s].h1, 1, start) : SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB || RISK_GRID || LEV_GRID || DD_LAB || RISK_STARTS || COIN_WF || SCORE_MOM || LAB2 || LAB3 || TF_DAY || PER_CANDLE || COINSET || TUNE || COMBO || SPLIT || SLOTS || BTC_COOL || BTC_LINE || TIME_STOP || SCORE_JUMP || SCORE_JUMP_ROB || PF_LAB || SCORE_RISE || LIMIT_ROB || LIVE_NOW || STOP_LAB || STREAK_ROB || SCORE_NOW || NEW_COINS || ADD_CHECK ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
     series[s].sig4 = SCORE_LAB ? precompute(s, to4h(series[s].h1), 4, start, { h1: series[s].h1, mode: LAB_MODE, mtfTrim: LAB_MTF }) : precompute(s, to4h(series[s].h1), 4, start);
     if (TF_DAY) series[s].sigD = precompute(s, to1d(series[s].h1), 24, start, { entryTf: 'D' });
     addFilterInputs(series[s]);
@@ -705,6 +707,18 @@ async function main() {
   if (LEV_GRID) return levGrid(series, symbols, times, start, now);
   if (DD_LAB) return ddLab(series, symbols, times, start, now);
   if (RISK_STARTS) return riskStarts(series, symbols, times, start, now);
+  if (ADD_CHECK) {
+    const NOW = { minScore: 65, limit: { atr: 0.3, hours: 4 }, beBufferPct: 0.2 };
+    const add = CANDIDATES.filter(c => series[c]), base = config.SYMBOLS, n = Math.ceil(base.length / 2);
+    const A = base.slice(0, n), B = base.slice(n);
+    const V = [['A  live ' + base.length + ' coins', { ...NOW }]];
+    for (const c of add) V.push(['+ ' + c.replace('USDT', ''), { ...NOW, coins: [...base, c] }]);
+    if (add.length > 1) V.push(['+ ' + add.map(c => c.replace('USDT', '')).join(' + '), { ...NOW, coins: [...base, ...add] }]);
+    V.push(['-- first half of the live list --', null], ['first half', { ...NOW, coins: A }], ['first half + new', { ...NOW, coins: [...A, ...add] }]);
+    V.push(['-- second half of the live list --', null], ['second half', { ...NOW, coins: B }], ['second half + new', { ...NOW, coins: [...B, ...add] }]);
+    return variantTable('Adding ' + add.map(c => c.replace('USDT', '')).join(' + ') + ' to the live coins (live setup)', V, series, times, start, now, 'ADD_CHECK.md',
+      'Live setup: score 65, limit 0.3 ATR 4h, BE +0.2%, 2.5% risk, max 5 open / 4 per direction / 3 per candle. The halves check whether the new coins help on a different base list.');
+  }
   if (NEW_COINS) return newCoinsLive(series, symbols.filter(s => CANDIDATES.includes(s) && !config.SYMBOLS.includes(s)), times, start, now);
   if (SCORE_NOW) {
     const L = (minScore, coins) => ({ minScore, limit: { atr: 0.3, hours: 4 }, beBufferPct: 0.2, ...(coins ? { coins } : {}) });

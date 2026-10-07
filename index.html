@@ -310,6 +310,8 @@
     { id: 'POPCATUSDT', label: 'POPCAT' },
     { id: 'GRAMUSDT', label: 'GRAM' },
     { id: '1000PEPEUSDT', label: 'PEPE' },
+    { id: 'ATOMUSDT', label: 'ATOM' },
+    { id: '1000BONKUSDT', label: 'BONK' },
     { id: 'KAITOUSDT', label: 'KAITO' },
     { id: 'XRPUSDT', label: 'XRP' },
   ];
@@ -651,7 +653,7 @@
 
   var OKX_BASE = 'https://www.okx.com';
   // 1000PEPEUSDT (Bybit, price per 1000) is plain PEPE on OKX.
-  var OKX_ALIAS = { '1000PEPEUSDT': { ccy: 'PEPE', mult: 1000 } };
+  var OKX_ALIAS = { '1000PEPEUSDT': { ccy: 'PEPE', mult: 1000 }, '1000BONKUSDT': { ccy: 'BONK', mult: 1000 } };
   function okxInstId(symbol) { return (OKX_ALIAS[symbol] ? OKX_ALIAS[symbol].ccy : symbol.replace('USDT', '')) + '-USDT-SWAP'; }
   function okxMult(symbol) { return OKX_ALIAS[symbol] ? OKX_ALIAS[symbol].mult : 1; }
 

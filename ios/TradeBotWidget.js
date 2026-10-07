@@ -18,7 +18,7 @@ const C = {
 // Live mark price per open coin — the same source the dashboard uses (Bybit,
 // OKX as fallback), so the widget's P&L matches it instead of the bot's last
 // sync (which can be up to 5 minutes old).
-const OKX_ALIAS = { '1000PEPEUSDT': { id: 'PEPE-USDT-SWAP', mult: 1000 } };
+const OKX_ALIAS = { '1000PEPEUSDT': { id: 'PEPE-USDT-SWAP', mult: 1000 }, '1000BONKUSDT': { id: 'BONK-USDT-SWAP', mult: 1000 } };
 async function liveMark(sym) {
   try {
     const r = new Request('https://api.bybit.com/v5/market/tickers?category=linear&symbol=' + sym);

@@ -37,7 +37,7 @@ number as a rehearsal of the strategy, not investment advice.
 
 ## Rules (`config.js` → `PORTFOLIO`)
 
-- **One shared 2000 USDT balance** for all 20 coins.
+- **One shared 2000 USDT balance** for all 22 coins.
 - **2.5% of the balance at risk per trade** (`RISK_PCT`): each position is
   sized so hitting its stop loses 2.5% of the bot's balance — $50 on 2000
   USDT, more as the account grows, less after losses. Capped at **400 USDT

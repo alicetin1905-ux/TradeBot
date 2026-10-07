@@ -11,7 +11,7 @@ const BAR = { '30': '30m', '60': '1H', '240': '4H', 'D': '1D' };
 // Bybit/Binance-style "BTCUSDT" -> OKX's "BTC-USDT-SWAP" / bare "BTC".
 // Coins Bybit lists per 1000 (1000PEPEUSDT) are plain PEPE on OKX: same
 // coin, price x1000 on Bybit, so OKX candles are scaled to Bybit's units.
-const ALIAS = { '1000PEPEUSDT': { ccy: 'PEPE', mult: 1000 } };
+const ALIAS = { '1000PEPEUSDT': { ccy: 'PEPE', mult: 1000 }, '1000BONKUSDT': { ccy: 'BONK', mult: 1000 } };
 function ccy(symbol) { return ALIAS[symbol] ? ALIAS[symbol].ccy : symbol.replace('USDT', ''); }
 function instId(symbol) { return ccy(symbol) + '-USDT-SWAP'; }
 function priceMult(symbol) { return ALIAS[symbol] ? ALIAS[symbol].mult : 1; }

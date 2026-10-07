@@ -1,116 +1,119 @@
 {
   "SOLUSDT": {
-    "score": 18,
+    "score": 13,
     "bias": 0,
-    "at": 1791331263092,
-    "src": "okx",
-    "atr": 1.55166
+    "at": 1791334863116,
+    "src": "bybit",
+    "atr": 1.57009
   },
   "DOGEUSDT": {
-    "score": -22,
-    "bias": 0,
-    "at": 1791331263504,
+    "score": -26,
+    "bias": -1,
+    "at": 1791334863530,
     "src": "bybit",
-    "atr": 0.00152325
+    "atr": 0.00152325,
+    "wait": "weak"
   },
   "SUIUSDT": {
     "score": -18,
     "bias": 0,
-    "at": 1791331264073,
+    "at": 1791334863937,
     "src": "bybit",
     "atr": 0.0324161
   },
   "ENAUSDT": {
-    "score": -11,
+    "score": -8,
     "bias": 0,
-    "at": 1791331264753,
-    "src": "okx",
-    "atr": 0.00828598
+    "at": 1791334864347,
+    "src": "bybit",
+    "atr": 0.00833438
   },
   "WLDUSDT": {
-    "score": -12,
+    "score": -15,
     "bias": 0,
-    "at": 1791331265150,
+    "at": 1791334864753,
     "src": "bybit",
     "atr": 0.0193247
   },
   "DYDXUSDT": {
-    "score": -11,
+    "score": -8,
     "bias": 0,
-    "at": 1791331265828,
-    "src": "okx",
-    "atr": 0.00407131
+    "at": 1791334865347,
+    "src": "bybit",
+    "atr": 0.00411214
   },
   "GALAUSDT": {
-    "score": -24,
-    "bias": 0,
-    "at": 1791331266703,
-    "src": "okx",
-    "atr": 0.0000852336
+    "score": -32,
+    "bias": -1,
+    "at": 1791334865760,
+    "src": "bybit",
+    "atr": 0.0000856638,
+    "wait": "weak"
   },
   "EGLDUSDT": {
     "score": -21,
     "bias": 0,
-    "at": 1791331267097,
+    "at": 1791334866157,
     "src": "bybit",
     "atr": 0.10614
   },
   "NEARUSDT": {
-    "score": 39,
+    "score": 36,
     "bias": 1,
-    "at": 1791331267848,
-    "src": "okx",
-    "atr": 0.181458,
+    "at": 1791334866718,
+    "src": "bybit",
+    "atr": 0.182262,
     "wait": "weak"
   },
   "XLMUSDT": {
-    "score": -51,
+    "score": -46,
     "bias": -1,
-    "at": 1791331268537,
+    "at": 1791334867269,
     "src": "bybit",
     "atr": 0.00389647,
     "wait": "weak"
   },
   "BLURUSDT": {
-    "score": -36,
+    "score": -30,
     "bias": -1,
-    "at": 1791331269277,
+    "at": 1791334867813,
     "src": "bybit",
     "atr": 0.00051488,
     "wait": "weak"
   },
   "SANDUSDT": {
-    "score": -1,
+    "score": 7,
     "bias": 0,
-    "at": 1791331269675,
+    "at": 1791334868235,
     "src": "bybit",
     "atr": 0.00370068
   },
   "AXSUSDT": {
-    "score": -5,
+    "score": -12,
     "bias": 0,
-    "at": 1791331270383,
-    "src": "okx",
-    "atr": 0.038737
+    "at": 1791334868639,
+    "src": "bybit",
+    "atr": 0.0389102
   },
   "ZILUSDT": {
     "score": -20,
     "bias": 0,
-    "at": 1791331271256,
+    "at": 1791334869205,
     "src": "bybit",
     "atr": 0.0000747345
   },
   "CHZUSDT": {
-    "score": -20,
-    "bias": 0,
-    "at": 1791331271915,
-    "src": "okx",
-    "atr": 0.000360273
+    "score": -26,
+    "bias": -1,
+    "at": 1791334869769,
+    "src": "bybit",
+    "atr": 0.000359412,
+    "wait": "weak"
   },
   "POPCATUSDT": {
     "score": -28,
     "bias": -1,
-    "at": 1791331272461,
+    "at": 1791334870227,
     "src": "bybit",
     "atr": 0.00126675,
     "wait": "weak"
@@ -126,7 +129,7 @@
   "GRAMUSDT": {
     "score": -9,
     "bias": 0,
-    "at": 1791331272849,
+    "at": 1791334870615,
     "src": "bybit",
     "atr": 0.027412
   },
@@ -139,34 +142,34 @@
     "wait": "weak"
   },
   "1000PEPEUSDT": {
-    "score": -45,
+    "score": -50,
     "bias": -1,
-    "at": 1791331273375,
+    "at": 1791334871174,
     "src": "bybit",
     "atr": 0.0000935603,
     "wait": "weak"
   },
   "BTCUSDT": {
-    "score": 10,
+    "score": 14,
     "bias": 0,
-    "at": 1791331274834,
+    "at": 1791334876775,
     "src": "bybit",
     "atr": 733.631
   },
   "KAITOUSDT": {
-    "score": -70,
+    "score": -71,
     "bias": -1,
-    "at": 1791331273770,
-    "src": "bybit",
-    "atr": 0.00803218,
+    "at": 1791334871910,
+    "src": "okx",
+    "atr": 0.00798949,
     "wait": "used"
   },
   "XRPUSDT": {
-    "score": -25,
+    "score": -31,
     "bias": -1,
-    "at": 1791331274308,
-    "src": "bybit",
-    "atr": 0.0196488,
+    "at": 1791334876230,
+    "src": "okx",
+    "atr": 0.0195479,
     "wait": "weak"
   }
 }

@@ -369,7 +369,7 @@ function simulate(series, symbols, times, rules) {
         continue;
       }
       const sig = series[p.symbol][sigKey].get(t);
-      if (sig && sig.bias !== 0 && sig.bias !== p.bias) closeFill(p, p.qtyRemaining, series[p.symbol].h1[i].c, 'signal flip', FEE_TAKER, t);
+      if (sig && sig.bias !== 0 && sig.bias !== p.bias && !R.noFlip && !(R.flipBeforeT1 && p.filled.t1)) closeFill(p, p.qtyRemaining, series[p.symbol].h1[i].c, 'signal flip', FEE_TAKER, t);
       else if (R.neutralExit && sig && sig.bias === 0 && (R.neutralExit === 'all' || !p.filled.t1))
         closeFill(p, p.qtyRemaining, series[p.symbol].h1[i].c, 'score neutral', FEE_TAKER, t); // score back inside +/-25
     }
@@ -666,6 +666,8 @@ const ADD_CHECK = args.includes('--add-check');
 const CHASE_LAB = args.includes('--chase-lab');
 // --drop-check: the live setup without a coin (and the half of the list it sits in); written to backtest/DROP_CHECK.md.
 const DROP_CHECK = args.includes('--drop-check');
+// --flip-lab: signal-flip exit only before T1 (after T1 breakeven / T1-lock handle the runner); written to backtest/FLIP_LAB.md.
+const FLIP_LAB = args.includes('--flip-lab');
 const COINSET = args.includes('--coinset') ? String(args[args.indexOf('--coinset') + 1] || '').split(',').filter(Boolean).map(x => x.toUpperCase().replace(/USDT$/, '') + 'USDT') : null;
 const LAB_MODE = args.includes('--mode') ? args[args.indexOf('--mode') + 1] : 'classic';
 const LAB_MTF = args.includes('--mtf');
@@ -697,7 +699,7 @@ async function main() {
   }
   for (const s of symbols) {
     process.stderr.write(`scoring ${s}…\n`);
-    series[s].sig1 = SCORE_LAB ? new Map() : TF_COMPARE ? precompute(s, series[s].h1, 1, start) : SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB || RISK_GRID || LEV_GRID || DD_LAB || RISK_STARTS || COIN_WF || SCORE_MOM || LAB2 || LAB3 || TF_DAY || PER_CANDLE || COINSET || TUNE || COMBO || SPLIT || SLOTS || BTC_COOL || BTC_LINE || TIME_STOP || SCORE_JUMP || SCORE_JUMP_ROB || PF_LAB || SCORE_RISE || LIMIT_ROB || LIVE_NOW || STOP_LAB || STREAK_ROB || SCORE_NOW || NEW_COINS || ADD_CHECK || CHASE_LAB || DROP_CHECK ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
+    series[s].sig1 = SCORE_LAB ? new Map() : TF_COMPARE ? precompute(s, series[s].h1, 1, start) : SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB || RISK_GRID || LEV_GRID || DD_LAB || RISK_STARTS || COIN_WF || SCORE_MOM || LAB2 || LAB3 || TF_DAY || PER_CANDLE || COINSET || TUNE || COMBO || SPLIT || SLOTS || BTC_COOL || BTC_LINE || TIME_STOP || SCORE_JUMP || SCORE_JUMP_ROB || PF_LAB || SCORE_RISE || LIMIT_ROB || LIVE_NOW || STOP_LAB || STREAK_ROB || SCORE_NOW || NEW_COINS || ADD_CHECK || CHASE_LAB || DROP_CHECK || FLIP_LAB ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
     series[s].sig4 = SCORE_LAB ? precompute(s, to4h(series[s].h1), 4, start, { h1: series[s].h1, mode: LAB_MODE, mtfTrim: LAB_MTF }) : precompute(s, to4h(series[s].h1), 4, start);
     if (TF_DAY) series[s].sigD = precompute(s, to1d(series[s].h1), 24, start, { entryTf: 'D' });
     addFilterInputs(series[s]);
@@ -730,6 +732,19 @@ async function main() {
       ['-- second half of the coins --', null],
       ['1 ATR, second half', { ...NOW, coins: B }], ['1.5 ATR, second half', { ...NOW, chaseAtr: 1.5, coins: B }], ['2 ATR, second half', { ...NOW, chaseAtr: 2, coins: B }],
     ], series, times, start, now, 'CHASE_LAB.md', 'Chase = |price - signal price| / ATR at the entry check, where the signal price is where the score first crossed +/-25. Live setup otherwise (score 65, limit 0.3 ATR 4h, BE +0.2%, 22 coins).');
+  }
+  if (FLIP_LAB) {
+    const NOW = { minScore: 65, limit: { atr: 0.3, hours: 4 }, beBufferPct: 0.2 };
+    const n = Math.ceil(config.SYMBOLS.length / 2), A = config.SYMBOLS.slice(0, n), B = config.SYMBOLS.slice(n);
+    return variantTable('Signal-flip exit only before T1 (live setup)', [
+      ['A  live: flip exit always', { ...NOW }],
+      ['flip exit only before T1', { ...NOW, flipBeforeT1: true }],
+      ['no flip exit (reference)', { ...NOW, noFlip: true }],
+      ['-- first half of the coins --', null],
+      ['live, first half', { ...NOW, coins: A }], ['before T1, first half', { ...NOW, flipBeforeT1: true, coins: A }],
+      ['-- second half of the coins --', null],
+      ['live, second half', { ...NOW, coins: B }], ['before T1, second half', { ...NOW, flipBeforeT1: true, coins: B }],
+    ], series, times, start, now, 'FLIP_LAB.md', 'Live setup (score 65, limit 0.3 ATR 4h, BE +0.2%, ' + config.SYMBOLS.length + ' coins). "Only before T1": once T1 is hit, an opposite signal no longer closes the trade; the breakeven stop and the T1 lock after T2 manage the rest.');
   }
   if (DROP_CHECK) {
     const NOW = { minScore: 65, limit: { atr: 0.3, hours: 4 }, beBufferPct: 0.2 };

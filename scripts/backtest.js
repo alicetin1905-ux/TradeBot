@@ -664,6 +664,8 @@ const NEW_COINS = args.includes('--new-coins');
 const ADD_CHECK = args.includes('--add-check');
 // --chase-lab: max distance from the signal price (x ATR) on the live setup. backtest/CHASE_LAB.md.
 const CHASE_LAB = args.includes('--chase-lab');
+// --drop-check: the live setup without a coin (and the half of the list it sits in); written to backtest/DROP_CHECK.md.
+const DROP_CHECK = args.includes('--drop-check');
 const COINSET = args.includes('--coinset') ? String(args[args.indexOf('--coinset') + 1] || '').split(',').filter(Boolean).map(x => x.toUpperCase().replace(/USDT$/, '') + 'USDT') : null;
 const LAB_MODE = args.includes('--mode') ? args[args.indexOf('--mode') + 1] : 'classic';
 const LAB_MTF = args.includes('--mtf');
@@ -695,7 +697,7 @@ async function main() {
   }
   for (const s of symbols) {
     process.stderr.write(`scoring ${s}…\n`);
-    series[s].sig1 = SCORE_LAB ? new Map() : TF_COMPARE ? precompute(s, series[s].h1, 1, start) : SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB || RISK_GRID || LEV_GRID || DD_LAB || RISK_STARTS || COIN_WF || SCORE_MOM || LAB2 || LAB3 || TF_DAY || PER_CANDLE || COINSET || TUNE || COMBO || SPLIT || SLOTS || BTC_COOL || BTC_LINE || TIME_STOP || SCORE_JUMP || SCORE_JUMP_ROB || PF_LAB || SCORE_RISE || LIMIT_ROB || LIVE_NOW || STOP_LAB || STREAK_ROB || SCORE_NOW || NEW_COINS || ADD_CHECK || CHASE_LAB ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
+    series[s].sig1 = SCORE_LAB ? new Map() : TF_COMPARE ? precompute(s, series[s].h1, 1, start) : SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB || RISK_GRID || LEV_GRID || DD_LAB || RISK_STARTS || COIN_WF || SCORE_MOM || LAB2 || LAB3 || TF_DAY || PER_CANDLE || COINSET || TUNE || COMBO || SPLIT || SLOTS || BTC_COOL || BTC_LINE || TIME_STOP || SCORE_JUMP || SCORE_JUMP_ROB || PF_LAB || SCORE_RISE || LIMIT_ROB || LIVE_NOW || STOP_LAB || STREAK_ROB || SCORE_NOW || NEW_COINS || ADD_CHECK || CHASE_LAB || DROP_CHECK ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
     series[s].sig4 = SCORE_LAB ? precompute(s, to4h(series[s].h1), 4, start, { h1: series[s].h1, mode: LAB_MODE, mtfTrim: LAB_MTF }) : precompute(s, to4h(series[s].h1), 4, start);
     if (TF_DAY) series[s].sigD = precompute(s, to1d(series[s].h1), 24, start, { entryTf: 'D' });
     addFilterInputs(series[s]);
@@ -728,6 +730,21 @@ async function main() {
       ['-- second half of the coins --', null],
       ['1 ATR, second half', { ...NOW, coins: B }], ['1.5 ATR, second half', { ...NOW, chaseAtr: 1.5, coins: B }], ['2 ATR, second half', { ...NOW, chaseAtr: 2, coins: B }],
     ], series, times, start, now, 'CHASE_LAB.md', 'Chase = |price - signal price| / ATR at the entry check, where the signal price is where the score first crossed +/-25. Live setup otherwise (score 65, limit 0.3 ATR 4h, BE +0.2%, 22 coins).');
+  }
+  if (DROP_CHECK) {
+    const NOW = { minScore: 65, limit: { atr: 0.3, hours: 4 }, beBufferPct: 0.2 };
+    const base = config.SYMBOLS, n = Math.ceil(base.length / 2), A = base.slice(0, n), B = base.slice(n);
+    const without = (list, xs) => list.filter(c => !xs.includes(c));
+    const V = [['A  live ' + base.length + ' coins', { ...NOW }]];
+    for (const c of CANDIDATES) V.push(['- ' + c.replace('USDT', ''), { ...NOW, coins: without(base, [c]) }]);
+    if (CANDIDATES.length > 1) V.push(['- ' + CANDIDATES.map(c => c.replace('USDT', '')).join(' - '), { ...NOW, coins: without(base, CANDIDATES) }]);
+    for (const [name, half] of [['first', A], ['second', B]]) {
+      const hit = CANDIDATES.filter(c => half.includes(c));
+      if (!hit.length) continue;
+      V.push(['-- ' + name + ' half of the live list --', null], [name + ' half', { ...NOW, coins: half }], [name + ' half - ' + hit.map(c => c.replace('USDT', '')).join(' - '), { ...NOW, coins: without(half, hit) }]);
+    }
+    return variantTable('Removing ' + CANDIDATES.map(c => c.replace('USDT', '')).join(' / ') + ' from the live coins (live setup)', V, series, times, start, now, 'DROP_CHECK.md',
+      'Live setup: score 65, limit 0.3 ATR 4h, BE +0.2%, 2.5% risk, max 5 open / 4 per direction / 3 per candle. The half check repeats the removal on the half of the list that holds the coin.');
   }
   if (ADD_CHECK) {
     const NOW = { minScore: 65, limit: { atr: 0.3, hours: 4 }, beBufferPct: 0.2 };

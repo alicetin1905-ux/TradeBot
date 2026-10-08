@@ -227,6 +227,11 @@
 
   .banner.exchange{ background:rgba(255,200,87,0.08); border-color:rgba(255,200,87,0.3); }
   .banner.exchange b{ color:var(--warn); }
+  .banner.small{ margin:6px 0 10px; padding:3px 8px; border-radius:6px; font-size:9.5px; line-height:1.4; display:inline-block; }
+  .coin .why{ margin-top:5px; font-size:10px; line-height:1.45; color:var(--text-secondary); }
+  .coin .why b{ color:var(--warn); font-weight:600; }
+  .coin .adxTag{ font-size:10px; color:var(--text-tertiary); font-weight:400; letter-spacing:0; }
+  .coin .why.ok b{ color:var(--up); }
 </style>
 </head>
 <body>
@@ -236,10 +241,7 @@
   <div class="sub">Bybit demo · ATLAS + GoldenRatio + CRUCIBLE</div>
 </div>
 
-<div class="banner exchange">
-  <b>Bybit demo</b> — demo funds, not real money. One 2000 USDT balance for all 21 coins;
-  stops and targets sit on Bybit. Open P&amp;L uses live Bybit prices<span id="priceSourceNote"></span>.
-</div>
+<div class="banner exchange small"><b>Bybit demo</b> · demo funds, not real money · live Bybit prices<span id="priceSourceNote"></span></div>
 
 <div style="display:flex; align-items:center; gap:8px; margin:-6px 0 6px;">
   <button type="button" id="alertsToggle">Alerts off</button>
@@ -453,8 +455,11 @@
               : sc.wait === 'adx' ? 'score ready · trend overstretched (ADX ≥ max)'
               : sc.wait === 'stale' ? 'score ready · enters only right after a 4H close'
               : sc.wait === 'btc' ? 'score ready · BTC points the other way'
+              : sc.wait === 'limit' ? 'score ready · portfolio limit'
+              : sc.wait === 'taken' ? 'score ready · order placed'
               : pct + '% to entry') + ' · ' + dirWord + '</div>' +
           '</div>' +
+          (Math.abs(sc.score) >= thresh ? whyHtml(sc, account) : '') +
           '<div class="sigLine" data-sig="' + s.id + '">' + sigHtml(s.id) + '</div>';
       } else {
         extraHtml = '<div class="noPos">no score yet — waits for the next hourly run</div>';
@@ -464,11 +469,46 @@
         '<div class="coin' + (pos ? ' inPos' : '') + (account && account.settings && account.settings.SYMBOLS && account.settings.SYMBOLS.indexOf(s.id) < 0 ? '' : ringClass(sc, s.id, account)) + '">' +
           '<div class="px" data-px="' + s.id + '">' + pxHtml(s.id) + '</div>' +
           '<div class="sym">' + s.label + '</div>' +
-          '<div class="bal">score ' + scoreTxt + '</div>' +
+          '<div class="bal">score ' + scoreTxt + (sc && sc.adx != null ? ' <span class="adxTag">ADX ' + Math.round(sc.adx) + '</span>' : '') + '</div>' +
           extraHtml +
         '</div>'
       );
     }).join('');
+  }
+
+  // Plain-language reason why a coin whose score reached the entry level has no
+  // trade: the bot's own hold reason (sc.why) plus what the rule means. Outside
+  // the entry window the reason from the check at the 4H close is shown.
+  var WHY = {
+    used: 'This signal was already traded. A new trade needs the score to fall back between −25 and +25 (or flip) first, so one move is never traded twice.',
+    fib: 'A fresh strong move the other way (Fibonacci check) has not been won back yet — entering now would trade into it.',
+    chase: 'Price already ran away from where the signal started. Entering this late gives a worse entry and stop (backtest: more losers).',
+    adx: 'The 4H trend is overstretched (ADX at or above the max). Entries this late in a trend were the weakest group in the backtest.',
+    btc: 'BTC\'s own signal points the other way. The bot takes no alt trades against BTC.',
+    limit: 'All entry rules passed, but a portfolio limit stopped it (slots, trades per direction, trades per candle, free margin or the daily loss limit).',
+    taken: 'All rules passed — the bot placed the trade.',
+  };
+  function hm(t) { return new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }); }
+  function nextClose() { var step = 4 * 3600000; return Math.floor(Date.now() / step) * step + step; } // 4H closes: 00/04/08/12/16/20 UTC
+  function whyHtml(sc, account) {
+    var mins = account && account.settings && account.settings.ENTRY_FRESH_MIN;
+    var c = sc.wait === 'stale' ? sc.check : { code: sc.wait, why: sc.why };
+    var parts = [];
+    if (sc.wait === 'stale') {
+      parts.push('<b>Waits for the next 4H close (' + hm(nextClose()) + ').</b> New trades only in the first ' + (mins || 60) + ' min after a close.');
+      if (c && c.code) {
+        parts.push('Last check (' + hm(c.at) + '): ' +
+          (c.code === 'taken' ? 'traded.' : esc(c.why || '') + (WHY[c.code] ? ' — ' + WHY[c.code] : '')));
+      } else {
+        parts.push('The score reached the entry level after the last check.');
+      }
+    } else if (c.code && WHY[c.code]) {
+      parts.push('<b>' + esc(c.why || '') + '</b>');
+      parts.push(WHY[c.code]);
+    } else {
+      return '';
+    }
+    return '<div class="why' + (c && c.code === 'taken' ? ' ok' : '') + '">' + parts.join(' ') + '</div>';
   }
 
   function renderRules(account, openCount) {

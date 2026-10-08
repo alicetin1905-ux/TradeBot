@@ -129,7 +129,12 @@ async function scoreAll(st, events) {
       });
       if (!analysis) { events.push({ symbol, type: 'skip', reason: 'not enough candle history yet' }); continue; }
       // atr: the dashboard shows whether price is still within MAX_CHASE_ATR of the signal price
-      st.scores[symbol] = { score: analysis.score, bias: analysis.bias, at: Date.now(), src: data.source || 'okx', atr: +analysis.atr.toPrecision(6) };
+      // check: the last real entry check on this signal candle (code + reason), kept so the
+      // dashboard can still say why a ready coin wasn't traded once the entry window has passed
+      const prev = st.scores[symbol];
+      st.scores[symbol] = { score: analysis.score, bias: analysis.bias, at: Date.now(), src: data.source || 'okx', atr: +analysis.atr.toPrecision(6),
+        adx: Number.isFinite(analysis.adx) ? +analysis.adx.toFixed(1) : null, candle: analysis.closedAt,
+        check: prev && prev.check && prev.check.candle === analysis.closedAt ? prev.check : undefined };
       if (data.source && data.source !== 'bybit') console.log(`${symbol}: market data from ${data.source}${data.note ? ` (Bybit candles failed: ${data.note})` : ''}`);
       signals[symbol] = { symbol, data, analysis };
     } catch (err) {
@@ -141,7 +146,8 @@ async function scoreAll(st, events) {
 
 // Coins with no open position whose signal passes the entry gates,
 // strongest |score| first. A coin held back gets a code in scores.json
-// (wait: 'weak' | 'used' | 'stale' | 'fib' | 'chase' | 'adx' | 'btc') so the dashboard can say why.
+// (wait: 'weak' | 'used' | 'stale' | 'fib' | 'chase' | 'adx' | 'btc'; after the exchange step
+// also 'limit' | 'taken', with the reason text in why — see noteWhy) so the dashboard can say why.
 function entryCandidates(signals, st, events, blocked = [], now = Date.now()) {
   const out = [];
   for (const sig of Object.values(signals)) {
@@ -186,6 +192,27 @@ function entryCandidates(signals, st, events, blocked = [], now = Date.now()) {
     out.push({ symbol, data, analysis, fibCheck: check.fibCheck });
   }
   return out.sort((a, b) => Math.abs(b.analysis.score) - Math.abs(a.analysis.score));
+}
+
+// Dashboard: why each coin with a signal did or didn't trade this run. The
+// reason is the run's own 'hold' text (entry gates in entryCandidates, slot /
+// margin / daily-loss limits in exchange.openEntries); a coin that passed every
+// gate but hit a portfolio limit gets wait 'limit'. Checks made inside the
+// entry window are kept on the candle (check) for the rest of its 4 hours.
+function noteWhy(st, events) {
+  for (const ev of events) {
+    const sc = st.scores[ev.symbol];
+    if (!sc) continue;
+    if (ev.type === 'hold') {
+      if (!sc.wait) sc.wait = 'limit';
+      sc.why = ev.reason;
+    } else if (ev.type === 'order' || ev.type === 'enter') {
+      sc.wait = 'taken'; sc.why = ev.type === 'order' ? 'limit entry order placed' : 'trade opened';
+    }
+    if ((ev.type === 'hold' || ev.type === 'order' || ev.type === 'enter') && sc.wait !== 'stale' && sc.wait !== 'weak') {
+      sc.check = { candle: sc.candle, at: Date.now(), code: sc.wait, why: sc.why };
+    }
+  }
 }
 
 function exchangeClient() {
@@ -264,6 +291,7 @@ async function run() {
   const blocked = [];
   const candidates = entryCandidates(signals, st, events, blocked);
   await exchange.runExchange({ client, st, signals, candidates, events, halt });
+  noteWhy(st, events);
   shadow.update({ shadow: st.shadow, signals, blocked, balance: st.account.balance });
   // Real liquidations: tracking only, never blocks or changes a trade.
   try {

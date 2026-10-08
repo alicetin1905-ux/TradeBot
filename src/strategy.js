@@ -32,7 +32,7 @@ function entryFilters({ symbol, data, analysis }) {
 
   const chaseDist = Math.abs(analysis.price - analysis.plan.entry);
   if (chaseDist > config.MAX_CHASE_ATR * analysis.atr) {
-    return { ok: false, code: 'chase', reason: 'price has drifted too far from the flip entry to still take it' };
+    return { ok: false, code: 'chase', reason: `price is ${(chaseDist / analysis.atr).toFixed(1)}× ATR from the signal price (max ${config.MAX_CHASE_ATR}×) — too late to take it` };
   }
   // ADX cap: no new entry into an overstretched trend (backtest 2020-2026:
   // ADX >= 40 entries were the weakest group; PF 1.44 -> 1.49)

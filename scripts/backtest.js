@@ -285,7 +285,7 @@ function simulate(series, symbols, times, rules) {
       lossStreak = p.pnl < 0 ? lossStreak + 1 : 0;
       if (R.streakPause && lossStreak >= R.streakPause.n) { pauseUntil = t + R.streakPause.hours * HOUR; lossStreak = 0; }
       trades.push({ symbol: p.symbol, bias: p.bias, score: p.score, openedAt: p.openedAt, closedAt: t, pnl: p.pnl, exit: reason, path: p.exits.join(' > '),
-        stopPct: Math.abs(1 - p.initStop / p.entry), margin: p.margin, notional: p.qty * p.entry });
+        stopPct: Math.abs(1 - p.initStop / p.entry), margin: p.margin, notional: p.qty * p.entry, sig: p.sig, sigT: p.sigT, entry: p.entry });
       if (reason === 'stop' || (R.coolAnyLoss && p.pnl < 0)) lastStop[p.symbol + (R.coolBothDirs ? '' : p.bias)] = t; // for the per-coin cooldown
       delete open[p.symbol];
     }
@@ -346,13 +346,13 @@ function simulate(series, symbols, times, rules) {
     return lv;
   }
 
-  function openPosition(s, sig, entry, t, feeRate, margin) {
+  function openPosition(s, sig, entry, t, feeRate, margin, sigT = t) {
     const lv = levels(entry, sig);
     const notional = margin * R.leverage, qty = notional / entry;
     balance -= notional * feeRate;
     open[s] = {
       symbol: s, bias: sig.bias, score: sig.score, entry, ...lv, qty, qtyRemaining: qty, margin,
-      pnl: -notional * feeRate, filled: {}, breakeven: false, openedAt: t, exits: [], atr: sig.atr, initStop: lv.stop,
+      pnl: -notional * feeRate, filled: {}, breakeven: false, openedAt: t, exits: [], atr: sig.atr, initStop: lv.stop, sig, sigT,
     };
   }
 
@@ -364,7 +364,7 @@ function simulate(series, symbols, times, rules) {
       const c = series[s].h1[i];
       if (o.sig.bias === 1 ? c.l <= o.price : c.h >= o.price) {
         delete pending[s];
-        openPosition(s, o.sig, o.price, t, FEE_MAKER, o.margin);
+        openPosition(s, o.sig, o.price, t, FEE_MAKER, o.margin, o.sigT);
         manage(open[s], c, t); // worst case: stop/targets can already hit in the fill candle
       } else if (t >= o.expires) { delete pending[s]; missedLimits++; }
     }
@@ -443,6 +443,9 @@ function simulate(series, symbols, times, rules) {
       if (R.minAdx && !(sig.adx >= R.minAdx)) continue;
       if (R.btcMinAdx && !(btc && btc.adx >= R.btcMinAdx)) continue;
       if (R.volMin && !(sig.vr >= R.volMin)) continue;
+      if (R.maxAdx && !(sig.adx < R.maxAdx)) continue; // skip an overstretched trend
+      if (R.tier && Math.abs(sig.score) < R.tier.below && !(sig.vr >= R.tier.volMin)) continue; // weaker scores need volume
+      if (R.skipDays && R.skipDays.includes(new Date(t + HOUR).getUTCDay())) continue;
       if (R.st1Agree && sig.st1 !== sig.bias) continue;
       if (R.st4Agree && sig.st4 !== sig.bias) continue;
       if (R.liqFilter && sig.liq) {
@@ -505,7 +508,7 @@ function simulate(series, symbols, times, rules) {
       if (balance - usedMargin() < margin * 0.99) continue; // full-size trades only
       used[s] = { bias: sig.bias, reset: false };
       if (R.limit) {
-        pending[s] = { sig, margin, price: sig.close - sig.bias * R.limit.atr * sig.atr, expires: t + R.limit.hours * HOUR };
+        pending[s] = { sig, sigT: t, margin, price: sig.close - sig.bias * R.limit.atr * sig.atr, expires: t + R.limit.hours * HOUR };
       } else {
         openPosition(s, sig, sig.close, t, FEE_TAKER, margin);
       }
@@ -715,6 +718,11 @@ const COOL_LAB = args.includes('--cool-lab');
 const PF2_LAB = args.includes('--pf2-lab');
 // --margin-lab: margin cap as a % of the balance instead of a fixed $400; written to backtest/MARGIN_LAB.md.
 const MARGIN_LAB = args.includes('--margin-lab');
+// --leak: the live trades split by what was true at entry (BTC score, ATR %, ADX, volume, ...),
+// PF per bucket for 2020-23 and 2024-26 separately; written to backtest/LEAK.md.
+const LEAK = args.includes('--leak');
+// --pf3-lab: filters suggested by the leak report (volume, ADX cap, higher score, weekday / hour); written to backtest/PF3_LAB.md.
+const PF3_LAB = args.includes('--pf3-lab');
 const PF2_PART = args.includes('--part') ? args[args.indexOf('--part') + 1] : 'breadth';
 const COINSET = args.includes('--coinset') ? String(args[args.indexOf('--coinset') + 1] || '').split(',').filter(Boolean).map(x => x.toUpperCase().replace(/USDT$/, '') + 'USDT') : null;
 const LAB_MODE = args.includes('--mode') ? args[args.indexOf('--mode') + 1] : 'classic';
@@ -747,7 +755,7 @@ async function main() {
   }
   for (const s of symbols) {
     process.stderr.write(`scoring ${s}…\n`);
-    series[s].sig1 = SCORE_LAB ? new Map() : TF_COMPARE ? precompute(s, series[s].h1, 1, start) : SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB || RISK_GRID || LEV_GRID || DD_LAB || RISK_STARTS || COIN_WF || SCORE_MOM || LAB2 || LAB3 || TF_DAY || PER_CANDLE || COINSET || TUNE || COMBO || SPLIT || SLOTS || BTC_COOL || BTC_LINE || TIME_STOP || SCORE_JUMP || SCORE_JUMP_ROB || PF_LAB || SCORE_RISE || LIMIT_ROB || LIVE_NOW || STOP_LAB || STREAK_ROB || SCORE_NOW || NEW_COINS || ADD_CHECK || CHASE_LAB || DROP_CHECK || FLIP_LAB || DAY_LAB || COOL_LAB || PF2_LAB || MARGIN_LAB ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
+    series[s].sig1 = SCORE_LAB ? new Map() : TF_COMPARE ? precompute(s, series[s].h1, 1, start) : SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB || RISK_GRID || LEV_GRID || DD_LAB || RISK_STARTS || COIN_WF || SCORE_MOM || LAB2 || LAB3 || TF_DAY || PER_CANDLE || COINSET || TUNE || COMBO || SPLIT || SLOTS || BTC_COOL || BTC_LINE || TIME_STOP || SCORE_JUMP || SCORE_JUMP_ROB || PF_LAB || SCORE_RISE || LIMIT_ROB || LIVE_NOW || STOP_LAB || STREAK_ROB || SCORE_NOW || NEW_COINS || ADD_CHECK || CHASE_LAB || DROP_CHECK || FLIP_LAB || DAY_LAB || COOL_LAB || PF2_LAB || MARGIN_LAB || LEAK || PF3_LAB ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
     series[s].sig4 = SCORE_LAB ? precompute(s, to4h(series[s].h1), 4, start, { h1: series[s].h1, mode: LAB_MODE, mtfTrim: LAB_MTF }) : precompute(s, to4h(series[s].h1), 4, start);
     if (DAY_LAB) series[s].dEma = dailyEma(to1d(series[s].h1));
     if (TF_DAY || DAY_LAB) series[s].sigD = precompute(s, to1d(series[s].h1), 24, start, { entryTf: 'D' });
@@ -782,6 +790,26 @@ async function main() {
       ['1 ATR, second half', { ...NOW, coins: B }], ['1.5 ATR, second half', { ...NOW, chaseAtr: 1.5, coins: B }], ['2 ATR, second half', { ...NOW, chaseAtr: 2, coins: B }],
     ], series, times, start, now, 'CHASE_LAB.md', 'Chase = |price - signal price| / ATR at the entry check, where the signal price is where the score first crossed +/-25. Live setup otherwise (score 65, limit 0.3 ATR 4h, BE +0.2%, 22 coins).');
   }
+  if (PF3_LAB) {
+    const NOW = { minScore: 65, limit: { atr: 0.3, hours: 4 }, beBufferPct: 0.2 };
+    const all = config.SYMBOLS, n = Math.ceil(all.length / 2), A = all.slice(0, n), B = all.slice(n);
+    const halves = (...vs) => [['-- first half of the coins --', null], ['live, first half', { ...NOW, coins: A }], ...vs.map(([l, x]) => [l + ', first half', { ...NOW, ...x, coins: A }]),
+      ['-- second half of the coins --', null], ['live, second half', { ...NOW, coins: B }], ...vs.map(([l, x]) => [l + ', second half', { ...NOW, ...x, coins: B }])];
+    const VOL = { volMin: 0.7 }, ADX = { maxAdx: 40 }, TIER = { tier: { below: 75, volMin: 1 } };
+    return variantTable('Filters from the leak report (live setup)', [
+      ['A  live', { ...NOW }],
+      ['volume >= 0.7x average', { ...NOW, ...VOL }],
+      ['ADX < 40', { ...NOW, ...ADX }],
+      ['volume >= 0.7x + ADX < 40', { ...NOW, ...VOL, ...ADX }],
+      ['min score 70', { ...NOW, minScore: 70 }],
+      ['min score 75', { ...NOW, minScore: 75 }],
+      ['score 65-74 only with volume >= 1x', { ...NOW, ...TIER }],
+      ['skip Sun + Mon signals', { ...NOW, skipDays: [0, 1] }],
+      ['skip the 08 UTC close', { ...NOW, skipCloseHours: [8] }],
+      ...halves(['volume >= 0.7x', VOL], ['ADX < 40', ADX], ['volume + ADX', { ...VOL, ...ADX }], ['65-74 needs volume', TIER]),
+    ], series, times, start, now, 'PF3_LAB.md', 'Live setup (score 65, limit 0.3 ATR 4h, BE +0.2%, ' + all.length + ' coins). Volume = the signal candle\'s volume vs its 20-candle average; ADX = 4H ADX(14) at the signal. Weekday / hour rows are the most likely to be noise (picked from the same data).');
+  }
+  if (LEAK) return leakReport(series, times, start, now);
   if (MARGIN_LAB) {
     const NOW = { minScore: 65, limit: { atr: 0.3, hours: 4 }, beBufferPct: 0.2 };
     const all = config.SYMBOLS, n = Math.ceil(all.length / 2), A = all.slice(0, n), B = all.slice(n);
@@ -1653,6 +1681,49 @@ function lab2(series, symbols, times, start, end) {
 
 // One row per variant (rule overrides on the live setup): per year with
 // fresh 2000 USDT and $100 fixed risk, 2020-23 vs 2024-26, and compounding.
+function leakReport(series, times, start, end) {
+  const P = config.PORTFOLIO;
+  const R = { ...VARIANTS.find(v => v.focus).rules, minScore: 65, limit: { atr: 0.3, hours: 4 }, beBufferPct: 0.2, start: P.STARTING_BALANCE, margin: P.MARGIN_USDT, leverage: P.LEVERAGE,
+    maxOpen: P.MAX_OPEN_POSITIONS, maxSameDir: P.MAX_SAME_DIRECTION, riskUsd: 100, riskPct: null };
+  const T = simulate(series, config.SYMBOLS, times, R).tradeList;
+  const split = Date.UTC(2024, 0, 1);
+  const stat = (xs) => {
+    const w = xs.filter(x => x.pnl > 0).reduce((a, x) => a + x.pnl, 0), l = -xs.filter(x => x.pnl <= 0).reduce((a, x) => a + x.pnl, 0);
+    return { n: xs.length, pf: l ? w / l : 0, net: w - l, win: xs.length ? xs.filter(x => x.pnl > 0).length / xs.length : 0 };
+  };
+  const btcAt = (x) => { const b = series.BTCUSDT && series.BTCUSDT.sig4.get(x.sigT); return b ? b.score * x.bias : null; };
+  const prevScore = (x) => { const q = series[x.symbol].sig4.get(x.sigT - 4 * HOUR); return q ? (x.sig.score - q.score) * x.bias : null; };
+  const F = [
+    ['|score| at entry', x => Math.abs(x.sig.score), [65, 70, 75, 80, 85, 90]],
+    ['BTC score in trade direction', btcAt, [-100, -25, 0, 25, 50, 75]],
+    ['score change vs previous 4H candle (trade direction)', prevScore, [-100, 0, 10, 20, 40]],
+    ['ATR % of price', x => x.sig.atr / x.sig.close * 100, [0, 1.5, 2.5, 3.5, 5]],
+    ['stop distance %', x => x.stopPct * 100, [0, 2, 3, 4, 6]],
+    ['ADX (4H)', x => x.sig.adx, [0, 20, 25, 30, 40]],
+    ['volume vs 20-candle average', x => x.sig.vr, [0, 0.7, 1, 1.5, 2.5]],
+    ['chase (ATR from signal price)', x => x.sig.chaseDist, [0, 0.25, 0.5, 0.75]],
+    ['Supertrend 4H with the trade', x => x.sig.st4 === x.bias ? 1 : 0, [0, 1]],
+    ['direction (1 = long)', x => x.bias === 1 ? 1 : 0, [0, 1]],
+    ['hours from signal to fill', x => (x.openedAt - x.sigT) / HOUR, [0, 1, 2, 3]],
+    ['UTC hour of the signal close', x => new Date(x.sigT + HOUR).getUTCHours(), [0, 4, 8, 12, 16, 20]],
+    ['weekday of the signal (0 = Sun)', x => new Date(x.sigT + HOUR).getUTCDay(), [0, 1, 2, 3, 4, 5, 6]],
+  ];
+  const L = ['# Where the PF comes from', '', `Live setup (score 65, limit 0.3 ATR 4h, BE +0.2%, ${config.SYMBOLS.length} coins), $100 fixed risk, ${new Date(start).toISOString().slice(0, 10)} → ${new Date(end).toISOString().slice(0, 10)}, ${T.length} trades. Each bucket: trades / win % / PF / net $, for 2020-23 and 2024-26 separately. A bucket only counts as a real pattern when both periods agree.`, ''];
+  for (const [name, fn, edges] of F) {
+    L.push('## ' + name, '', '| bucket | 2020-23: n | win | PF | net | 2024-26: n | win | PF | net |', '|---|---:|---:|---:|---:|---:|---:|---:|---:|');
+    for (let i = 0; i < edges.length; i++) {
+      const lo = edges[i], hi = edges[i + 1];
+      const inB = (x) => { const v = fn(x); return v != null && !Number.isNaN(v) && v >= lo && (hi == null || v < hi); };
+      const a = stat(T.filter(x => x.openedAt < split && inB(x))), b = stat(T.filter(x => x.openedAt >= split && inB(x)));
+      const c = (s) => s.n ? `${s.n} | ${(s.win * 100).toFixed(0)}% | ${s.pf.toFixed(2)} | ${s.net.toFixed(0)}` : '0 | - | - | -';
+      L.push(`| ${hi == null ? '>= ' + lo : lo + ' to <' + hi} | ${c(a)} | ${c(b)} |`);
+    }
+    L.push('');
+  }
+  fs.writeFileSync(path.join(OUT, 'LEAK.md'), L.join('\n'));
+  console.log(L.join('\n'));
+}
+
 function variantTable(title, V, series, times, start, end, file, note) {
   const live = VARIANTS.find(v => v.focus);
   const P = config.PORTFOLIO;

@@ -1350,7 +1350,7 @@ function analyze(series, allSymbols, times, start, end) {
   const rules = { ...live.rules, start: P.STARTING_BALANCE, riskUsd: P.RISK_PCT != null ? null : P.RISK_USDT, riskPct: P.RISK_PCT, margin: P.MARGIN_USDT, leverage: P.LEVERAGE, maxSameDir: P.MAX_SAME_DIRECTION, maxOpen: P.MAX_OPEN_POSITIONS,
     // the live entry rules (control/settings.json wins over config.js; the
     // backtest otherwise ignores that file): min score, pullback limit entry, breakeven buffer
-    minScore: liveSetting('ENTRY_MIN_SCORE'), beBufferPct: liveSetting('BREAKEVEN_BUFFER_PCT') || 0,
+    minScore: liveSetting('ENTRY_MIN_SCORE'), beBufferPct: liveSetting('BREAKEVEN_BUFFER_PCT') || 0, maxAdx: liveSetting('ADX_MAX') || null,
     limit: liveSetting('LIMIT_ENTRY_ATR') > 0 ? { atr: liveSetting('LIMIT_ENTRY_ATR'), hours: liveSetting('LIMIT_ENTRY_HOURS') || 4 } : null };
   process.stderr.write(`analysis rules: min score ${rules.minScore}, limit ${JSON.stringify(rules.limit)}, BE buffer ${rules.beBufferPct}%\n`);
   const r = simulate(series, symbols, times, rules);

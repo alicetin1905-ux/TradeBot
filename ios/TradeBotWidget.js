@@ -173,6 +173,7 @@ function readiness(s, pos, account) {
     case 'used': return { t: 'signal used', s: 'used', c: C.dim };
     case 'stale': return { t: 'next 4H close ' + countdown(), s: 'next 4H', c: C.amber };
     case 'chase': return { t: 'ran too far', s: 'too far', c: C.amber };
+    case 'adx': return { t: 'trend stretched', s: 'ADX high', c: C.amber };
     case 'fib': return { t: 'Fib check', s: 'Fib', c: C.amber };
     case 'btc': return { t: 'BTC blocks', s: 'BTC', c: C.red };
     case 'weak': return { t: 'below ' + MIN_SCORE, s: '<' + MIN_SCORE, c: C.dim };

@@ -12,7 +12,7 @@
 3. Results are in **Strategy Tester** (TradingView's own backtest on that coin).
 
 Settings (gear icon) match the live bot: min score 65, signal at ±25, max 1×
-ATR from the signal price, Fibonacci check, BTC filter, **pullback entry**
+ATR from the signal price, no entry at ADX(14) ≥ 40, Fibonacci check, BTC filter, **pullback entry**
 (limit order 0.3× ATR better than the close, cancelled after 4 h; set it to 0
 for market entries), stop 1.5× ATR (widened to the Chandelier Exit), targets
 1.5/2.5/3.5R closing 25/25/50%, stop to breakeven (entry + 0.2%) after T1 and

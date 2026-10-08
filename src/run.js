@@ -141,7 +141,7 @@ async function scoreAll(st, events) {
 
 // Coins with no open position whose signal passes the entry gates,
 // strongest |score| first. A coin held back gets a code in scores.json
-// (wait: 'weak' | 'used' | 'stale' | 'fib' | 'chase' | 'btc') so the dashboard can say why.
+// (wait: 'weak' | 'used' | 'stale' | 'fib' | 'chase' | 'adx' | 'btc') so the dashboard can say why.
 function entryCandidates(signals, st, events, blocked = [], now = Date.now()) {
   const out = [];
   for (const sig of Object.values(signals)) {

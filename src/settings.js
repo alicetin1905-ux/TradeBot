@@ -54,6 +54,7 @@ const FIELDS = {
   USE_FIB: { at: ['USE_FIB'], check: bool, label: 'Fibonacci check on' },
   BTC_FILTER: { at: ['BTC_FILTER'], check: bool, label: 'No altcoin trades against BTC\'s signal' },
   MAX_CHASE_ATR: { at: ['MAX_CHASE_ATR'], check: num(0.1, 5), label: 'Max distance from the flip entry (x ATR)' },
+  ADX_MAX: { at: ['ADX_MAX'], check: num(10, 100, { nullable: true }), label: 'No new entry when the 4H ADX is at or above this (null = off)' },
   ENTRY_FRESH_MIN: { at: ['ENTRY_FRESH_MIN'], check: num(5, 240, { int: true, nullable: true }), label: 'Enter only within this many minutes of a candle close (null = any time)' },
   SYMBOLS: { at: ['SYMBOLS'], check: null, label: 'Coins to trade' }, // checked against ALL_SYMBOLS below
   // Alerts

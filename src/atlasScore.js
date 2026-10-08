@@ -232,7 +232,7 @@ function analyse({ symbol, candles, ticker, oi, ratio, book, tape, entryTf, mtfT
     plan = sizeFor({ symbol, equity: account, bias, entry, stop, riskPct, leverage });
   }
 
-  return { symbol, sig, score, groupScore, mtfFactor, bias, plan, mtf, mtfDir, atr: a14, price, closedAt: k[i].t, ce: { dir: ce.dir[i], stop: ceStop } };
+  return { symbol, sig, score, groupScore, mtfFactor, bias, plan, mtf, mtfDir, atr: a14, adx: adxV, price, closedAt: k[i].t, ce: { dir: ce.dir[i], stop: ceStop } };
 }
 
 function fmt(x) { return nn(x) ? (+x).toFixed(2) : '—'; }

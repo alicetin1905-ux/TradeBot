@@ -450,6 +450,7 @@
               : sc.wait === 'used' ? 'already traded this signal · waits for a reset'
               : sc.wait === 'fib' ? 'score ready · waiting on Fibonacci check'
               : sc.wait === 'chase' ? 'score ready · price ran too far from the entry'
+              : sc.wait === 'adx' ? 'score ready · trend overstretched (ADX ≥ max)'
               : sc.wait === 'stale' ? 'score ready · enters only right after a 4H close'
               : sc.wait === 'btc' ? 'score ready · BTC points the other way'
               : pct + '% to entry') + ' · ' + dirWord + '</div>' +
@@ -525,6 +526,7 @@
     { g: 'Strategy', k: 'USE_FIB', label: 'Fibonacci check', t: 'bool' },
     { g: 'Strategy', k: 'BTC_FILTER', label: 'BTC filter (no alt trades against BTC)', t: 'bool' },
     { g: 'Strategy', k: 'MAX_CHASE_ATR', label: 'Max chase (x ATR)', t: 'num', min: 0.1, max: 5 },
+    { g: 'Strategy', k: 'ADX_MAX', label: 'Max 4H ADX for a new entry (empty = off)', t: 'num', min: 10, max: 100, nullable: true },
     { g: 'Strategy', k: 'ENTRY_FRESH_MIN', label: 'Enter within (min of close)', t: 'num', min: 5, max: 240, int: true, nullable: true },
     { g: 'Strategy', k: 'SYMBOLS', label: 'Coins', t: 'coins' },
     { g: 'Alerts', k: 'STATUS_EVERY_H', label: 'Status push every (h)', t: 'num', min: 1, max: 24, int: true },

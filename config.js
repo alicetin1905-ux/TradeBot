@@ -65,6 +65,8 @@ const config = module.exports = {
   // this run got to it — matches "a trade plan whose entry keeps sliding
   // isn't a plan" from ATLAS's own flip-entry comment, capped at 1x ATR.
   MAX_CHASE_ATR: 1,
+  // no new entry when the signal candle's 4H ADX(14) is at or above this (null = off)
+  ADX_MAX: 40,
 
   // Pullback entry: instead of buying/selling at market, rest a limit order
   // this many ATRs better than the price at the signal, for LIMIT_ENTRY_HOURS;

@@ -11,7 +11,7 @@ const config = require('../config');
 function dirName(bias) { return bias === 1 ? 'long' : bias === -1 ? 'short' : 'flat'; }
 
 // Signal-side entry gates that don't depend on account size: GoldenRatio
-// confluence and the max-chase distance from the flip entry. src/run.js sizes
+// confluence, the max-chase distance from the flip entry and the ADX cap. src/run.js sizes
 // the plan itself.
 function entryFilters({ symbol, data, analysis }) {
   const fibCheck = config.USE_FIB === false ? { agrees: true, impulse: null } : fib.confluence({
@@ -33,6 +33,11 @@ function entryFilters({ symbol, data, analysis }) {
   const chaseDist = Math.abs(analysis.price - analysis.plan.entry);
   if (chaseDist > config.MAX_CHASE_ATR * analysis.atr) {
     return { ok: false, code: 'chase', reason: 'price has drifted too far from the flip entry to still take it' };
+  }
+  // ADX cap: no new entry into an overstretched trend (backtest 2020-2026:
+  // ADX >= 40 entries were the weakest group; PF 1.44 -> 1.49)
+  if (config.ADX_MAX != null && analysis.adx >= config.ADX_MAX) {
+    return { ok: false, code: 'adx', fibCheck, reason: `4H ADX ${analysis.adx.toFixed(1)} is at or above ${config.ADX_MAX} — trend overstretched, no new entry` };
   }
   return { ok: true, fibCheck };
 }

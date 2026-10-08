@@ -36,6 +36,7 @@ grpS = "Signal"
 minScore = input.int(65, "Min |score| to enter", minval = 25, maxval = 100, group = grpS)
 biasTh   = input.int(25, "Signal threshold (long / short)", minval = 1, maxval = 100, group = grpS)
 chaseAtr = input.float(1.0, "Max distance from signal price (x ATR)", minval = 0.1, maxval = 5, group = grpS)
+adxMax   = input.float(40, "No entry when ADX(14) >= (0 = off)", minval = 0, maxval = 100, group = grpS)
 useFib   = input.bool(true, "Fibonacci check", group = grpS)
 fibTh    = input.float(2.0, "Fibonacci impulse min move %", minval = 0.5, maxval = 10, group = grpS,
      tooltip = "The bot uses 2% for most coins; ETH 1, SOL 3, XRP 3, HYPE 3, SUI 4.")
@@ -351,10 +352,13 @@ if pendingOn
 // ---------------- entries ----------------
 bool chaseOk = not na(flipPrice) and math.abs(close - flipPrice) <= chaseAtr * atr14
 bool btcOk = not useBtc or isBtc or btcBias != -bias
+// ADX cap: no new entry into an overstretched trend
+[_dip, _dim, adxNow] = ta.dmi(14, 14)
+bool adxOk = adxMax <= 0 or adxNow < adxMax
 // Heikin Ashi / Renko etc. candles are averages, not real prices: the score and
 // fills would be wrong (far too good), so the strategy only trades on normal candles.
 bool stdChart = chart.is_standard
-bool baseOk = stdChart and strategy.position_size == 0 and not pendingOn and bias != 0 and math.abs(score) >= minScore and not signalUsed and chaseOk and btcOk
+bool baseOk = stdChart and strategy.position_size == 0 and not pendingOn and bias != 0 and math.abs(score) >= minScore and not signalUsed and chaseOk and btcOk and adxOk
 bool fibOk = true
 if baseOk and useFib
     fibOk := f_fibAgrees(bias, fibTh, 12, 300, 6, 0.618)

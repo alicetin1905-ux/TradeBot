@@ -991,3 +991,22 @@ test('pullback limit entry: cancelled after LIMIT_ENTRY_HOURS; a partial fill ke
     assert.equal(st.positions.SOLUSDT, undefined);
   } finally { [config.LIMIT_ENTRY_ATR, config.LIMIT_ENTRY_HOURS] = saved; }
 });
+
+test('ADX cap: the entry gate holds a signal back when the 4H ADX is at or above ADX_MAX', () => {
+  const strategy = require('../src/strategy');
+  const saved = { fib: config.USE_FIB, adx: config.ADX_MAX, chase: config.MAX_CHASE_ATR };
+  config.USE_FIB = false;
+  config.MAX_CHASE_ATR = 1;
+  try {
+    const analysis = (adx) => ({ bias: 1, price: 100, atr: 2, adx, plan: { entry: 100 } });
+    config.ADX_MAX = 40;
+    assert.equal(strategy.entryFilters({ symbol: 'SOLUSDT', data: {}, analysis: analysis(39.9) }).ok, true);
+    const held = strategy.entryFilters({ symbol: 'SOLUSDT', data: {}, analysis: analysis(40) });
+    assert.equal(held.ok, false);
+    assert.equal(held.code, 'adx');
+    config.ADX_MAX = null; // off
+    assert.equal(strategy.entryFilters({ symbol: 'SOLUSDT', data: {}, analysis: analysis(55) }).ok, true);
+  } finally {
+    config.USE_FIB = saved.fib; config.ADX_MAX = saved.adx; config.MAX_CHASE_ATR = saved.chase;
+  }
+});

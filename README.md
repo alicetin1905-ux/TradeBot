@@ -63,6 +63,10 @@ number as a rehearsal of the strategy, not investment advice.
   signal points the other way. Backtest: +218% vs +256% over the year, but
   the weakest 4 months +55% instead of +23% and the worst drop 36% instead
   of 46%.
+- **ADX cap** (`ADX_MAX`, 40): no new entry while the signal candle's 4H
+  ADX(14) is at or above 40, an overstretched trend. Backtest 2020-2026
+  (21 coins): PF 1.44 -> 1.49, worst drop 29.9% -> 29.2%, 43 of 1815
+  trades skipped; 35/45/50 checked too (`backtest/ADX_LAB.md`).
 - **One trade per signal:** once a coin has been traded long (or short), it
   isn't entered in that direction again until its score has gone neutral or
   flipped at least once since — closing a trade never triggers an instant

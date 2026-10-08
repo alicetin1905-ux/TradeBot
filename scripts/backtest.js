@@ -86,6 +86,16 @@ async function fetchHistory(symbol, fromMs) {
 }
 
 // UTC daily candles from 1H candles; incomplete days are dropped.
+// daily close and EMA20/50/200 of the daily closes, keyed by the day's open time
+function dailyEma(d1) {
+  const out = new Map(), e = {};
+  for (const c of d1) {
+    for (const n of [20, 50, 200]) e[n] = e[n] == null ? c.c : e[n] + (c.c - e[n]) * 2 / (n + 1);
+    out.set(c.t, { c: c.c, 20: e[20], 50: e[50], 200: e[200] });
+  }
+  return out;
+}
+
 function to1d(h1) {
   const out = [];
   for (let i = 0; i + 23 < h1.length; i++) {
@@ -398,7 +408,13 @@ function simulate(series, symbols, times, rules) {
         // daily trend filter: the last closed 1D signal must point the trade's way
         const dayStart = Math.floor((t + HOUR) / (24 * HOUR)) * 24 * HOUR - 24 * HOUR;
         const d = series[s].sigD && series[s].sigD.get(dayStart + 23 * HOUR);
-        if (!d || d.bias !== sig.bias) continue;
+        if (R.dAgree === 'soft' ? d && d.bias === -sig.bias : (!d || d.bias !== sig.bias)) continue;
+      }
+      if (R.dEma) {
+        // daily trend: the last closed daily close must sit on the trade's side of its EMA
+        const dayStart = Math.floor((t + HOUR) / (24 * HOUR)) * 24 * HOUR - 24 * HOUR;
+        const d = series[s].dEma && series[s].dEma.get(dayStart);
+        if (!d || (d.c - d[R.dEma]) * sig.bias <= 0) continue;
       }
       if (R.entryFn) {
         // score momentum: the score in the trade's direction now and 1 / 2 signal candles ago
@@ -668,6 +684,8 @@ const CHASE_LAB = args.includes('--chase-lab');
 const DROP_CHECK = args.includes('--drop-check');
 // --flip-lab: signal-flip exit only before T1 (after T1 breakeven / T1-lock handle the runner); written to backtest/FLIP_LAB.md.
 const FLIP_LAB = args.includes('--flip-lab');
+// --day-lab: daily-trend filters on the live setup (1D ATLAS signal, daily close vs EMA20/50/200); written to backtest/DAY_LAB.md.
+const DAY_LAB = args.includes('--day-lab');
 const COINSET = args.includes('--coinset') ? String(args[args.indexOf('--coinset') + 1] || '').split(',').filter(Boolean).map(x => x.toUpperCase().replace(/USDT$/, '') + 'USDT') : null;
 const LAB_MODE = args.includes('--mode') ? args[args.indexOf('--mode') + 1] : 'classic';
 const LAB_MTF = args.includes('--mtf');
@@ -699,9 +717,10 @@ async function main() {
   }
   for (const s of symbols) {
     process.stderr.write(`scoring ${s}…\n`);
-    series[s].sig1 = SCORE_LAB ? new Map() : TF_COMPARE ? precompute(s, series[s].h1, 1, start) : SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB || RISK_GRID || LEV_GRID || DD_LAB || RISK_STARTS || COIN_WF || SCORE_MOM || LAB2 || LAB3 || TF_DAY || PER_CANDLE || COINSET || TUNE || COMBO || SPLIT || SLOTS || BTC_COOL || BTC_LINE || TIME_STOP || SCORE_JUMP || SCORE_JUMP_ROB || PF_LAB || SCORE_RISE || LIMIT_ROB || LIVE_NOW || STOP_LAB || STREAK_ROB || SCORE_NOW || NEW_COINS || ADD_CHECK || CHASE_LAB || DROP_CHECK || FLIP_LAB ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
+    series[s].sig1 = SCORE_LAB ? new Map() : TF_COMPARE ? precompute(s, series[s].h1, 1, start) : SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB || RISK_GRID || LEV_GRID || DD_LAB || RISK_STARTS || COIN_WF || SCORE_MOM || LAB2 || LAB3 || TF_DAY || PER_CANDLE || COINSET || TUNE || COMBO || SPLIT || SLOTS || BTC_COOL || BTC_LINE || TIME_STOP || SCORE_JUMP || SCORE_JUMP_ROB || PF_LAB || SCORE_RISE || LIMIT_ROB || LIVE_NOW || STOP_LAB || STREAK_ROB || SCORE_NOW || NEW_COINS || ADD_CHECK || CHASE_LAB || DROP_CHECK || FLIP_LAB || DAY_LAB ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
     series[s].sig4 = SCORE_LAB ? precompute(s, to4h(series[s].h1), 4, start, { h1: series[s].h1, mode: LAB_MODE, mtfTrim: LAB_MTF }) : precompute(s, to4h(series[s].h1), 4, start);
-    if (TF_DAY) series[s].sigD = precompute(s, to1d(series[s].h1), 24, start, { entryTf: 'D' });
+    if (DAY_LAB) series[s].dEma = dailyEma(to1d(series[s].h1));
+    if (TF_DAY || DAY_LAB) series[s].sigD = precompute(s, to1d(series[s].h1), 24, start, { entryTf: 'D' });
     addFilterInputs(series[s]);
   }
   const times = [...new Set(symbols.flatMap(s => series[s].h1.map(c => c.t)))].filter(t => t >= start && t <= now).sort((a, b) => a - b);
@@ -732,6 +751,22 @@ async function main() {
       ['-- second half of the coins --', null],
       ['1 ATR, second half', { ...NOW, coins: B }], ['1.5 ATR, second half', { ...NOW, chaseAtr: 1.5, coins: B }], ['2 ATR, second half', { ...NOW, chaseAtr: 2, coins: B }],
     ], series, times, start, now, 'CHASE_LAB.md', 'Chase = |price - signal price| / ATR at the entry check, where the signal price is where the score first crossed +/-25. Live setup otherwise (score 65, limit 0.3 ATR 4h, BE +0.2%, 22 coins).');
+  }
+  if (DAY_LAB) {
+    const NOW = { minScore: 65, limit: { atr: 0.3, hours: 4 }, beBufferPct: 0.2 };
+    const n = Math.ceil(config.SYMBOLS.length / 2), A = config.SYMBOLS.slice(0, n), B = config.SYMBOLS.slice(n);
+    return variantTable('Daily trend filter (live setup)', [
+      ['A  live: no daily filter', { ...NOW }],
+      ['1D ATLAS signal must agree', { ...NOW, dAgree: true }],
+      ['1D ATLAS signal not against (soft)', { ...NOW, dAgree: 'soft' }],
+      ['daily close vs EMA20', { ...NOW, dEma: 20 }],
+      ['daily close vs EMA50', { ...NOW, dEma: 50 }],
+      ['daily close vs EMA200', { ...NOW, dEma: 200 }],
+      ['-- first half of the coins --', null],
+      ['live, first half', { ...NOW, coins: A }], ['1D not against, first half', { ...NOW, dAgree: 'soft', coins: A }], ['EMA50, first half', { ...NOW, dEma: 50, coins: A }],
+      ['-- second half of the coins --', null],
+      ['live, second half', { ...NOW, coins: B }], ['1D not against, second half', { ...NOW, dAgree: 'soft', coins: B }], ['EMA50, second half', { ...NOW, dEma: 50, coins: B }],
+    ], series, times, start, now, 'DAY_LAB.md', 'Live setup (score 65, limit 0.3 ATR 4h, BE +0.2%, ' + config.SYMBOLS.length + ' coins). Filters use the last closed daily candle (UTC day): "agree" = the 1D ATLAS score is past +/-25 in the trade direction; "not against" = it is not past +/-25 the other way; EMA = the daily close is above (long) / below (short) its EMA.');
   }
   if (FLIP_LAB) {
     const NOW = { minScore: 65, limit: { atr: 0.3, hours: 4 }, beBufferPct: 0.2 };

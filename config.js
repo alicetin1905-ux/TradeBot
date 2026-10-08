@@ -3,10 +3,10 @@
 // without touching this file — these are the defaults.
 const config = module.exports = {
   // The six coins ATLAS / GoldenRatio / CRUCIBLE / BTCLiveBoard track, plus HYPE and SUI.
-  SYMBOLS: ['SOLUSDT', 'DOGEUSDT', 'SUIUSDT', 'ENAUSDT', 'WLDUSDT', 'DYDXUSDT', 'GALAUSDT', 'EGLDUSDT', 'NEARUSDT', 'XLMUSDT', 'BLURUSDT', 'SANDUSDT', 'AXSUSDT', 'ZILUSDT', 'CHZUSDT', 'POPCATUSDT', 'GRAMUSDT', '1000PEPEUSDT', 'KAITOUSDT', 'XRPUSDT', 'ATOMUSDT', '1000BONKUSDT'],
+  SYMBOLS: ['SOLUSDT', 'DOGEUSDT', 'SUIUSDT', 'ENAUSDT', 'WLDUSDT', 'DYDXUSDT', 'GALAUSDT', 'EGLDUSDT', 'NEARUSDT', 'XLMUSDT', 'BLURUSDT', 'SANDUSDT', 'AXSUSDT', 'ZILUSDT', 'CHZUSDT', 'GRAMUSDT', '1000PEPEUSDT', 'KAITOUSDT', 'XRPUSDT', 'ATOMUSDT', '1000BONKUSDT'],
   // Every coin the bot knows (SYMBOLS can be narrowed to a subset of these;
   // close-all always covers all of them).
-  ALL_SYMBOLS: ['BTCUSDT', 'SOLUSDT', 'DOGEUSDT', 'SUIUSDT', 'ENAUSDT', 'WLDUSDT', 'DYDXUSDT', 'GALAUSDT', 'EGLDUSDT', 'NEARUSDT', 'XLMUSDT', 'BLURUSDT', 'SANDUSDT', 'AXSUSDT', 'ZILUSDT', 'CHZUSDT', 'POPCATUSDT', 'GRAMUSDT', '1000PEPEUSDT', 'KAITOUSDT', 'XRPUSDT', 'ATOMUSDT', '1000BONKUSDT'],
+  ALL_SYMBOLS: ['BTCUSDT', 'SOLUSDT', 'DOGEUSDT', 'SUIUSDT', 'ENAUSDT', 'WLDUSDT', 'DYDXUSDT', 'GALAUSDT', 'EGLDUSDT', 'NEARUSDT', 'XLMUSDT', 'BLURUSDT', 'SANDUSDT', 'AXSUSDT', 'ZILUSDT', 'CHZUSDT', 'GRAMUSDT', '1000PEPEUSDT', 'KAITOUSDT', 'XRPUSDT', 'ATOMUSDT', '1000BONKUSDT'],
 
   // Signal timeframe: entries, flips and levels are decided on closed 4H
   // candles (OKX "4H", UTC-aligned). The 1H version didn't cover its fees in

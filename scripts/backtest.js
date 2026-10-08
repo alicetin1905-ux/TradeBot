@@ -276,6 +276,7 @@ function simulate(series, symbols, times, rules) {
   const usedMargin = () => Object.values(open).reduce((s, p) => s + p.margin * (p.qtyRemaining / p.qty), 0)
     + Object.values(pending).reduce((s, o) => s + o.margin, 0);
 
+  const lastStop = {};
   function closeFill(p, qty, price, reason, fee, t) {
     const pnl = (price - p.entry) * p.bias * qty - price * qty * fee;
     p.pnl += pnl; balance += pnl; p.qtyRemaining -= qty;
@@ -285,6 +286,7 @@ function simulate(series, symbols, times, rules) {
       if (R.streakPause && lossStreak >= R.streakPause.n) { pauseUntil = t + R.streakPause.hours * HOUR; lossStreak = 0; }
       trades.push({ symbol: p.symbol, bias: p.bias, score: p.score, openedAt: p.openedAt, closedAt: t, pnl: p.pnl, exit: reason, path: p.exits.join(' > '),
         stopPct: Math.abs(1 - p.initStop / p.entry), margin: p.margin, notional: p.qty * p.entry });
+      if (reason === 'stop' || (R.coolAnyLoss && p.pnl < 0)) lastStop[p.symbol + (R.coolBothDirs ? '' : p.bias)] = t; // for the per-coin cooldown
       delete open[p.symbol];
     }
   }
@@ -409,6 +411,11 @@ function simulate(series, symbols, times, rules) {
         const dayStart = Math.floor((t + HOUR) / (24 * HOUR)) * 24 * HOUR - 24 * HOUR;
         const d = series[s].sigD && series[s].sigD.get(dayStart + 23 * HOUR);
         if (R.dAgree === 'soft' ? d && d.bias === -sig.bias : (!d || d.bias !== sig.bias)) continue;
+      }
+      if (R.coolH) {
+        // per-coin cooldown: no new trade on this coin (this direction) for N hours after a stop-loss
+        const ls = lastStop[s + (R.coolBothDirs ? '' : sig.bias)];
+        if (ls != null && t - ls < R.coolH * HOUR) continue;
       }
       if (R.dEma) {
         // daily trend: the last closed daily close must sit on the trade's side of its EMA
@@ -686,6 +693,8 @@ const DROP_CHECK = args.includes('--drop-check');
 const FLIP_LAB = args.includes('--flip-lab');
 // --day-lab: daily-trend filters on the live setup (1D ATLAS signal, daily close vs EMA20/50/200); written to backtest/DAY_LAB.md.
 const DAY_LAB = args.includes('--day-lab');
+// --cool-lab: per-coin cooldown after a stop-loss on the live setup; written to backtest/COOL_LAB.md.
+const COOL_LAB = args.includes('--cool-lab');
 const COINSET = args.includes('--coinset') ? String(args[args.indexOf('--coinset') + 1] || '').split(',').filter(Boolean).map(x => x.toUpperCase().replace(/USDT$/, '') + 'USDT') : null;
 const LAB_MODE = args.includes('--mode') ? args[args.indexOf('--mode') + 1] : 'classic';
 const LAB_MTF = args.includes('--mtf');
@@ -717,7 +726,7 @@ async function main() {
   }
   for (const s of symbols) {
     process.stderr.write(`scoring ${s}…\n`);
-    series[s].sig1 = SCORE_LAB ? new Map() : TF_COMPARE ? precompute(s, series[s].h1, 1, start) : SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB || RISK_GRID || LEV_GRID || DD_LAB || RISK_STARTS || COIN_WF || SCORE_MOM || LAB2 || LAB3 || TF_DAY || PER_CANDLE || COINSET || TUNE || COMBO || SPLIT || SLOTS || BTC_COOL || BTC_LINE || TIME_STOP || SCORE_JUMP || SCORE_JUMP_ROB || PF_LAB || SCORE_RISE || LIMIT_ROB || LIVE_NOW || STOP_LAB || STREAK_ROB || SCORE_NOW || NEW_COINS || ADD_CHECK || CHASE_LAB || DROP_CHECK || FLIP_LAB || DAY_LAB ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
+    series[s].sig1 = SCORE_LAB ? new Map() : TF_COMPARE ? precompute(s, series[s].h1, 1, start) : SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB || RISK_GRID || LEV_GRID || DD_LAB || RISK_STARTS || COIN_WF || SCORE_MOM || LAB2 || LAB3 || TF_DAY || PER_CANDLE || COINSET || TUNE || COMBO || SPLIT || SLOTS || BTC_COOL || BTC_LINE || TIME_STOP || SCORE_JUMP || SCORE_JUMP_ROB || PF_LAB || SCORE_RISE || LIMIT_ROB || LIVE_NOW || STOP_LAB || STREAK_ROB || SCORE_NOW || NEW_COINS || ADD_CHECK || CHASE_LAB || DROP_CHECK || FLIP_LAB || DAY_LAB || COOL_LAB ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
     series[s].sig4 = SCORE_LAB ? precompute(s, to4h(series[s].h1), 4, start, { h1: series[s].h1, mode: LAB_MODE, mtfTrim: LAB_MTF }) : precompute(s, to4h(series[s].h1), 4, start);
     if (DAY_LAB) series[s].dEma = dailyEma(to1d(series[s].h1));
     if (TF_DAY || DAY_LAB) series[s].sigD = precompute(s, to1d(series[s].h1), 24, start, { entryTf: 'D' });
@@ -751,6 +760,22 @@ async function main() {
       ['-- second half of the coins --', null],
       ['1 ATR, second half', { ...NOW, coins: B }], ['1.5 ATR, second half', { ...NOW, chaseAtr: 1.5, coins: B }], ['2 ATR, second half', { ...NOW, chaseAtr: 2, coins: B }],
     ], series, times, start, now, 'CHASE_LAB.md', 'Chase = |price - signal price| / ATR at the entry check, where the signal price is where the score first crossed +/-25. Live setup otherwise (score 65, limit 0.3 ATR 4h, BE +0.2%, 22 coins).');
+  }
+  if (COOL_LAB) {
+    const NOW = { minScore: 65, limit: { atr: 0.3, hours: 4 }, beBufferPct: 0.2 };
+    const n = Math.ceil(config.SYMBOLS.length / 2), A = config.SYMBOLS.slice(0, n), B = config.SYMBOLS.slice(n);
+    return variantTable('Per-coin cooldown after a stop-loss (live setup)', [
+      ['A  live: no cooldown', { ...NOW }],
+      ['12h, same direction', { ...NOW, coolH: 12 }],
+      ['24h, same direction', { ...NOW, coolH: 24 }],
+      ['48h, same direction', { ...NOW, coolH: 48 }],
+      ['24h, both directions', { ...NOW, coolH: 24, coolBothDirs: true }],
+      ['24h after any loss, same direction', { ...NOW, coolH: 24, coolAnyLoss: true }],
+      ['-- first half of the coins --', null],
+      ['live, first half', { ...NOW, coins: A }], ['12h, first half', { ...NOW, coolH: 12, coins: A }], ['24h, first half', { ...NOW, coolH: 24, coins: A }], ['48h, first half', { ...NOW, coolH: 48, coins: A }],
+      ['-- second half of the coins --', null],
+      ['live, second half', { ...NOW, coins: B }], ['12h, second half', { ...NOW, coolH: 12, coins: B }], ['24h, second half', { ...NOW, coolH: 24, coins: B }], ['48h, second half', { ...NOW, coolH: 48, coins: B }],
+    ], series, times, start, now, 'COOL_LAB.md', 'Live setup (score 65, limit 0.3 ATR 4h, BE +0.2%, ' + config.SYMBOLS.length + ' coins). Cooldown starts when a trade closes on its full stop-loss (not breakeven / T1-lock); "any loss" also counts flip exits in loss.');
   }
   if (DAY_LAB) {
     const NOW = { minScore: 65, limit: { atr: 0.3, hours: 4 }, beBufferPct: 0.2 };

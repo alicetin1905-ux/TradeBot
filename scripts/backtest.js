@@ -404,8 +404,15 @@ function simulate(series, symbols, times, rules) {
     for (const s of symbols) {
       if (open[s] || pending[s]) continue;
       const sig = series[s][sigKey].get(t);
-      const minScore = (R.minScoreBySymbol && R.minScoreBySymbol[s] != null) ? R.minScoreBySymbol[s] : R.minScore;
       if (!sig || sig.bias === 0 || !sig.ratio) continue;
+      const minScore = (R.minScoreBySymbol && R.minScoreBySymbol[s] != null) ? R.minScoreBySymbol[s]
+        : sig.bias === 1 && R.minScoreLong != null ? R.minScoreLong : sig.bias === -1 && R.minScoreShort != null ? R.minScoreShort : R.minScore;
+      if (R.breadth) {
+        // market breadth: share of the coins whose score is past +/-25 in the trade direction (and the other way)
+        let n = 0, with_ = 0, against = 0;
+        for (const c of R.breadthCoins || symbols) { const x = series[c] && series[c][sigKey].get(t); if (!x) continue; n++; if (x.bias === sig.bias) with_++; else if (x.bias === -sig.bias) against++; }
+        if (R.breadth === 'majority' ? !(with_ > against) : !(n && with_ / n >= R.breadth)) continue;
+      }
       if (R.dAgree) {
         // daily trend filter: the last closed 1D signal must point the trade's way
         const dayStart = Math.floor((t + HOUR) / (24 * HOUR)) * 24 * HOUR - 24 * HOUR;
@@ -478,11 +485,17 @@ function simulate(series, symbols, times, rules) {
       const busy = [...Object.values(open), ...Object.values(pending).map(o => o.sig)];
       if (busy.length >= R.maxOpen) break;
       if (busy.filter(p => p.bias === sig.bias).length >= R.maxSameDir) continue;
+      if (R.groups) {
+        // correlation cap: at most groupMax open / pending trades per group of coins that move together
+        const g = R.groups.find(x => x.includes(s));
+        if (g && [...Object.keys(open), ...Object.keys(pending)].filter(c => g.includes(c)).length >= R.groupMax) continue;
+      }
       if (t < pauseUntil) break;
       if (R.maxNewPerCandle && newNow >= R.maxNewPerCandle) break;
       let margin = R.margin;
       let risk = R.riskPct ? balance * R.riskPct / 100 : R.riskUsd;
       if (R.ddThrottle && curDD >= R.ddThrottle.at) risk *= R.ddThrottle.factor;
+      if (R.riskByScore) risk *= R.riskByScore.find(([min]) => Math.abs(sig.score) >= min)[1]; // [[minScore, factor], ...] high to low
       if (R.riskUsd || R.riskPct) {
         if (!(risk > 0)) continue;
         margin = Math.min(risk / stopDist(sig), R.margin * R.leverage) / R.leverage;
@@ -695,6 +708,10 @@ const FLIP_LAB = args.includes('--flip-lab');
 const DAY_LAB = args.includes('--day-lab');
 // --cool-lab: per-coin cooldown after a stop-loss on the live setup; written to backtest/COOL_LAB.md.
 const COOL_LAB = args.includes('--cool-lab');
+// --pf2-lab --part breadth|size|corr|ls: market breadth, score-based sizing, correlation cap,
+// separate long/short score; written to backtest/PF2_<PART>.md.
+const PF2_LAB = args.includes('--pf2-lab');
+const PF2_PART = args.includes('--part') ? args[args.indexOf('--part') + 1] : 'breadth';
 const COINSET = args.includes('--coinset') ? String(args[args.indexOf('--coinset') + 1] || '').split(',').filter(Boolean).map(x => x.toUpperCase().replace(/USDT$/, '') + 'USDT') : null;
 const LAB_MODE = args.includes('--mode') ? args[args.indexOf('--mode') + 1] : 'classic';
 const LAB_MTF = args.includes('--mtf');
@@ -726,7 +743,7 @@ async function main() {
   }
   for (const s of symbols) {
     process.stderr.write(`scoring ${s}…\n`);
-    series[s].sig1 = SCORE_LAB ? new Map() : TF_COMPARE ? precompute(s, series[s].h1, 1, start) : SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB || RISK_GRID || LEV_GRID || DD_LAB || RISK_STARTS || COIN_WF || SCORE_MOM || LAB2 || LAB3 || TF_DAY || PER_CANDLE || COINSET || TUNE || COMBO || SPLIT || SLOTS || BTC_COOL || BTC_LINE || TIME_STOP || SCORE_JUMP || SCORE_JUMP_ROB || PF_LAB || SCORE_RISE || LIMIT_ROB || LIVE_NOW || STOP_LAB || STREAK_ROB || SCORE_NOW || NEW_COINS || ADD_CHECK || CHASE_LAB || DROP_CHECK || FLIP_LAB || DAY_LAB || COOL_LAB ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
+    series[s].sig1 = SCORE_LAB ? new Map() : TF_COMPARE ? precompute(s, series[s].h1, 1, start) : SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB || RISK_GRID || LEV_GRID || DD_LAB || RISK_STARTS || COIN_WF || SCORE_MOM || LAB2 || LAB3 || TF_DAY || PER_CANDLE || COINSET || TUNE || COMBO || SPLIT || SLOTS || BTC_COOL || BTC_LINE || TIME_STOP || SCORE_JUMP || SCORE_JUMP_ROB || PF_LAB || SCORE_RISE || LIMIT_ROB || LIVE_NOW || STOP_LAB || STREAK_ROB || SCORE_NOW || NEW_COINS || ADD_CHECK || CHASE_LAB || DROP_CHECK || FLIP_LAB || DAY_LAB || COOL_LAB || PF2_LAB ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
     series[s].sig4 = SCORE_LAB ? precompute(s, to4h(series[s].h1), 4, start, { h1: series[s].h1, mode: LAB_MODE, mtfTrim: LAB_MTF }) : precompute(s, to4h(series[s].h1), 4, start);
     if (DAY_LAB) series[s].dEma = dailyEma(to1d(series[s].h1));
     if (TF_DAY || DAY_LAB) series[s].sigD = precompute(s, to1d(series[s].h1), 24, start, { entryTf: 'D' });
@@ -760,6 +777,59 @@ async function main() {
       ['-- second half of the coins --', null],
       ['1 ATR, second half', { ...NOW, coins: B }], ['1.5 ATR, second half', { ...NOW, chaseAtr: 1.5, coins: B }], ['2 ATR, second half', { ...NOW, chaseAtr: 2, coins: B }],
     ], series, times, start, now, 'CHASE_LAB.md', 'Chase = |price - signal price| / ATR at the entry check, where the signal price is where the score first crossed +/-25. Live setup otherwise (score 65, limit 0.3 ATR 4h, BE +0.2%, 22 coins).');
+  }
+  if (PF2_LAB) {
+    const NOW = { minScore: 65, limit: { atr: 0.3, hours: 4 }, beBufferPct: 0.2 };
+    const all = config.SYMBOLS, n = Math.ceil(all.length / 2), A = all.slice(0, n), B = all.slice(n);
+    // robustness: the live setup and each variant on both halves of the coin list
+    const halves = (...vs) => [['-- first half of the coins --', null], ['live, first half', { ...NOW, coins: A }], ...vs.map(([l, x]) => [l + ', first half', { ...NOW, ...x, coins: A }]),
+      ['-- second half of the coins --', null], ['live, second half', { ...NOW, coins: B }], ...vs.map(([l, x]) => [l + ', second half', { ...NOW, ...x, coins: B }])];
+    const live = ['A  live', { ...NOW }];
+    const MEMES = ['DOGEUSDT', '1000PEPEUSDT', '1000BONKUSDT'], GAMING = ['GALAUSDT', 'SANDUSDT', 'AXSUSDT'], L1 = ['SOLUSDT', 'SUIUSDT', 'NEARUSDT', 'ATOMUSDT', 'EGLDUSDT'];
+    const P = config.PORTFOLIO;
+    const parts = {
+      breadth: ['Market breadth filter (live setup)', 'PF2_BREADTH.md', 'Breadth = share of all ' + all.length + ' live coins whose 4H score is past +/-25 in the trade direction on the same candle (halves still use all coins for breadth). "majority" = more coins with the trade than against it.', [
+        live,
+        ['breadth: majority with the trade', { ...NOW, breadth: 'majority', breadthCoins: all }],
+        ['breadth >= 20% with the trade', { ...NOW, breadth: 0.2, breadthCoins: all }],
+        ['breadth >= 30% with the trade', { ...NOW, breadth: 0.3, breadthCoins: all }],
+        ['breadth >= 40% with the trade', { ...NOW, breadth: 0.4, breadthCoins: all }],
+        ['breadth >= 50% with the trade', { ...NOW, breadth: 0.5, breadthCoins: all }],
+        ...halves(['majority', { breadth: 'majority', breadthCoins: all }], ['>= 30%', { breadth: 0.3, breadthCoins: all }])]],
+      size: ['Risk by score strength (live setup)', 'PF2_SIZE.md', 'Risk per trade scaled by |score| at entry: the factor multiplies the 2.5% (compound) or $100 (per year). PF in $ terms. Score bands of the live trades are listed below the table.', [
+        live,
+        ['0.8x <75, 1x 75-84, 1.2x 85+', { ...NOW, riskByScore: [[85, 1.2], [75, 1], [0, 0.8]] }],
+        ['0.6x <75, 1x 75-84, 1.4x 85+', { ...NOW, riskByScore: [[85, 1.4], [75, 1], [0, 0.6]] }],
+        ['1x <85, 1.3x 85+', { ...NOW, riskByScore: [[85, 1.3], [0, 1]] }],
+        ['reverse: 1.2x <75, 1x 75-84, 0.8x 85+', { ...NOW, riskByScore: [[85, 0.8], [75, 1], [0, 1.2]] }],
+        ...halves(['0.8/1/1.2', { riskByScore: [[85, 1.2], [75, 1], [0, 0.8]] }])]],
+      corr: ['Correlation cap per coin group (live setup)', 'PF2_CORR.md', 'Groups: memes = DOGE, 1000PEPE, 1000BONK; gaming = GALA, SAND, AXS; L1 = SOL, SUI, NEAR, ATOM, EGLD. Cap = max open + pending trades per group (either direction).', [
+        live,
+        ['memes + gaming: max 2 each', { ...NOW, groups: [MEMES, GAMING], groupMax: 2 }],
+        ['memes + gaming: max 1 each', { ...NOW, groups: [MEMES, GAMING], groupMax: 1 }],
+        ['memes + gaming + L1: max 2 each', { ...NOW, groups: [MEMES, GAMING, L1], groupMax: 2 }],
+        ...halves(['memes+gaming max 2', { groups: [MEMES, GAMING], groupMax: 2 }])]],
+      ls: ['Separate entry score for longs and shorts (live setup)', 'PF2_LS.md', 'Min |score| to enter, per direction (live: 65 both).', [
+        live,
+        ['long 65 / short 70', { ...NOW, minScoreShort: 70 }],
+        ['long 70 / short 65', { ...NOW, minScoreLong: 70 }],
+        ['long 60 / short 65', { ...NOW, minScoreLong: 60 }],
+        ['long 65 / short 60', { ...NOW, minScoreShort: 60 }],
+        ...halves(['long 65 / short 70', { minScoreShort: 70 }], ['long 70 / short 65', { minScoreLong: 70 }])]],
+    };
+    const [title, file, note, V] = parts[PF2_PART];
+    let extraNote = note;
+    if (PF2_PART === 'size') {
+      const base = { ...VARIANTS.find(v => v.focus).rules, ...NOW, start: P.STARTING_BALANCE, margin: P.MARGIN_USDT, leverage: P.LEVERAGE, maxOpen: P.MAX_OPEN_POSITIONS, maxSameDir: P.MAX_SAME_DIRECTION, riskUsd: 100, riskPct: null };
+      const r = simulate(series, all, times, base), bands = [[65, 70], [70, 75], [75, 80], [80, 85], [85, 90], [90, 101]];
+      extraNote += '\n\nLive trades by |score| at entry ($100 fixed risk, whole period):\nscore    trades  win%    PF    net $';
+      for (const [lo, hi] of bands) {
+        const T = r.tradeList.filter(x => Math.abs(x.score) >= lo && Math.abs(x.score) < hi);
+        const w = T.filter(x => x.pnl > 0).reduce((a, x) => a + x.pnl, 0), l = -T.filter(x => x.pnl <= 0).reduce((a, x) => a + x.pnl, 0);
+        extraNote += '\n' + (lo + '-' + (hi > 100 ? 100 : hi - 1)).padEnd(8) + String(T.length).padStart(7) + (T.length ? (T.filter(x => x.pnl > 0).length / T.length * 100).toFixed(0) + '%' : '-').padStart(6) + (l ? (w / l).toFixed(2) : '-').padStart(7) + (w - l).toFixed(0).padStart(9);
+      }
+    }
+    return variantTable(title, V, series, times, start, now, file, extraNote);
   }
   if (COOL_LAB) {
     const NOW = { minScore: 65, limit: { atr: 0.3, hours: 4 }, beBufferPct: 0.2 };

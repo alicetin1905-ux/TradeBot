@@ -498,7 +498,9 @@ function simulate(series, symbols, times, rules) {
       if (R.riskByScore) risk *= R.riskByScore.find(([min]) => Math.abs(sig.score) >= min)[1]; // [[minScore, factor], ...] high to low
       if (R.riskUsd || R.riskPct) {
         if (!(risk > 0)) continue;
-        margin = Math.min(risk / stopDist(sig), R.margin * R.leverage) / R.leverage;
+        // margin cap: fixed R.margin, or R.marginPct % of the current balance (grows with it); marginPct 0 = no cap
+        const cap = R.marginPct === 0 ? Infinity : R.marginPct ? balance * R.marginPct / 100 : R.margin;
+        margin = Math.min(risk / stopDist(sig), cap * R.leverage) / R.leverage;
       }
       if (balance - usedMargin() < margin * 0.99) continue; // full-size trades only
       used[s] = { bias: sig.bias, reset: false };
@@ -711,6 +713,8 @@ const COOL_LAB = args.includes('--cool-lab');
 // --pf2-lab --part breadth|size|corr|ls: market breadth, score-based sizing, correlation cap,
 // separate long/short score; written to backtest/PF2_<PART>.md.
 const PF2_LAB = args.includes('--pf2-lab');
+// --margin-lab: margin cap as a % of the balance instead of a fixed $400; written to backtest/MARGIN_LAB.md.
+const MARGIN_LAB = args.includes('--margin-lab');
 const PF2_PART = args.includes('--part') ? args[args.indexOf('--part') + 1] : 'breadth';
 const COINSET = args.includes('--coinset') ? String(args[args.indexOf('--coinset') + 1] || '').split(',').filter(Boolean).map(x => x.toUpperCase().replace(/USDT$/, '') + 'USDT') : null;
 const LAB_MODE = args.includes('--mode') ? args[args.indexOf('--mode') + 1] : 'classic';
@@ -743,7 +747,7 @@ async function main() {
   }
   for (const s of symbols) {
     process.stderr.write(`scoring ${s}…\n`);
-    series[s].sig1 = SCORE_LAB ? new Map() : TF_COMPARE ? precompute(s, series[s].h1, 1, start) : SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB || RISK_GRID || LEV_GRID || DD_LAB || RISK_STARTS || COIN_WF || SCORE_MOM || LAB2 || LAB3 || TF_DAY || PER_CANDLE || COINSET || TUNE || COMBO || SPLIT || SLOTS || BTC_COOL || BTC_LINE || TIME_STOP || SCORE_JUMP || SCORE_JUMP_ROB || PF_LAB || SCORE_RISE || LIMIT_ROB || LIVE_NOW || STOP_LAB || STREAK_ROB || SCORE_NOW || NEW_COINS || ADD_CHECK || CHASE_LAB || DROP_CHECK || FLIP_LAB || DAY_LAB || COOL_LAB || PF2_LAB ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
+    series[s].sig1 = SCORE_LAB ? new Map() : TF_COMPARE ? precompute(s, series[s].h1, 1, start) : SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB || RISK_GRID || LEV_GRID || DD_LAB || RISK_STARTS || COIN_WF || SCORE_MOM || LAB2 || LAB3 || TF_DAY || PER_CANDLE || COINSET || TUNE || COMBO || SPLIT || SLOTS || BTC_COOL || BTC_LINE || TIME_STOP || SCORE_JUMP || SCORE_JUMP_ROB || PF_LAB || SCORE_RISE || LIMIT_ROB || LIVE_NOW || STOP_LAB || STREAK_ROB || SCORE_NOW || NEW_COINS || ADD_CHECK || CHASE_LAB || DROP_CHECK || FLIP_LAB || DAY_LAB || COOL_LAB || PF2_LAB || MARGIN_LAB ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
     series[s].sig4 = SCORE_LAB ? precompute(s, to4h(series[s].h1), 4, start, { h1: series[s].h1, mode: LAB_MODE, mtfTrim: LAB_MTF }) : precompute(s, to4h(series[s].h1), 4, start);
     if (DAY_LAB) series[s].dEma = dailyEma(to1d(series[s].h1));
     if (TF_DAY || DAY_LAB) series[s].sigD = precompute(s, to1d(series[s].h1), 24, start, { entryTf: 'D' });
@@ -777,6 +781,24 @@ async function main() {
       ['-- second half of the coins --', null],
       ['1 ATR, second half', { ...NOW, coins: B }], ['1.5 ATR, second half', { ...NOW, chaseAtr: 1.5, coins: B }], ['2 ATR, second half', { ...NOW, chaseAtr: 2, coins: B }],
     ], series, times, start, now, 'CHASE_LAB.md', 'Chase = |price - signal price| / ATR at the entry check, where the signal price is where the score first crossed +/-25. Live setup otherwise (score 65, limit 0.3 ATR 4h, BE +0.2%, 22 coins).');
+  }
+  if (MARGIN_LAB) {
+    const NOW = { minScore: 65, limit: { atr: 0.3, hours: 4 }, beBufferPct: 0.2 };
+    const all = config.SYMBOLS, n = Math.ceil(all.length / 2), A = all.slice(0, n), B = all.slice(n);
+    const SIZE = [[85, 1.2], [75, 1], [0, 0.8]];
+    return variantTable('Margin cap growing with the balance (live setup)', [
+      ['A  live: max $400 margin', { ...NOW }],
+      ['max 10% of balance', { ...NOW, marginPct: 10 }],
+      ['max 15% of balance', { ...NOW, marginPct: 15 }],
+      ['max 20% of balance (= $400 at start)', { ...NOW, marginPct: 20 }],
+      ['max 25% of balance', { ...NOW, marginPct: 25 }],
+      ['no margin cap (risk only)', { ...NOW, marginPct: 0 }],
+      ['20% of balance + risk by score 0.8/1/1.2', { ...NOW, marginPct: 20, riskByScore: SIZE }],
+      ['-- first half of the coins --', null],
+      ['live, first half', { ...NOW, coins: A }], ['20% of balance, first half', { ...NOW, marginPct: 20, coins: A }], ['20% + score size, first half', { ...NOW, marginPct: 20, riskByScore: SIZE, coins: A }],
+      ['-- second half of the coins --', null],
+      ['live, second half', { ...NOW, coins: B }], ['20% of balance, second half', { ...NOW, marginPct: 20, coins: B }], ['20% + score size, second half', { ...NOW, marginPct: 20, riskByScore: SIZE, coins: B }],
+    ], series, times, start, now, 'MARGIN_LAB.md', 'Live setup (score 65, limit 0.3 ATR 4h, BE +0.2%, 2.5% risk, 10x, ' + all.length + ' coins). The cap limits the margin per trade; risk sizing (2.5% of balance at the stop) still decides the size below it. No slippage modelled: very large orders on small coins would fill worse in reality.');
   }
   if (PF2_LAB) {
     const NOW = { minScore: 65, limit: { atr: 0.3, hours: 4 }, beBufferPct: 0.2 };

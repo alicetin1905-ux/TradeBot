@@ -184,7 +184,7 @@
   .setRow{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:6px 0; border-bottom:1px solid var(--border); font-size:12px; }
   .setRow:last-child{ border-bottom:0; }
   .setRow .k{ color:var(--text-secondary); flex:1; min-width:0; }
-  .setRow .v{ font-family:var(--mono); text-align:right; flex:0 0 auto; }
+  .setRow .v{ font-family:var(--mono); text-align:right; flex:0 1 auto; min-width:0; max-width:65%; overflow-wrap:anywhere; }
   .setRow .v.changed{ color:var(--bot); }
   .setRow .d{ display:block; font-size:9.5px; color:var(--text-tertiary); }
   .setRow input[type=text], .setRow input[type=number], .setRow select{
@@ -227,6 +227,9 @@
 
   .banner.exchange{ background:rgba(255,200,87,0.08); border-color:rgba(255,200,87,0.3); }
   .banner.exchange b{ color:var(--warn); }
+  /* never let one wide element make the whole page pan sideways on a phone */
+  html, body{ max-width:100%; overflow-x:hidden; }
+  @supports (overflow-x:clip){ html, body{ overflow-x:clip; } }
   .banner.small{ margin:6px 0 10px; padding:3px 8px; border-radius:6px; font-size:9.5px; line-height:1.4; display:inline-block; }
   .coin .why{ margin-top:5px; font-size:10px; line-height:1.45; color:var(--text-secondary); }
   .coin .why b{ color:var(--warn); font-weight:600; }

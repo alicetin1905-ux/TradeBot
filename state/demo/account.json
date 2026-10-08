@@ -62,6 +62,7 @@
     "USE_FIB": true,
     "BTC_FILTER": true,
     "MAX_CHASE_ATR": 1,
+    "ADX_MAX": 40,
     "ENTRY_FRESH_MIN": 60,
     "SYMBOLS": [
       "SOLUSDT",
@@ -122,6 +123,7 @@
     "USE_FIB": true,
     "BTC_FILTER": true,
     "MAX_CHASE_ATR": 1,
+    "ADX_MAX": 40,
     "ENTRY_FRESH_MIN": 60,
     "SYMBOLS": [
       "SOLUSDT",
@@ -149,5 +151,5 @@
     "STATUS_EVERY_H": 4
   },
   "settingsErrors": [],
-  "updatedAt": 1791450083935
+  "updatedAt": 1791452704054
 }

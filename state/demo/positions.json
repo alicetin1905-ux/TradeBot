@@ -1,1 +1,38 @@
-{}
+{
+  "NEARUSDT": {
+    "symbol": "NEARUSDT",
+    "bias": 1,
+    "entry": 5.225,
+    "stop": 4.889,
+    "initialStop": 4.889,
+    "t1": 5.729,
+    "t2": 6.066,
+    "t3": 6.402,
+    "qtyTotal": 131.1,
+    "qtyRemaining": 131.1,
+    "qtyT1": 32.7,
+    "qtyT2": 32.7,
+    "qtyT3": 65.7,
+    "margin": 68.49974999999999,
+    "notional": 684.9975,
+    "riskAmt": 44.04959999999992,
+    "filled": {
+      "t1": false,
+      "t2": false,
+      "t3": false
+    },
+    "breakeven": false,
+    "beAfter": "t1",
+    "openedAt": 1791688502373,
+    "score": 66,
+    "orders": {
+      "entry": "646121d8-172e-473d-b4f2-16a1c007cf3e",
+      "t1": "32ce8439-cf30-435f-898d-e0470bae8a98",
+      "t2": "4666d968-5704-4fb4-be2d-bbecb91c29f1",
+      "t3": "0eb3eea8-113f-4f6e-8f58-4ba6f12e0bbf"
+    },
+    "tickSize": 0.001,
+    "markPrice": 5.2392,
+    "unrealisedPnl": 1.86162
+  }
+}

@@ -1,1 +1,25 @@
-{}
+{
+  "GALAUSDT": {
+    "symbol": "GALAUSDT",
+    "bias": 1,
+    "score": 66,
+    "orderId": "0d1f3593-e381-4b38-b8ea-1afdcf4f4062",
+    "price": 0.002404,
+    "qty": 378288,
+    "stopLoss": 0.002286,
+    "ratios": {
+      "t1": 1.0734241968769642,
+      "t2": 1.122373661461607,
+      "t3": 1.1713231260462498
+    },
+    "inst": {
+      "qtyStep": 1,
+      "minOrderQty": 1,
+      "minNotional": 5,
+      "tickSize": 0.000001
+    },
+    "margin": 90.9404352,
+    "placedAt": 1791763275415,
+    "expiresAt": 1791777675415
+  }
+}

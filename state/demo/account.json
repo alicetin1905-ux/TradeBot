@@ -1,9 +1,9 @@
 {
   "fundingSince": 1790807106520,
   "funding": {
-    "total": -1.4504608199999995,
+    "total": -1.3687698399999997,
     "bySymbol": {
-      "WLDUSDT": -0.5929867,
+      "WLDUSDT": -0.63345497,
       "DYDXUSDT": -0.50007593,
       "SANDUSDT": -0.09948077,
       "NEARUSDT": 0.00185318,
@@ -12,10 +12,11 @@
       "BLURUSDT": -0.394025,
       "KAITOUSDT": 0.07200672,
       "CHZUSDT": 0.37754927999999993,
-      "SUIUSDT": -0.04726308
+      "SUIUSDT": -0.06438603,
+      "ZILUSDT": 0.1392822
     }
   },
-  "balance": 1780.59527902,
+  "balance": 1780.67697,
   "startingBalance": 2000,
   "marginPct": 10,
   "marginUsdt": 400,
@@ -31,7 +32,7 @@
   "maxOpenPositions": 5,
   "mode": "demo",
   "fundingError": null,
-  "exchangeEquity": 1845.30714305,
+  "exchangeEquity": 1848.50187905,
   "settings": {
     "RISK_PCT": 2.5,
     "RISK_USDT": 100,
@@ -155,5 +156,5 @@
     "STATUS_EVERY_H": 4
   },
   "settingsErrors": [],
-  "updatedAt": 1791788482449
+  "updatedAt": 1791792004214
 }

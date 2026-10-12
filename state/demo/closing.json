@@ -1,1 +1,39 @@
-{}
+{
+  "GALAUSDT": {
+    "symbol": "GALAUSDT",
+    "bias": 1,
+    "entry": 0.002404,
+    "stop": 0.002286,
+    "initialStop": 0.002286,
+    "t1": 0.002581,
+    "t2": 0.002698,
+    "t3": 0.002816,
+    "qtyTotal": 378288,
+    "qtyRemaining": 378288,
+    "qtyT1": 94572,
+    "qtyT2": 94572,
+    "qtyT3": 189144,
+    "margin": 90.9404352,
+    "notional": 909.4043519999999,
+    "riskAmt": 44.63798400000002,
+    "filled": {
+      "t1": false,
+      "t2": false,
+      "t3": false
+    },
+    "breakeven": false,
+    "beAfter": "t1",
+    "openedAt": 1791767702231,
+    "score": 66,
+    "orders": {
+      "entry": "0d1f3593-e381-4b38-b8ea-1afdcf4f4062",
+      "t1": "3d221b85-7ba0-4c20-ad12-fd46d9f6bfe9",
+      "t2": "514b6451-2596-4ce4-9f74-3f591b5fbea2",
+      "t3": "1d7a0985-3925-446d-ad2a-b08337c0a8db"
+    },
+    "tickSize": 0.000001,
+    "markPrice": 0.002356,
+    "unrealisedPnl": -18.157824,
+    "closedDetectedAt": 1791816301572
+  }
+}

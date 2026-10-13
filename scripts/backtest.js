@@ -725,6 +725,9 @@ const LEAK = args.includes('--leak');
 const PF3_LAB = args.includes('--pf3-lab');
 // --adx-lab: ADX cap 35/40/45/50 on the live setup, with both coin halves; written to backtest/ADX_LAB.md.
 const ADX_LAB = args.includes('--adx-lab');
+// --live-compare YYYY-MM-DD: the live setup simulated from that date to now (trade list), plus how
+// often a run of the same number of trades did as badly over the whole backtest; backtest/LIVE_COMPARE.md.
+const LIVE_COMPARE = args.includes('--live-compare') ? args[args.indexOf('--live-compare') + 1] : null;
 const PF2_PART = args.includes('--part') ? args[args.indexOf('--part') + 1] : 'breadth';
 const COINSET = args.includes('--coinset') ? String(args[args.indexOf('--coinset') + 1] || '').split(',').filter(Boolean).map(x => x.toUpperCase().replace(/USDT$/, '') + 'USDT') : null;
 const LAB_MODE = args.includes('--mode') ? args[args.indexOf('--mode') + 1] : 'classic';
@@ -757,7 +760,7 @@ async function main() {
   }
   for (const s of symbols) {
     process.stderr.write(`scoring ${s}…\n`);
-    series[s].sig1 = SCORE_LAB ? new Map() : TF_COMPARE ? precompute(s, series[s].h1, 1, start) : SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB || RISK_GRID || LEV_GRID || DD_LAB || RISK_STARTS || COIN_WF || SCORE_MOM || LAB2 || LAB3 || TF_DAY || PER_CANDLE || COINSET || TUNE || COMBO || SPLIT || SLOTS || BTC_COOL || BTC_LINE || TIME_STOP || SCORE_JUMP || SCORE_JUMP_ROB || PF_LAB || SCORE_RISE || LIMIT_ROB || LIVE_NOW || STOP_LAB || STREAK_ROB || SCORE_NOW || NEW_COINS || ADD_CHECK || CHASE_LAB || DROP_CHECK || FLIP_LAB || DAY_LAB || COOL_LAB || PF2_LAB || MARGIN_LAB || LEAK || PF3_LAB || ADX_LAB ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
+    series[s].sig1 = SCORE_LAB ? new Map() : TF_COMPARE ? precompute(s, series[s].h1, 1, start) : SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB || RISK_GRID || LEV_GRID || DD_LAB || RISK_STARTS || COIN_WF || SCORE_MOM || LAB2 || LAB3 || TF_DAY || PER_CANDLE || COINSET || TUNE || COMBO || SPLIT || SLOTS || BTC_COOL || BTC_LINE || TIME_STOP || SCORE_JUMP || SCORE_JUMP_ROB || PF_LAB || SCORE_RISE || LIMIT_ROB || LIVE_NOW || STOP_LAB || STREAK_ROB || SCORE_NOW || NEW_COINS || ADD_CHECK || CHASE_LAB || DROP_CHECK || FLIP_LAB || DAY_LAB || COOL_LAB || PF2_LAB || MARGIN_LAB || LEAK || PF3_LAB || ADX_LAB || LIVE_COMPARE ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
     series[s].sig4 = SCORE_LAB ? precompute(s, to4h(series[s].h1), 4, start, { h1: series[s].h1, mode: LAB_MODE, mtfTrim: LAB_MTF }) : precompute(s, to4h(series[s].h1), 4, start);
     if (DAY_LAB) series[s].dEma = dailyEma(to1d(series[s].h1));
     if (TF_DAY || DAY_LAB) series[s].sigD = precompute(s, to1d(series[s].h1), 24, start, { entryTf: 'D' });
@@ -791,6 +794,31 @@ async function main() {
       ['-- second half of the coins --', null],
       ['1 ATR, second half', { ...NOW, coins: B }], ['1.5 ATR, second half', { ...NOW, chaseAtr: 1.5, coins: B }], ['2 ATR, second half', { ...NOW, chaseAtr: 2, coins: B }],
     ], series, times, start, now, 'CHASE_LAB.md', 'Chase = |price - signal price| / ATR at the entry check, where the signal price is where the score first crossed +/-25. Live setup otherwise (score 65, limit 0.3 ATR 4h, BE +0.2%, 22 coins).');
+  }
+  if (LIVE_COMPARE) {
+    const P = config.PORTFOLIO, from = Date.parse(LIVE_COMPARE + 'T00:00:00Z');
+    const R = { ...VARIANTS.find(v => v.focus).rules, minScore: 65, limit: { atr: 0.3, hours: 4 }, beBufferPct: 0.2, maxAdx: 40, start: P.STARTING_BALANCE,
+      margin: P.MARGIN_USDT, leverage: P.LEVERAGE, maxOpen: P.MAX_OPEN_POSITIONS, maxSameDir: P.MAX_SAME_DIRECTION, riskUsd: null, riskPct: P.RISK_PCT };
+    const recent = simulate(series, config.SYMBOLS, times.filter(t => t >= from), R);
+    const L = ['# Live vs backtest, same period', '', `Live setup (score 65, limit 0.3 ATR 4h, BE +0.2%, ADX < 40, ${config.SYMBOLS.length} coins, ${P.RISK_PCT}% risk) simulated from ${LIVE_COMPARE} to ${new Date(now).toISOString().slice(0, 16)} UTC.`, '',
+      '| opened (UTC) | coin | side | P&L $ | exits |', '|---|---|---|---:|---|'];
+    for (const x of recent.tradeList) L.push(`| ${new Date(x.openedAt).toISOString().slice(0, 16)} | ${x.symbol.replace('USDT', '')} | ${x.bias === 1 ? 'long' : 'short'} | ${x.pnl.toFixed(2)} | ${x.path} |`);
+    const w = recent.tradeList.filter(x => x.pnl > 0), l = recent.tradeList.filter(x => x.pnl <= 0);
+    const gw = w.reduce((a, x) => a + x.pnl, 0), gl = -l.reduce((a, x) => a + x.pnl, 0);
+    L.push('', `Backtest, this period: ${recent.tradeList.length} closed trades, ${w.length} won / ${l.length} lost, net $${recent.net.toFixed(2)}, PF ${gl ? (gw / gl).toFixed(2) : '-'}${recent.open ? ', ' + recent.open + ' still open' : ''}.`);
+    // how often N consecutive trades over 2020-2026 were this bad ($100 fixed risk; R = P&L / $100)
+    const all = simulate(series, config.SYMBOLS, times, { ...R, riskUsd: 100, riskPct: null }).tradeList.sort((a, b) => a.closedAt - b.closedAt).map(x => x.pnl / 100);
+    const N = +(args[args.indexOf('--n') + 1] || 17), live = +(args[args.indexOf('--live-r') + 1] || -5.3);
+    let worse = 0, tot = 0, pfLow = 0;
+    for (let i = 0; i + N <= all.length; i++) {
+      const sl = all.slice(i, i + N), sum = sl.reduce((a, x) => a + x, 0);
+      const ww = sl.filter(x => x > 0).reduce((a, x) => a + x, 0), ll = -sl.filter(x => x <= 0).reduce((a, x) => a + x, 0);
+      tot++; if (sum <= live) worse++; if (ll && ww / ll <= 0.52) pfLow++;
+    }
+    L.push('', `Over 2020-2026 (${all.length} trades), ${(worse / tot * 100).toFixed(1)}% of all runs of ${N} trades in a row lost ${-live}R or more, and ${(pfLow / tot * 100).toFixed(1)}% had a PF of 0.52 or lower.`);
+    fs.writeFileSync(path.join(OUT, 'LIVE_COMPARE.md'), L.join('\n') + '\n');
+    console.log(L.join('\n'));
+    return;
   }
   if (ADX_LAB) {
     const NOW = { minScore: 65, limit: { atr: 0.3, hours: 4 }, beBufferPct: 0.2 };

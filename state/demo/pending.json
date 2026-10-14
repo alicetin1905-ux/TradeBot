@@ -1,1 +1,25 @@
-{}
+{
+  "SUIUSDT": {
+    "symbol": "SUIUSDT",
+    "bias": -1,
+    "score": -67,
+    "orderId": "48b36857-c07d-48a2-951e-55bfb7c02466",
+    "price": 1.0206,
+    "qty": 930,
+    "stopLoss": 1.0676,
+    "ratios": {
+      "t1": 0.9309324010458027,
+      "t2": 0.8848873350763378,
+      "t3": 0.8388422691068728
+    },
+    "inst": {
+      "qtyStep": 10,
+      "minOrderQty": 10,
+      "minNotional": 5,
+      "tickSize": 0.0001
+    },
+    "margin": 94.91579999999999,
+    "placedAt": 1791993673063,
+    "expiresAt": 1792008073063
+  }
+}

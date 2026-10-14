@@ -32,20 +32,20 @@
       "t3": "b404c645-5978-44d0-b12b-b6ebb5fe3404"
     },
     "tickSize": 0.00001,
-    "markPrice": 0.08449,
-    "unrealisedPnl": -8.94163
+    "markPrice": 0.08364,
+    "unrealisedPnl": 5.39872
   },
   "ENAUSDT": {
     "symbol": "ENAUSDT",
     "bias": -1,
     "entry": 0.21246,
-    "stop": 0.22578,
+    "stop": 0.21204,
     "initialStop": 0.22578,
     "t1": 0.19248,
     "t2": 0.17916,
     "t3": 0.16584,
     "qtyTotal": 3256,
-    "qtyRemaining": 3256,
+    "qtyRemaining": 2442,
     "qtyT1": 814,
     "qtyT2": 814,
     "qtyT3": 1628,
@@ -53,11 +53,11 @@
     "notional": 691.76976,
     "riskAmt": 43.36991999999999,
     "filled": {
-      "t1": false,
+      "t1": true,
       "t2": false,
       "t3": false
     },
-    "breakeven": false,
+    "breakeven": true,
     "beAfter": "t1",
     "openedAt": 1791897901414,
     "score": -67,
@@ -68,7 +68,7 @@
       "t3": "cfc2401f-1468-4c8e-94b1-445b750c2909"
     },
     "tickSize": 0.00001,
-    "markPrice": 0.21023,
-    "unrealisedPnl": 7.26088
+    "markPrice": 0.2019,
+    "unrealisedPnl": 25.78752
   }
 }

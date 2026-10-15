@@ -1,41 +1,4 @@
 {
-  "DOGEUSDT": {
-    "symbol": "DOGEUSDT",
-    "bias": -1,
-    "entry": 0.08396,
-    "stop": 0.0801,
-    "initialStop": 0.08653,
-    "t1": 0.0801,
-    "t2": 0.07753,
-    "t3": 0.07496,
-    "qtyTotal": 16871,
-    "qtyRemaining": 8437,
-    "qtyT1": 4217,
-    "qtyT2": 4217,
-    "qtyT3": 8437,
-    "margin": 141.648916,
-    "notional": 1416.48916,
-    "riskAmt": 43.35846999999981,
-    "filled": {
-      "t1": true,
-      "t2": true,
-      "t3": false
-    },
-    "breakeven": true,
-    "beAfter": "t1",
-    "openedAt": 1791895201497,
-    "score": -75,
-    "orders": {
-      "entry": "4e20f3ce-e845-4aea-a4e7-6d8b97b1b1cc",
-      "t1": "77a9ce7a-091f-4863-a907-6c9062cd1ae5",
-      "t2": "bb74915a-9774-4d0b-820d-5a0da4715533",
-      "t3": "b404c645-5978-44d0-b12b-b6ebb5fe3404"
-    },
-    "tickSize": 0.00001,
-    "markPrice": 0.07866,
-    "unrealisedPnl": 44.7161,
-    "lockedT1": true
-  },
   "ENAUSDT": {
     "symbol": "ENAUSDT",
     "bias": -1,
@@ -69,8 +32,8 @@
       "t3": "cfc2401f-1468-4c8e-94b1-445b750c2909"
     },
     "tickSize": 0.00001,
-    "markPrice": 0.18568,
-    "unrealisedPnl": 65.39676
+    "markPrice": 0.19068,
+    "unrealisedPnl": 53.18676
   },
   "SUIUSDT": {
     "symbol": "SUIUSDT",
@@ -105,7 +68,7 @@
       "t3": "624c6458-6dcb-494d-9426-31423bbfdbd7"
     },
     "tickSize": 0.0001,
-    "markPrice": 0.9754,
-    "unrealisedPnl": 42.036
+    "markPrice": 0.9988,
+    "unrealisedPnl": 20.274
   }
 }

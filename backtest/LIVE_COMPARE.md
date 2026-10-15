@@ -1,6 +1,6 @@
 # Live vs backtest, same period
 
-Live setup (score 65, limit 0.3 ATR 4h, BE +0.2%, ADX < 40, 21 coins, 2.5% risk) simulated from 2026-09-30 to 2026-10-13T17:53 UTC.
+Live setup (score 65, limit 0.3 ATR 4h, BE +0.2%, ADX < 40, 21 coins, 2.5% risk) simulated from 2026-09-30 to 2026-10-15T22:19 UTC.
 
 | opened (UTC) | coin | side | P&L $ | exits |
 |---|---|---|---:|---|
@@ -23,7 +23,8 @@ Live setup (score 65, limit 0.3 ATR 4h, BE +0.2%, ADX < 40, 21 coins, 2.5% risk)
 | 2026-10-11T16:00 | GALA | long | -53.84 | stop |
 | 2026-10-11T17:00 | XLM | long | -54.27 | stop |
 | 2026-10-11T16:00 | 1000PEPE | long | -54.14 | stop |
+| 2026-10-13T05:00 | DOGE | short | 88.16 | T1 > T2 > T1-lock stop |
 
-Backtest, this period: 19 closed trades, 8 won / 11 lost, net $35.35, PF 1.06.
+Backtest, this period: 20 closed trades, 9 won / 11 lost, net $163.11, PF 1.22.
 
-Over 2020-2026 (1778 trades), 10.8% of all runs of 17 trades in a row lost 5.3R or more, and 11.6% had a PF of 0.52 or lower.
+Over 2020-2026 (1779 trades), 15.1% of all runs of 18 trades in a row lost 3.8R or more, and 10.8% had a PF of 0.52 or lower.

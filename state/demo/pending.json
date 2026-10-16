@@ -1,1 +1,25 @@
-{}
+{
+  "ZILUSDT": {
+    "symbol": "ZILUSDT",
+    "bias": -1,
+    "score": -74,
+    "orderId": "0f550649-dd93-4175-b2bf-f75e98a490d0",
+    "price": 0.002727,
+    "qty": 76320,
+    "stopLoss": 0.003325,
+    "ratios": {
+      "t1": 0.6708940908336019,
+      "t2": 0.45149015138933646,
+      "t3": 0.23208621194507095
+    },
+    "inst": {
+      "qtyStep": 10,
+      "minOrderQty": 10,
+      "minNotional": 5,
+      "tickSize": 0.000001
+    },
+    "margin": 20.812464,
+    "placedAt": 1792137675389,
+    "expiresAt": 1792152075389
+  }
+}

@@ -1,25 +1,25 @@
 {
-  "EGLDUSDT": {
-    "symbol": "EGLDUSDT",
+  "SOLUSDT": {
+    "symbol": "SOLUSDT",
     "bias": -1,
-    "score": -69,
-    "orderId": "00d7c68a-8820-4f00-9b18-16fc8ae4a294",
-    "price": 3.595,
-    "qty": 324.63,
-    "stopLoss": 3.736,
+    "score": -71,
+    "orderId": "3743b86c-f989-4993-a971-ea5102a04e26",
+    "price": 103.7,
+    "qty": 16.6,
+    "stopLoss": 106.44,
     "ratios": {
-      "t1": 0.9413141309076581,
-      "t2": 0.9021902181794302,
-      "t3": 0.8630663054512023
+      "t1": 0.9603076566059873,
+      "t2": 0.933846094343312,
+      "t3": 0.9073845320806369
     },
     "inst": {
-      "qtyStep": 0.01,
-      "minOrderQty": 0.01,
+      "qtyStep": 0.1,
+      "minOrderQty": 0.1,
       "minNotional": 5,
-      "tickSize": 0.001
+      "tickSize": 0.01
     },
-    "margin": 116.704485,
-    "placedAt": 1792296073997,
-    "expiresAt": 1792310473997
+    "margin": 172.14200000000002,
+    "placedAt": 1792310475023,
+    "expiresAt": 1792324875023
   }
 }

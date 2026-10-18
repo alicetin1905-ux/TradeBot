@@ -1,1 +1,25 @@
-{}
+{
+  "DYDXUSDT": {
+    "symbol": "DYDXUSDT",
+    "bias": -1,
+    "score": -68,
+    "orderId": "150d17c3-82a4-4e0b-9220-db651a636d0d",
+    "price": 0.11958,
+    "qty": 8998.3,
+    "stopLoss": 0.12465,
+    "ratios": {
+      "t1": 0.9363481575029851,
+      "t2": 0.8939135958383084,
+      "t3": 0.8514790341736318
+    },
+    "inst": {
+      "qtyStep": 0.1,
+      "minOrderQty": 0.1,
+      "minNotional": 5,
+      "tickSize": 0.00001
+    },
+    "margin": 107.60167139999999,
+    "placedAt": 1792281673541,
+    "expiresAt": 1792296073541
+  }
+}

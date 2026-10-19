@@ -86,6 +86,31 @@ async function fetchHistory(symbol, fromMs) {
 }
 
 // UTC daily candles from 1H candles; incomplete days are dropped.
+// Funding per 8h period ([[t, rate]], backtest/funding-hl/) -> lookups for the
+// last 24h average before a time and its z-score vs the previous 90 days.
+function loadFunding(sym) {
+  let rows;
+  try { rows = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'backtest', 'funding-hl', sym + '.json'), 'utf8')); } catch (e) { return null; }
+  if (!rows.length) return null;
+  const H8 = 8 * HOUR, t0 = rows[0][0], v = [];
+  for (const [t, r] of rows) v[Math.round((t - t0) / H8)] = r;
+  return {
+    // average 8h rate over the 3 periods that ended at or before closeT, and its z-score vs the 270 before
+    at(closeT) {
+      const i = Math.floor((closeT - t0) / H8) - 1;
+      if (i < 3 + 270) return null;
+      const last = [v[i], v[i - 1], v[i - 2]];
+      if (last.some(x => x == null)) return null;
+      const avg = (last[0] + last[1] + last[2]) / 3;
+      let n = 0, m = 0, q = 0;
+      for (let j = i - 3; j > i - 3 - 270; j--) { if (v[j] == null) continue; n++; m += v[j]; q += v[j] * v[j]; }
+      if (n < 100) return { avg, z: null };
+      m /= n; const sd = Math.sqrt(Math.max(1e-18, q / n - m * m));
+      return { avg, z: (avg - m) / sd };
+    },
+  };
+}
+
 // daily close and EMA20/50/200 of the daily closes, keyed by the day's open time
 function dailyEma(d1) {
   const out = new Map(), e = {};
@@ -428,6 +453,16 @@ function simulate(series, symbols, times, rules) {
         const d = series[s].sigD && series[s].sigD.get(dayStart + 23 * HOUR);
         if (R.dAgree === 'soft' ? d && d.bias === -sig.bias : (!d || d.bias !== sig.bias)) continue;
       }
+      if (R.fund) {
+        // funding: positive "with" = the trade's side is the crowded one (longs paying / shorts paying)
+        const f = series[s].fund && series[s].fund.at(t + HOUR);
+        if (f) {
+          const withAvg = f.avg * sig.bias, withZ = f.z == null ? null : f.z * sig.bias;
+          if (R.fund.maxWith != null && withAvg > R.fund.maxWith) continue;
+          if (R.fund.maxZ != null && withZ != null && withZ > R.fund.maxZ) continue;
+          if (R.fund.minZ != null && withZ != null && withZ < R.fund.minZ) continue;
+        }
+      }
       if (R.coolH) {
         // per-coin cooldown: no new trade on this coin (this direction) for N hours after a stop-loss
         const ls = lastStop[s + (R.coolBothDirs ? '' : sig.bias)];
@@ -738,6 +773,9 @@ const ADX_LAB = args.includes('--adx-lab');
 // often a run of the same number of trades did as badly over the whole backtest; backtest/LIVE_COMPARE.md.
 // --be-roe-lab: stop to breakeven once the trade is +X% on its margin (ROE); backtest/BE_ROE_LAB.md.
 const BE_ROE_LAB = args.includes('--be-roe-lab');
+// --fund-lab: funding-rate filters (Hyperliquid funding, backtest/funding-hl/, from mid 2023;
+// coins without data are never blocked); written to backtest/FUND_LAB.md.
+const FUND_LAB = args.includes('--fund-lab');
 const LIVE_COMPARE = args.includes('--live-compare') ? args[args.indexOf('--live-compare') + 1] : null;
 const PF2_PART = args.includes('--part') ? args[args.indexOf('--part') + 1] : 'breadth';
 const COINSET = args.includes('--coinset') ? String(args[args.indexOf('--coinset') + 1] || '').split(',').filter(Boolean).map(x => x.toUpperCase().replace(/USDT$/, '') + 'USDT') : null;
@@ -771,8 +809,9 @@ async function main() {
   }
   for (const s of symbols) {
     process.stderr.write(`scoring ${s}…\n`);
-    series[s].sig1 = SCORE_LAB ? new Map() : TF_COMPARE ? precompute(s, series[s].h1, 1, start) : SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB || RISK_GRID || LEV_GRID || DD_LAB || RISK_STARTS || COIN_WF || SCORE_MOM || LAB2 || LAB3 || TF_DAY || PER_CANDLE || COINSET || TUNE || COMBO || SPLIT || SLOTS || BTC_COOL || BTC_LINE || TIME_STOP || SCORE_JUMP || SCORE_JUMP_ROB || PF_LAB || SCORE_RISE || LIMIT_ROB || LIVE_NOW || STOP_LAB || STREAK_ROB || SCORE_NOW || NEW_COINS || ADD_CHECK || CHASE_LAB || DROP_CHECK || FLIP_LAB || DAY_LAB || COOL_LAB || PF2_LAB || MARGIN_LAB || LEAK || PF3_LAB || ADX_LAB || LIVE_COMPARE || BE_ROE_LAB ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
+    series[s].sig1 = SCORE_LAB ? new Map() : TF_COMPARE ? precompute(s, series[s].h1, 1, start) : SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB || RISK_GRID || LEV_GRID || DD_LAB || RISK_STARTS || COIN_WF || SCORE_MOM || LAB2 || LAB3 || TF_DAY || PER_CANDLE || COINSET || TUNE || COMBO || SPLIT || SLOTS || BTC_COOL || BTC_LINE || TIME_STOP || SCORE_JUMP || SCORE_JUMP_ROB || PF_LAB || SCORE_RISE || LIMIT_ROB || LIVE_NOW || STOP_LAB || STREAK_ROB || SCORE_NOW || NEW_COINS || ADD_CHECK || CHASE_LAB || DROP_CHECK || FLIP_LAB || DAY_LAB || COOL_LAB || PF2_LAB || MARGIN_LAB || LEAK || PF3_LAB || ADX_LAB || LIVE_COMPARE || BE_ROE_LAB || FUND_LAB ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
     series[s].sig4 = SCORE_LAB ? precompute(s, to4h(series[s].h1), 4, start, { h1: series[s].h1, mode: LAB_MODE, mtfTrim: LAB_MTF }) : precompute(s, to4h(series[s].h1), 4, start);
+    if (FUND_LAB) series[s].fund = loadFunding(s);
     if (DAY_LAB) series[s].dEma = dailyEma(to1d(series[s].h1));
     if (TF_DAY || DAY_LAB) series[s].sigD = precompute(s, to1d(series[s].h1), 24, start, { entryTf: 'D' });
     addFilterInputs(series[s]);
@@ -805,6 +844,33 @@ async function main() {
       ['-- second half of the coins --', null],
       ['1 ATR, second half', { ...NOW, coins: B }], ['1.5 ATR, second half', { ...NOW, chaseAtr: 1.5, coins: B }], ['2 ATR, second half', { ...NOW, chaseAtr: 2, coins: B }],
     ], series, times, start, now, 'CHASE_LAB.md', 'Chase = |price - signal price| / ATR at the entry check, where the signal price is where the score first crossed +/-25. Live setup otherwise (score 65, limit 0.3 ATR 4h, BE +0.2%, 22 coins).');
+  }
+  if (FUND_LAB) {
+    const NOW = { minScore: 65, limit: { atr: 0.3, hours: 4 }, beBufferPct: 0.2, maxAdx: 40 };
+    const all = config.SYMBOLS, n = Math.ceil(all.length / 2), A = all.slice(0, n), B = all.slice(n);
+    const P = config.PORTFOLIO;
+    // where the PF comes from, by funding at entry (trades with funding data only)
+    const base = { ...VARIANTS.find(v => v.focus).rules, ...NOW, start: P.STARTING_BALANCE, margin: P.MARGIN_USDT, leverage: P.LEVERAGE, maxOpen: P.MAX_OPEN_POSITIONS, maxSameDir: P.MAX_SAME_DIRECTION, riskUsd: 100, riskPct: null };
+    const T = simulate(series, all, times, base).tradeList.map(x => { const f = series[x.symbol].fund && series[x.symbol].fund.at(x.sigT + HOUR); return f ? { ...x, fw: f.avg * x.bias * 100, fz: f.z == null ? null : f.z * x.bias } : null; }).filter(Boolean);
+    const st = (xs) => { const w = xs.filter(x => x.pnl > 0).reduce((a, x) => a + x.pnl, 0), l = -xs.filter(x => x.pnl <= 0).reduce((a, x) => a + x.pnl, 0); return `${String(xs.length).padStart(5)} ${(xs.length ? xs.filter(x => x.pnl > 0).length / xs.length * 100 : 0).toFixed(0).padStart(4)}% ${(l ? w / l : 0).toFixed(2).padStart(6)} ${(w - l).toFixed(0).padStart(8)}`; };
+    const split = Date.UTC(2025, 0, 1);
+    const tbl = (title, fn, edges) => { const out = [title, 'bucket            all: n  win    PF    net$ | to 2024: n win PF net$ | 2025-26: n win PF net$'];
+      for (let i = 0; i < edges.length; i++) { const lo = edges[i], hi = edges[i + 1], inB = (x) => { const v = fn(x); return v != null && v >= lo && (hi == null || v < hi); };
+        out.push(((hi == null ? '>= ' + lo : lo + ' to ' + hi)).padEnd(18) + st(T.filter(inB)) + ' |' + st(T.filter(x => x.openedAt < split && inB(x))) + ' |' + st(T.filter(x => x.openedAt >= split && inB(x)))); }
+      return out.join('\n'); };
+    const note = 'Funding from Hyperliquid (a stand-in for Bybit; 8h-equivalent rate, average of the last 24h before the signal close), mid 2023 onward, 18 of 21 coins (no EGLD, ZIL, CHZ: never blocked). "With the trade" > 0 = the trade is on the crowded side (a long while longs pay, a short while shorts pay). Years before 2023 are identical by construction.\n\n'
+      + 'Live trades with funding data, by funding at entry ($100 fixed risk):\n' + tbl('funding with the trade (% per 8h)', x => x.fw, [-1, -0.01, 0, 0.01, 0.02, 0.05]) + '\n\n' + tbl('funding z-score vs the coin\'s last 90 days, with the trade', x => x.fz, [-10, -1, 0, 1, 2]);
+    return variantTable('Funding-rate filter (live setup)', [
+      ['A  live: no funding filter', { ...NOW }],
+      ['skip if funding with the trade > 0.02%', { ...NOW, fund: { maxWith: 0.0002 } }],
+      ['skip if funding with the trade > 0.05%', { ...NOW, fund: { maxWith: 0.0005 } }],
+      ['skip if z with the trade > 1 (crowded)', { ...NOW, fund: { maxZ: 1 } }],
+      ['skip if z with the trade > 2 (very crowded)', { ...NOW, fund: { maxZ: 2 } }],
+      ['only if z with the trade < 0 (against the crowd)', { ...NOW, fund: { maxZ: 0 } }],
+      ['skip if z with the trade < -1 (contrarian check)', { ...NOW, fund: { minZ: -1 } }],
+      ['-- first half of the coins --', null], ['live, first half', { ...NOW, coins: A }], ['z > 1 skip, first half', { ...NOW, fund: { maxZ: 1 }, coins: A }], ['> 0.02% skip, first half', { ...NOW, fund: { maxWith: 0.0002 }, coins: A }],
+      ['-- second half of the coins --', null], ['live, second half', { ...NOW, coins: B }], ['z > 1 skip, second half', { ...NOW, fund: { maxZ: 1 }, coins: B }], ['> 0.02% skip, second half', { ...NOW, fund: { maxWith: 0.0002 }, coins: B }],
+    ], series, times, start, now, 'FUND_LAB.md', note);
   }
   if (BE_ROE_LAB) {
     const NOW = { minScore: 65, limit: { atr: 0.3, hours: 4 }, beBufferPct: 0.2, maxAdx: 40 };

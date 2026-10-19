@@ -308,6 +308,15 @@ function simulate(series, symbols, times, rules) {
       if (k === R.breakevenAfter) { p.stop = p.entry * (1 + p.bias * (R.beBufferPct || 0) / 100); p.breakeven = true; } // BREAKEVEN_BUFFER_PCT
       if (k === 't2' && R.lockT1AfterT2) { p.stop = p.t1; p.lockedT1 = true; p.breakeven = false; }
     }
+    // R.beAtRoe: stop to breakeven once the open profit reaches this % of the margin
+    // (price move = ROE / leverage), on top of / instead of breakeven after T1.
+    // Checked after this candle's stop, so the new stop counts from the next candle.
+    if (R.beAtRoe && open[p.symbol] && !p.breakeven && !p.lockedT1 && !p.trailing) {
+      const best = p.bias === 1 ? c.h : c.l;
+      if ((best - p.entry) * p.bias / p.entry * 100 * R.leverage >= R.beAtRoe) {
+        p.stop = p.entry * (1 + p.bias * (R.beBufferPct || 0) / 100); p.breakeven = true; p.beByRoe = true;
+      }
+    }
     // Trailing stop for the rest once `after` has filled: best close since
     // then minus trail.atr x ATR (never loosens). Uses closes, and a new level
     // only counts from the next candle — conservative.
@@ -727,6 +736,8 @@ const PF3_LAB = args.includes('--pf3-lab');
 const ADX_LAB = args.includes('--adx-lab');
 // --live-compare YYYY-MM-DD: the live setup simulated from that date to now (trade list), plus how
 // often a run of the same number of trades did as badly over the whole backtest; backtest/LIVE_COMPARE.md.
+// --be-roe-lab: stop to breakeven once the trade is +X% on its margin (ROE); backtest/BE_ROE_LAB.md.
+const BE_ROE_LAB = args.includes('--be-roe-lab');
 const LIVE_COMPARE = args.includes('--live-compare') ? args[args.indexOf('--live-compare') + 1] : null;
 const PF2_PART = args.includes('--part') ? args[args.indexOf('--part') + 1] : 'breadth';
 const COINSET = args.includes('--coinset') ? String(args[args.indexOf('--coinset') + 1] || '').split(',').filter(Boolean).map(x => x.toUpperCase().replace(/USDT$/, '') + 'USDT') : null;
@@ -760,7 +771,7 @@ async function main() {
   }
   for (const s of symbols) {
     process.stderr.write(`scoring ${s}…\n`);
-    series[s].sig1 = SCORE_LAB ? new Map() : TF_COMPARE ? precompute(s, series[s].h1, 1, start) : SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB || RISK_GRID || LEV_GRID || DD_LAB || RISK_STARTS || COIN_WF || SCORE_MOM || LAB2 || LAB3 || TF_DAY || PER_CANDLE || COINSET || TUNE || COMBO || SPLIT || SLOTS || BTC_COOL || BTC_LINE || TIME_STOP || SCORE_JUMP || SCORE_JUMP_ROB || PF_LAB || SCORE_RISE || LIMIT_ROB || LIVE_NOW || STOP_LAB || STREAK_ROB || SCORE_NOW || NEW_COINS || ADD_CHECK || CHASE_LAB || DROP_CHECK || FLIP_LAB || DAY_LAB || COOL_LAB || PF2_LAB || MARGIN_LAB || LEAK || PF3_LAB || ADX_LAB || LIVE_COMPARE ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
+    series[s].sig1 = SCORE_LAB ? new Map() : TF_COMPARE ? precompute(s, series[s].h1, 1, start) : SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB || RISK_GRID || LEV_GRID || DD_LAB || RISK_STARTS || COIN_WF || SCORE_MOM || LAB2 || LAB3 || TF_DAY || PER_CANDLE || COINSET || TUNE || COMBO || SPLIT || SLOTS || BTC_COOL || BTC_LINE || TIME_STOP || SCORE_JUMP || SCORE_JUMP_ROB || PF_LAB || SCORE_RISE || LIMIT_ROB || LIVE_NOW || STOP_LAB || STREAK_ROB || SCORE_NOW || NEW_COINS || ADD_CHECK || CHASE_LAB || DROP_CHECK || FLIP_LAB || DAY_LAB || COOL_LAB || PF2_LAB || MARGIN_LAB || LEAK || PF3_LAB || ADX_LAB || LIVE_COMPARE || BE_ROE_LAB ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
     series[s].sig4 = SCORE_LAB ? precompute(s, to4h(series[s].h1), 4, start, { h1: series[s].h1, mode: LAB_MODE, mtfTrim: LAB_MTF }) : precompute(s, to4h(series[s].h1), 4, start);
     if (DAY_LAB) series[s].dEma = dailyEma(to1d(series[s].h1));
     if (TF_DAY || DAY_LAB) series[s].sigD = precompute(s, to1d(series[s].h1), 24, start, { entryTf: 'D' });
@@ -794,6 +805,21 @@ async function main() {
       ['-- second half of the coins --', null],
       ['1 ATR, second half', { ...NOW, coins: B }], ['1.5 ATR, second half', { ...NOW, chaseAtr: 1.5, coins: B }], ['2 ATR, second half', { ...NOW, chaseAtr: 2, coins: B }],
     ], series, times, start, now, 'CHASE_LAB.md', 'Chase = |price - signal price| / ATR at the entry check, where the signal price is where the score first crossed +/-25. Live setup otherwise (score 65, limit 0.3 ATR 4h, BE +0.2%, 22 coins).');
+  }
+  if (BE_ROE_LAB) {
+    const NOW = { minScore: 65, limit: { atr: 0.3, hours: 4 }, beBufferPct: 0.2, maxAdx: 40 };
+    const all = config.SYMBOLS, n = Math.ceil(all.length / 2), A = all.slice(0, n), B = all.slice(n);
+    const halves = (...vs) => [['-- first half of the coins --', null], ['live, first half', { ...NOW, coins: A }], ...vs.map(([l, x]) => [l + ', first half', { ...NOW, ...x, coins: A }]),
+      ['-- second half of the coins --', null], ['live, second half', { ...NOW, coins: B }], ...vs.map(([l, x]) => [l + ', second half', { ...NOW, ...x, coins: B }])];
+    return variantTable('Stop to breakeven at +X% ROE (live setup)', [
+      ['A  live: breakeven after T1', { ...NOW }],
+      ['+ breakeven at 50% ROE (5% move)', { ...NOW, beAtRoe: 50 }],
+      ['+ breakeven at 75% ROE (7.5% move)', { ...NOW, beAtRoe: 75 }],
+      ['+ breakeven at 100% ROE (10% move)', { ...NOW, beAtRoe: 100 }],
+      ['+ breakeven at 150% ROE (15% move)', { ...NOW, beAtRoe: 150 }],
+      ['only 100% ROE (no breakeven at T1)', { ...NOW, beAtRoe: 100, breakevenAfter: null }],
+      ...halves(['+ 100% ROE', { beAtRoe: 100 }], ['+ 50% ROE', { beAtRoe: 50 }]),
+    ], series, times, start, now, 'BE_ROE_LAB.md', 'Live setup (score 65, limit 0.3 ATR 4h, BE +0.2% after T1, ADX < 40, 10x, ' + all.length + ' coins). ROE = open profit on the margin; at 10x, 100% ROE = a 10% price move. Whichever comes first (T1 or the ROE level) moves the stop to entry + 0.2%.');
   }
   if (LIVE_COMPARE) {
     const P = config.PORTFOLIO, from = Date.parse(LIVE_COMPARE + 'T00:00:00Z');

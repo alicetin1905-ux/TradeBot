@@ -1,40 +1,4 @@
 {
-  "SUIUSDT": {
-    "symbol": "SUIUSDT",
-    "bias": -1,
-    "entry": 1.0206,
-    "stop": 1.0186,
-    "initialStop": 1.0676,
-    "t1": 0.9501,
-    "t2": 0.9031,
-    "t3": 0.8561,
-    "qtyTotal": 930,
-    "qtyRemaining": 700,
-    "qtyT1": 230,
-    "qtyT2": 230,
-    "qtyT3": 470,
-    "margin": 94.91579999999999,
-    "notional": 949.1579999999999,
-    "riskAmt": 43.71000000000014,
-    "filled": {
-      "t1": true,
-      "t2": false,
-      "t3": false
-    },
-    "breakeven": true,
-    "beAfter": "t1",
-    "openedAt": 1791996002017,
-    "score": -67,
-    "orders": {
-      "entry": "48b36857-c07d-48a2-951e-55bfb7c02466",
-      "t1": "d520ae61-ba33-4b35-ad40-961770b94503",
-      "t2": "a5aaa96b-b65d-484c-a046-0bf3a3473b42",
-      "t3": "624c6458-6dcb-494d-9426-31423bbfdbd7"
-    },
-    "tickSize": 0.0001,
-    "markPrice": 1.01519,
-    "unrealisedPnl": 3.787
-  },
   "ZILUSDT": {
     "symbol": "ZILUSDT",
     "bias": -1,
@@ -68,8 +32,8 @@
       "t3": "5093bb63-9745-4514-b272-2f40511c3b48"
     },
     "tickSize": 0.000001,
-    "markPrice": 0.002157,
-    "unrealisedPnl": 43.5024
+    "markPrice": 0.002164,
+    "unrealisedPnl": 42.96816
   },
   "SOLUSDT": {
     "symbol": "SOLUSDT",
@@ -104,7 +68,7 @@
       "t3": "3b4eb185-35fe-48bf-8bb9-d178f3d5d59c"
     },
     "tickSize": 0.01,
-    "markPrice": 105.36,
-    "unrealisedPnl": -27.556
+    "markPrice": 106.224,
+    "unrealisedPnl": -41.8984
   }
 }

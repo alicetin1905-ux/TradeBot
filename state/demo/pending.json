@@ -1,1 +1,48 @@
-{}
+{
+  "GALAUSDT": {
+    "symbol": "GALAUSDT",
+    "bias": -1,
+    "score": -72,
+    "orderId": "9975afe2-cd25-4610-ad48-b31490a7aab7",
+    "price": 0.001901,
+    "qty": 650969,
+    "stopLoss": 0.001972,
+    "ratios": {
+      "t1": 0.9437842776226003,
+      "t2": 0.9063071293710004,
+      "t3": 0.8688299811194007
+    },
+    "inst": {
+      "qtyStep": 1,
+      "minOrderQty": 1,
+      "minNotional": 5,
+      "tickSize": 0.000001
+    },
+    "margin": 123.74920689999999,
+    "placedAt": 1792670473941,
+    "expiresAt": 1792684873941
+  },
+  "KAITOUSDT": {
+    "symbol": "KAITOUSDT",
+    "bias": -1,
+    "score": -68,
+    "orderId": "b406ea63-cb6c-4a58-aa3a-465f7180b4bf",
+    "price": 0.2716,
+    "qty": 4848,
+    "stopLoss": 0.2812,
+    "ratios": {
+      "t1": 0.9471680425627201,
+      "t2": 0.9119467376045337,
+      "t3": 0.8767254326463472
+    },
+    "inst": {
+      "qtyStep": 1,
+      "minOrderQty": 1,
+      "minNotional": 5,
+      "tickSize": 0.0001
+    },
+    "margin": 131.67168,
+    "placedAt": 1792670473941,
+    "expiresAt": 1792684873941
+  }
+}

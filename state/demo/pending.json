@@ -1,48 +1,48 @@
 {
-  "XRPUSDT": {
-    "symbol": "XRPUSDT",
+  "EGLDUSDT": {
+    "symbol": "EGLDUSDT",
     "bias": -1,
     "score": -67,
-    "orderId": "5980d780-becc-429f-a2c6-6c400ed692eb",
-    "price": 1.3132,
-    "qty": 1397.1,
-    "stopLoss": 1.3464,
+    "orderId": "e6d02e14-fa7e-4d1c-8cad-26636afb6ac4",
+    "price": 3.566,
+    "qty": 375.95,
+    "stopLoss": 3.689,
     "ratios": {
-      "t1": 0.9620852711701202,
-      "t2": 0.9368087852835337,
-      "t3": 0.9115322993969472
+      "t1": 0.948117122240588,
+      "t2": 0.9135285370676465,
+      "t3": 0.8789399518947052
     },
     "inst": {
-      "qtyStep": 0.1,
-      "minOrderQty": 0.1,
+      "qtyStep": 0.01,
+      "minOrderQty": 0.01,
       "minNotional": 5,
-      "tickSize": 0.0001
+      "tickSize": 0.001
     },
-    "margin": 183.46717199999998,
-    "placedAt": 1792699274626,
-    "expiresAt": 1792713674626
+    "margin": 134.06377,
+    "placedAt": 1792713675654,
+    "expiresAt": 1792728075654
   },
-  "AXSUSDT": {
-    "symbol": "AXSUSDT",
+  "SUIUSDT": {
+    "symbol": "SUIUSDT",
     "bias": -1,
     "score": -65,
-    "orderId": "529a0893-8826-41ca-b696-c3f2aff9e847",
-    "price": 1.0051,
-    "qty": 1395.8,
-    "stopLoss": 1.0383,
+    "orderId": "0bcaea77-67ab-46c6-804c-0611b65e9c95",
+    "price": 0.9776,
+    "qty": 1360,
+    "stopLoss": 1.0115,
     "ratios": {
-      "t1": 0.9504177420637085,
-      "t2": 0.9173629034395143,
-      "t3": 0.88430806481532
+      "t1": 0.9479086342746034,
+      "t2": 0.913181057124339,
+      "t3": 0.8784534799740745
     },
     "inst": {
-      "qtyStep": 0.1,
-      "minOrderQty": 0.1,
+      "qtyStep": 10,
+      "minOrderQty": 10,
       "minNotional": 5,
       "tickSize": 0.0001
     },
-    "margin": 140.291858,
-    "placedAt": 1792699274626,
-    "expiresAt": 1792713674626
+    "margin": 132.9536,
+    "placedAt": 1792713675654,
+    "expiresAt": 1792728075654
   }
 }

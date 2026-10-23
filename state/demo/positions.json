@@ -32,8 +32,44 @@
       "t3": "5093bb63-9745-4514-b272-2f40511c3b48"
     },
     "tickSize": 0.000001,
-    "markPrice": 0.002065,
-    "unrealisedPnl": 50.52384,
+    "markPrice": 0.002058,
+    "unrealisedPnl": 51.05808,
     "funding": -0.50289704
+  },
+  "SUIUSDT": {
+    "symbol": "SUIUSDT",
+    "bias": -1,
+    "entry": 0.9776,
+    "stop": 1.0115,
+    "initialStop": 1.0115,
+    "t1": 0.9267,
+    "t2": 0.8927,
+    "t3": 0.8588,
+    "qtyTotal": 1360,
+    "qtyRemaining": 1360,
+    "qtyT1": 340,
+    "qtyT2": 340,
+    "qtyT3": 680,
+    "margin": 132.9536,
+    "notional": 1329.536,
+    "riskAmt": 46.104000000000056,
+    "filled": {
+      "t1": false,
+      "t2": false,
+      "t3": false
+    },
+    "breakeven": false,
+    "beAfter": "t1",
+    "openedAt": 1792716601860,
+    "score": -65,
+    "orders": {
+      "entry": "0bcaea77-67ab-46c6-804c-0611b65e9c95",
+      "t1": "7a94782c-1b4f-45fd-9587-6f5831bee142",
+      "t2": "6191c6da-93d1-4256-9c5c-d33b28c6b08b",
+      "t3": "e0af81b9-e56a-4cc6-a230-7e4dcee04133"
+    },
+    "tickSize": 0.0001,
+    "markPrice": 0.9774,
+    "unrealisedPnl": 0.272
   }
 }

@@ -605,5 +605,22 @@
     "t2": 0.01245,
     "t3": 0.01205,
     "qtyTotal": 113290
+  },
+  {
+    "symbol": "XLMUSDT",
+    "bias": -1,
+    "entry": 0.1774,
+    "exit": 0.1709,
+    "qty": 5217,
+    "pnl": 33.38790318,
+    "reason": "stop hit at T1 (locked after T2)",
+    "openedAt": 1792764072941,
+    "closedAt": 1792872095349,
+    "score": -67,
+    "stop": 0.1817,
+    "t1": 0.1709,
+    "t2": 0.1666,
+    "t3": 0.1622,
+    "qtyTotal": 10433
   }
 ]

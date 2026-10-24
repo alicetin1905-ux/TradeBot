@@ -520,5 +520,39 @@
     "t2": 0.1666,
     "t3": 0.1622,
     "qtyTotal": 10433
+  },
+  {
+    "symbol": "SUIUSDT",
+    "bias": -1,
+    "entry": 0.9776,
+    "exit": 0.9267,
+    "qty": 340,
+    "pnl": 17.19300029,
+    "reason": "T1 hit, stop moved to breakeven",
+    "openedAt": 1792716601860,
+    "closedAt": 1792851374900,
+    "score": -65,
+    "stop": 1.0115,
+    "t1": 0.9267,
+    "t2": 0.8927,
+    "t3": 0.8588,
+    "qtyTotal": 1360
+  },
+  {
+    "symbol": "CHZUSDT",
+    "bias": -1,
+    "entry": 0.01345,
+    "exit": 0.01285,
+    "qty": 28322,
+    "pnl": 16.80245349,
+    "reason": "T1 hit, stop moved to breakeven",
+    "openedAt": 1792789501749,
+    "closedAt": 1792851329501,
+    "score": -78,
+    "stop": 0.01385,
+    "t1": 0.01285,
+    "t2": 0.01245,
+    "t3": 0.01205,
+    "qtyTotal": 113290
   }
 ]

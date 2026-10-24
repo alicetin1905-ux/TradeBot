@@ -32,21 +32,21 @@
       "t3": "5093bb63-9745-4514-b272-2f40511c3b48"
     },
     "tickSize": 0.000001,
-    "markPrice": 0.002036,
-    "unrealisedPnl": 52.73712,
+    "markPrice": 0.001979,
+    "unrealisedPnl": 57.08736,
     "funding": -1.5559244800000003
   },
   "SUIUSDT": {
     "symbol": "SUIUSDT",
     "bias": -1,
     "entry": 0.9776,
-    "stop": 1.0115,
+    "stop": 0.9756,
     "initialStop": 1.0115,
     "t1": 0.9267,
     "t2": 0.8927,
     "t3": 0.8588,
     "qtyTotal": 1360,
-    "qtyRemaining": 1360,
+    "qtyRemaining": 1020,
     "qtyT1": 340,
     "qtyT2": 340,
     "qtyT3": 680,
@@ -54,11 +54,11 @@
     "notional": 1329.536,
     "riskAmt": 46.104000000000056,
     "filled": {
-      "t1": false,
+      "t1": true,
       "t2": false,
       "t3": false
     },
-    "breakeven": false,
+    "breakeven": true,
     "beAfter": "t1",
     "openedAt": 1792716601860,
     "score": -65,
@@ -69,8 +69,8 @@
       "t3": "e0af81b9-e56a-4cc6-a230-7e4dcee04133"
     },
     "tickSize": 0.0001,
-    "markPrice": 0.94498,
-    "unrealisedPnl": 44.3632,
+    "markPrice": 0.9245,
+    "unrealisedPnl": 54.162,
     "funding": 0.11592815999999999
   },
   "XLMUSDT": {
@@ -106,20 +106,20 @@
       "t3": "87ba9020-cd0a-437f-b7e0-0de9755ded1c"
     },
     "tickSize": 0.0001,
-    "markPrice": 0.1704,
-    "unrealisedPnl": 54.775
+    "markPrice": 0.1689,
+    "unrealisedPnl": 66.5125
   },
   "CHZUSDT": {
     "symbol": "CHZUSDT",
     "bias": -1,
     "entry": 0.01345,
-    "stop": 0.01385,
+    "stop": 0.01342,
     "initialStop": 0.01385,
     "t1": 0.01285,
     "t2": 0.01245,
     "t3": 0.01205,
     "qtyTotal": 113290,
-    "qtyRemaining": 113290,
+    "qtyRemaining": 84968,
     "qtyT1": 28322,
     "qtyT2": 28322,
     "qtyT3": 56646,
@@ -127,11 +127,11 @@
     "notional": 1523.7505,
     "riskAmt": 45.315999999999924,
     "filled": {
-      "t1": false,
+      "t1": true,
       "t2": false,
       "t3": false
     },
-    "breakeven": false,
+    "breakeven": true,
     "beAfter": "t1",
     "openedAt": 1792789501749,
     "score": -78,
@@ -142,7 +142,7 @@
       "t3": "966ba3a6-578f-4bf5-ba19-317c524cb584"
     },
     "tickSize": 0.00001,
-    "markPrice": 0.01297,
-    "unrealisedPnl": 54.3792
+    "markPrice": 0.01275,
+    "unrealisedPnl": 59.4776
   }
 }

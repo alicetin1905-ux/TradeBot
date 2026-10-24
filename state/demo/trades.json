@@ -554,5 +554,39 @@
     "t2": 0.01245,
     "t3": 0.01205,
     "qtyTotal": 113290
+  },
+  {
+    "symbol": "XLMUSDT",
+    "bias": -1,
+    "entry": 0.1774,
+    "exit": 0.1666,
+    "qty": 2608,
+    "pnl": 28.12172839,
+    "reason": "T2 hit, stop moved to T1",
+    "openedAt": 1792764072941,
+    "closedAt": 1792854979249,
+    "score": -67,
+    "stop": 0.1817,
+    "t1": 0.1709,
+    "t2": 0.1666,
+    "t3": 0.1622,
+    "qtyTotal": 10433
+  },
+  {
+    "symbol": "CHZUSDT",
+    "bias": -1,
+    "entry": 0.01345,
+    "exit": 0.01245,
+    "qty": 28322,
+    "pnl": 28.13351925,
+    "reason": "T2 hit, stop moved to T1",
+    "openedAt": 1792789501749,
+    "closedAt": 1792855179085,
+    "score": -78,
+    "stop": 0.01385,
+    "t1": 0.01285,
+    "t2": 0.01245,
+    "t3": 0.01205,
+    "qtyTotal": 113290
   }
 ]

@@ -588,5 +588,22 @@
     "t2": 0.01245,
     "t3": 0.01205,
     "qtyTotal": 113290
+  },
+  {
+    "symbol": "CHZUSDT",
+    "bias": -1,
+    "entry": 0.01345,
+    "exit": 0.01286,
+    "qty": 56646,
+    "pnl": 32.60730226,
+    "reason": "stop hit at T1 (locked after T2)",
+    "openedAt": 1792789501749,
+    "closedAt": 1792868285021,
+    "score": -78,
+    "stop": 0.01385,
+    "t1": 0.01285,
+    "t2": 0.01245,
+    "t3": 0.01205,
+    "qtyTotal": 113290
   }
 ]

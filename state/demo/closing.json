@@ -1,42 +1,4 @@
 {
-  "CHZUSDT": {
-    "symbol": "CHZUSDT",
-    "bias": -1,
-    "entry": 0.01345,
-    "stop": 0.01285,
-    "initialStop": 0.01385,
-    "t1": 0.01285,
-    "t2": 0.01245,
-    "t3": 0.01205,
-    "qtyTotal": 113290,
-    "qtyRemaining": 56646,
-    "qtyT1": 28322,
-    "qtyT2": 28322,
-    "qtyT3": 56646,
-    "margin": 152.37505000000002,
-    "notional": 1523.7505,
-    "riskAmt": 45.315999999999924,
-    "filled": {
-      "t1": true,
-      "t2": true,
-      "t3": false
-    },
-    "breakeven": true,
-    "beAfter": "t1",
-    "openedAt": 1792789501749,
-    "score": -78,
-    "orders": {
-      "entry": "886ce3e6-6ede-4141-af23-d347dad14d45",
-      "t1": "2968e799-2dee-41b2-ba28-36edb98311ef",
-      "t2": "d70b5a05-e1b8-425d-8f4b-41c9587fbe0d",
-      "t3": "966ba3a6-578f-4bf5-ba19-317c524cb584"
-    },
-    "tickSize": 0.00001,
-    "markPrice": 0.01275,
-    "unrealisedPnl": 39.6522,
-    "lockedT1": true,
-    "closedDetectedAt": 1792868402203
-  },
   "XLMUSDT": {
     "symbol": "XLMUSDT",
     "bias": -1,

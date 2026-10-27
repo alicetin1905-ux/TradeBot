@@ -1,1 +1,25 @@
-{}
+{
+  "SOLUSDT": {
+    "symbol": "SOLUSDT",
+    "bias": -1,
+    "score": -76,
+    "orderId": "ed19f037-4c79-440c-8410-8e761485c396",
+    "price": 100.54,
+    "qty": 22,
+    "stopLoss": 102.84,
+    "ratios": {
+      "t1": 0.965647192039325,
+      "t2": 0.9427453200655417,
+      "t3": 0.9198434480917583
+    },
+    "inst": {
+      "qtyStep": 0.1,
+      "minOrderQty": 0.1,
+      "minNotional": 5,
+      "tickSize": 0.01
+    },
+    "margin": 221.18800000000002,
+    "placedAt": 1793088075931,
+    "expiresAt": 1793102475931
+  }
+}

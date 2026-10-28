@@ -1,1 +1,41 @@
-{}
+{
+  "SUIUSDT": {
+    "symbol": "SUIUSDT",
+    "bias": -1,
+    "entry": 0.9776,
+    "stop": 0.9756,
+    "initialStop": 1.0115,
+    "t1": 0.9267,
+    "t2": 0.8927,
+    "t3": 0.8588,
+    "qtyTotal": 1360,
+    "qtyRemaining": 1020,
+    "qtyT1": 340,
+    "qtyT2": 340,
+    "qtyT3": 680,
+    "margin": 132.9536,
+    "notional": 1329.536,
+    "riskAmt": 46.104000000000056,
+    "filled": {
+      "t1": true,
+      "t2": false,
+      "t3": false
+    },
+    "breakeven": true,
+    "beAfter": "t1",
+    "openedAt": 1792716601860,
+    "score": -65,
+    "orders": {
+      "entry": "0bcaea77-67ab-46c6-804c-0611b65e9c95",
+      "t1": "7a94782c-1b4f-45fd-9587-6f5831bee142",
+      "t2": "6191c6da-93d1-4256-9c5c-d33b28c6b08b",
+      "t3": "e0af81b9-e56a-4cc6-a230-7e4dcee04133",
+      "close": "db6a5c5a-dfaf-4fa2-b58d-d2c818364cf2"
+    },
+    "tickSize": 0.0001,
+    "markPrice": 0.9409,
+    "unrealisedPnl": 37.434,
+    "funding": 0.24799711999999996,
+    "closedDetectedAt": 1793160074692
+  }
+}

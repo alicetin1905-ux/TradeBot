@@ -21,5 +21,74 @@
     "margin": 108.53975,
     "placedAt": 1793304077661,
     "expiresAt": 1793318477661
+  },
+  "SUIUSDT": {
+    "symbol": "SUIUSDT",
+    "bias": -1,
+    "score": -78,
+    "orderId": "7f3bdd3c-a3be-414d-a26d-85ad8fad7ef2",
+    "price": 0.8752,
+    "qty": 600,
+    "stopLoss": 0.9582,
+    "ratios": {
+      "t1": 0.8577296059483497,
+      "t2": 0.762882676580583,
+      "t3": 0.6680357472128159
+    },
+    "inst": {
+      "qtyStep": 10,
+      "minOrderQty": 10,
+      "minNotional": 5,
+      "tickSize": 0.0001
+    },
+    "margin": 52.512,
+    "placedAt": 1793318475918,
+    "expiresAt": 1793332875918
+  },
+  "DOGEUSDT": {
+    "symbol": "DOGEUSDT",
+    "bias": -1,
+    "score": -76,
+    "orderId": "26c2bbf7-12eb-42e7-a1de-85ea9ad3eb1c",
+    "price": 0.07567,
+    "qty": 9324,
+    "stopLoss": 0.08107,
+    "ratios": {
+      "t1": 0.892997921801039,
+      "t2": 0.8216632030017317,
+      "t3": 0.7503284842024244
+    },
+    "inst": {
+      "qtyStep": 1,
+      "minOrderQty": 1,
+      "minNotional": 5,
+      "tickSize": 0.00001
+    },
+    "margin": 70.554708,
+    "placedAt": 1793318475918,
+    "expiresAt": 1793332875918
+  },
+  "GALAUSDT": {
+    "symbol": "GALAUSDT",
+    "bias": -1,
+    "score": -76,
+    "orderId": "71bd6050-82cb-41a4-9264-2afe2f838b7d",
+    "price": 0.001637,
+    "qty": 290804,
+    "stopLoss": 0.00181,
+    "ratios": {
+      "t1": 0.8414126640023099,
+      "t2": 0.7356877733371832,
+      "t3": 0.6299628826720564
+    },
+    "inst": {
+      "qtyStep": 1,
+      "minOrderQty": 1,
+      "minNotional": 5,
+      "tickSize": 0.000001
+    },
+    "margin": 47.6046148,
+    "placedAt": 1793318475918,
+    "expiresAt": 1793332875918
   }
 }

@@ -1,1 +1,74 @@
-{}
+{
+  "SUIUSDT": {
+    "symbol": "SUIUSDT",
+    "bias": -1,
+    "entry": 0.8752,
+    "stop": 0.9582,
+    "initialStop": 0.9582,
+    "t1": 0.7507,
+    "t2": 0.6677,
+    "t3": 0.5847,
+    "qtyTotal": 600,
+    "qtyRemaining": 600,
+    "qtyT1": 150,
+    "qtyT2": 150,
+    "qtyT3": 300,
+    "margin": 52.512,
+    "notional": 525.12,
+    "riskAmt": 49.80000000000005,
+    "filled": {
+      "t1": false,
+      "t2": false,
+      "t3": false
+    },
+    "breakeven": false,
+    "beAfter": "t1",
+    "openedAt": 1793331302048,
+    "score": -78,
+    "orders": {
+      "entry": "7f3bdd3c-a3be-414d-a26d-85ad8fad7ef2",
+      "t1": "c55dba07-36ad-4112-97fe-ad1d07344084",
+      "t2": "a356696d-a270-4469-a6a2-ab7d5f15b9b0",
+      "t3": "6c9385ff-a3fe-49e5-9aa3-115d4becb16d"
+    },
+    "tickSize": 0.0001,
+    "markPrice": 0.877,
+    "unrealisedPnl": -1.08
+  },
+  "DOGEUSDT": {
+    "symbol": "DOGEUSDT",
+    "bias": -1,
+    "entry": 0.07567,
+    "stop": 0.08107,
+    "initialStop": 0.08107,
+    "t1": 0.06757,
+    "t2": 0.06218,
+    "t3": 0.05678,
+    "qtyTotal": 9324,
+    "qtyRemaining": 9324,
+    "qtyT1": 2331,
+    "qtyT2": 2331,
+    "qtyT3": 4662,
+    "margin": 70.554708,
+    "notional": 705.54708,
+    "riskAmt": 50.34960000000002,
+    "filled": {
+      "t1": false,
+      "t2": false,
+      "t3": false
+    },
+    "breakeven": false,
+    "beAfter": "t1",
+    "openedAt": 1793331302048,
+    "score": -76,
+    "orders": {
+      "entry": "26c2bbf7-12eb-42e7-a1de-85ea9ad3eb1c",
+      "t1": "dfaff542-c5d8-493b-9ca3-f6509df78b54",
+      "t2": "77baa520-a89d-4bbe-bae3-841da4f85a5a",
+      "t3": "e54b3f4c-a869-40a1-822e-b0a07234ae7d"
+    },
+    "tickSize": 0.00001,
+    "markPrice": 0.07568,
+    "unrealisedPnl": -0.09324
+  }
+}

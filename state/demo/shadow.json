@@ -1,5 +1,34 @@
 {
-  "open": {},
+  "open": {
+    "ZILUSDT": {
+      "symbol": "ZILUSDT",
+      "bias": -1,
+      "entry": 0.001901,
+      "stop": 0.002025399804759355,
+      "t1": 0.0017144002928609675,
+      "t2": 0.0015900004881016126,
+      "t3": 0.0014656006833422576,
+      "qty": 404401.864,
+      "qtyRemaining": 404401.864,
+      "split": {
+        "t1": 0.25,
+        "t2": 0.25,
+        "t3": 0.5
+      },
+      "filled": {
+        "t1": false,
+        "t2": false,
+        "t3": false
+      },
+      "breakeven": false,
+      "beAfter": "t1",
+      "pnl": 0,
+      "score": -68,
+      "openedAt": 1793491200000,
+      "lastCandle": 1793491200000,
+      "blockedBy": "up 7.8%"
+    }
+  },
   "closed": [
     {
       "symbol": "WLDUSDT",
@@ -13,5 +42,10 @@
       "blockedBy": "down 15.9%"
     }
   ],
-  "used": {}
+  "used": {
+    "ZILUSDT": {
+      "bias": -1,
+      "reset": false
+    }
+  }
 }

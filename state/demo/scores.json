@@ -1,37 +1,37 @@
 {
   "SOLUSDT": {
-    "score": -55,
+    "score": -50,
     "bias": -1,
-    "at": 1793613661997,
+    "at": 1793617262368,
     "src": "bybit",
     "atr": 1.50117,
     "adx": 30,
     "candle": 1793592000000,
     "wait": "weak",
-    "why": "score -55 is below the entry minimum of 65"
+    "why": "score -50 is below the entry minimum of 65"
   },
   "DOGEUSDT": {
-    "score": -61,
+    "score": -47,
     "bias": -1,
-    "at": 1793613662420,
+    "at": 1793617263090,
     "src": "bybit",
     "atr": 0.00112628,
     "adx": 21.3,
     "candle": 1793592000000
   },
   "SUIUSDT": {
-    "score": -40,
+    "score": -35,
     "bias": -1,
-    "at": 1793613662818,
+    "at": 1793617263491,
     "src": "bybit",
     "atr": 0.0178438,
     "adx": 15,
     "candle": 1793592000000
   },
   "ENAUSDT": {
-    "score": -68,
+    "score": -65,
     "bias": -1,
-    "at": 1793613663267,
+    "at": 1793617264000,
     "src": "bybit",
     "atr": 0.00742084,
     "adx": 19.7,
@@ -43,23 +43,23 @@
       "why": "price is 1.4× ATR from the signal price (max 1×) — too late to take it"
     },
     "wait": "stale",
-    "why": "signal candle closed 121 min ago — new entries only right after a 4H close"
+    "why": "signal candle closed 181 min ago — new entries only right after a 4H close"
   },
   "WLDUSDT": {
-    "score": -55,
+    "score": -54,
     "bias": -1,
-    "at": 1793613663668,
+    "at": 1793617264548,
     "src": "bybit",
     "atr": 0.01156,
     "adx": 28.3,
     "candle": 1793592000000,
     "wait": "weak",
-    "why": "score -55 is below the entry minimum of 65"
+    "why": "score -54 is below the entry minimum of 65"
   },
   "DYDXUSDT": {
-    "score": -70,
+    "score": -72,
     "bias": -1,
-    "at": 1793613664384,
+    "at": 1793617265418,
     "src": "bybit",
     "atr": 0.00263012,
     "adx": 12.8,
@@ -68,47 +68,49 @@
   "GALAUSDT": {
     "score": -60,
     "bias": -1,
-    "at": 1793613664779,
+    "at": 1793617265825,
     "src": "bybit",
     "atr": 0.0000422539,
     "adx": 12.6,
     "candle": 1793592000000
   },
   "EGLDUSDT": {
-    "score": -22,
-    "bias": 0,
-    "at": 1793613665469,
+    "score": -25,
+    "bias": -1,
+    "at": 1793617266361,
     "src": "bybit",
     "atr": 0.0799836,
     "adx": 16.5,
-    "candle": 1793592000000
+    "candle": 1793592000000,
+    "wait": "weak",
+    "why": "score -25 is below the entry minimum of 65"
   },
   "NEARUSDT": {
-    "score": -60,
+    "score": -54,
     "bias": -1,
-    "at": 1793613666015,
+    "at": 1793617266768,
     "src": "bybit",
     "atr": 0.136357,
     "adx": 11.1,
     "candle": 1793592000000,
     "wait": "weak",
-    "why": "score -60 is below the entry minimum of 65"
+    "why": "score -54 is below the entry minimum of 65"
   },
   "XLMUSDT": {
-    "score": -38,
+    "score": -31,
     "bias": -1,
-    "at": 1793613666413,
+    "at": 1793617267167,
     "src": "bybit",
     "atr": 0.00284543,
     "adx": 8.9,
     "candle": 1793592000000,
     "wait": "weak",
-    "why": "score -38 is below the entry minimum of 65"
+    "why": "score -31 is below the entry minimum of 65"
   },
   "BLURUSDT": {
     "score": -25,
     "bias": -1,
-    "at": 1793613666811,
+    "at": 1793617268041,
     "src": "bybit",
     "atr": 0.000413123,
     "adx": 27.1,
@@ -119,7 +121,7 @@
   "SANDUSDT": {
     "score": -46,
     "bias": -1,
-    "at": 1793613667386,
+    "at": 1793617268444,
     "src": "bybit",
     "atr": 0.00114475,
     "adx": 10.6,
@@ -128,20 +130,20 @@
     "why": "score -46 is below the entry minimum of 65"
   },
   "AXSUSDT": {
-    "score": -64,
+    "score": -57,
     "bias": -1,
-    "at": 1793613667964,
+    "at": 1793617268859,
     "src": "bybit",
     "atr": 0.0187225,
     "adx": 28.5,
     "candle": 1793592000000,
     "wait": "weak",
-    "why": "score -64 is below the entry minimum of 65"
+    "why": "score -57 is below the entry minimum of 65"
   },
   "ZILUSDT": {
-    "score": -65,
+    "score": -68,
     "bias": -1,
-    "at": 1793613668511,
+    "at": 1793617269764,
     "src": "bybit",
     "atr": 0.0000455533,
     "adx": 23.7,
@@ -153,12 +155,12 @@
       "why": "price is 2.6× ATR from the signal price (max 1×) — too late to take it"
     },
     "wait": "stale",
-    "why": "signal candle closed 121 min ago — new entries only right after a 4H close"
+    "why": "signal candle closed 181 min ago — new entries only right after a 4H close"
   },
   "CHZUSDT": {
     "score": -60,
     "bias": -1,
-    "at": 1793613669242,
+    "at": 1793617270324,
     "src": "bybit",
     "atr": 0.00024824,
     "adx": 30.8,
@@ -183,9 +185,9 @@
     "wait": "stale"
   },
   "GRAMUSDT": {
-    "score": -23,
+    "score": -20,
     "bias": 0,
-    "at": 1793613670196,
+    "at": 1793617270730,
     "src": "bybit",
     "atr": 0.021976,
     "adx": 29.5,
@@ -200,29 +202,29 @@
     "wait": "weak"
   },
   "1000PEPEUSDT": {
-    "score": -32,
+    "score": -26,
     "bias": -1,
-    "at": 1793613670740,
+    "at": 1793617271291,
     "src": "bybit",
     "atr": 0.000208309,
     "adx": 12.5,
     "candle": 1793592000000,
     "wait": "weak",
-    "why": "score -32 is below the entry minimum of 65"
+    "why": "score -26 is below the entry minimum of 65"
   },
   "BTCUSDT": {
-    "score": -4,
+    "score": 2,
     "bias": 0,
-    "at": 1793613674048,
+    "at": 1793617273775,
     "src": "bybit",
     "atr": 738.618,
     "adx": 23.6,
     "candle": 1793592000000
   },
   "KAITOUSDT": {
-    "score": -64,
+    "score": -71,
     "bias": -1,
-    "at": 1793613671610,
+    "at": 1793617271694,
     "src": "bybit",
     "atr": 0.00534865,
     "adx": 24.4,
@@ -233,40 +235,40 @@
       "code": "chase",
       "why": "price is 1.1× ATR from the signal price (max 1×) — too late to take it"
     },
-    "wait": "weak",
-    "why": "score -64 is below the entry minimum of 65"
+    "wait": "stale",
+    "why": "signal candle closed 181 min ago — new entries only right after a 4H close"
   },
   "XRPUSDT": {
-    "score": -46,
+    "score": -44,
     "bias": -1,
-    "at": 1793613672175,
+    "at": 1793617272237,
     "src": "bybit",
     "atr": 0.0165202,
     "adx": 21.8,
     "candle": 1793592000000,
     "wait": "weak",
-    "why": "score -46 is below the entry minimum of 65"
+    "why": "score -44 is below the entry minimum of 65"
   },
   "ATOMUSDT": {
-    "score": -40,
+    "score": -45,
     "bias": -1,
-    "at": 1793613672743,
+    "at": 1793617272683,
     "src": "bybit",
     "atr": 0.0285209,
     "adx": 46.2,
     "candle": 1793592000000,
     "wait": "weak",
-    "why": "score -40 is below the entry minimum of 65"
+    "why": "score -45 is below the entry minimum of 65"
   },
   "1000BONKUSDT": {
-    "score": -52,
+    "score": -57,
     "bias": -1,
-    "at": 1793613673647,
+    "at": 1793617273242,
     "src": "bybit",
     "atr": 0.0000771883,
     "adx": 10.4,
     "candle": 1793592000000,
     "wait": "weak",
-    "why": "score -52 is below the entry minimum of 65"
+    "why": "score -57 is below the entry minimum of 65"
   }
 }

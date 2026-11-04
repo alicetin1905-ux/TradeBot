@@ -1,41 +1,4 @@
 {
-  "SUIUSDT": {
-    "symbol": "SUIUSDT",
-    "bias": -1,
-    "entry": 0.8752,
-    "stop": 0.9582,
-    "initialStop": 0.9582,
-    "t1": 0.7507,
-    "t2": 0.6677,
-    "t3": 0.5847,
-    "qtyTotal": 600,
-    "qtyRemaining": 600,
-    "qtyT1": 150,
-    "qtyT2": 150,
-    "qtyT3": 300,
-    "margin": 52.512,
-    "notional": 525.12,
-    "riskAmt": 49.80000000000005,
-    "filled": {
-      "t1": false,
-      "t2": false,
-      "t3": false
-    },
-    "breakeven": false,
-    "beAfter": "t1",
-    "openedAt": 1793331302048,
-    "score": -78,
-    "orders": {
-      "entry": "7f3bdd3c-a3be-414d-a26d-85ad8fad7ef2",
-      "t1": "c55dba07-36ad-4112-97fe-ad1d07344084",
-      "t2": "a356696d-a270-4469-a6a2-ab7d5f15b9b0",
-      "t3": "6c9385ff-a3fe-49e5-9aa3-115d4becb16d"
-    },
-    "tickSize": 0.0001,
-    "markPrice": 0.90362,
-    "unrealisedPnl": -17.052,
-    "funding": 0.58927704
-  },
   "DOGEUSDT": {
     "symbol": "DOGEUSDT",
     "bias": -1,
@@ -69,8 +32,8 @@
       "t3": "e54b3f4c-a869-40a1-822e-b0a07234ae7d"
     },
     "tickSize": 0.00001,
-    "markPrice": 0.07476,
-    "unrealisedPnl": 8.48484
+    "markPrice": 0.07703,
+    "unrealisedPnl": -12.68064
   },
   "GALAUSDT": {
     "symbol": "GALAUSDT",
@@ -105,8 +68,8 @@
       "t3": "0925e8b4-ca3e-4f1d-a3a5-3793d05c89de"
     },
     "tickSize": 0.000001,
-    "markPrice": 0.001664,
-    "unrealisedPnl": -7.851708
+    "markPrice": 0.001714,
+    "unrealisedPnl": -22.391908
   },
   "DYDXUSDT": {
     "symbol": "DYDXUSDT",
@@ -141,7 +104,7 @@
       "t3": "bfdde6fa-ecdf-4c1c-aaf6-4f0ebca3e0b8"
     },
     "tickSize": 0.00001,
-    "markPrice": 0.10362,
-    "unrealisedPnl": 4.609872
+    "markPrice": 0.10676,
+    "unrealisedPnl": -15.494292
   }
 }

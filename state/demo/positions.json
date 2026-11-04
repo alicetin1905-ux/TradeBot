@@ -1,76 +1,4 @@
 {
-  "DOGEUSDT": {
-    "symbol": "DOGEUSDT",
-    "bias": -1,
-    "entry": 0.07567,
-    "stop": 0.08107,
-    "initialStop": 0.08107,
-    "t1": 0.06757,
-    "t2": 0.06218,
-    "t3": 0.05678,
-    "qtyTotal": 9324,
-    "qtyRemaining": 9324,
-    "qtyT1": 2331,
-    "qtyT2": 2331,
-    "qtyT3": 4662,
-    "margin": 70.554708,
-    "notional": 705.54708,
-    "riskAmt": 50.34960000000002,
-    "filled": {
-      "t1": false,
-      "t2": false,
-      "t3": false
-    },
-    "breakeven": false,
-    "beAfter": "t1",
-    "openedAt": 1793331302048,
-    "score": -76,
-    "orders": {
-      "entry": "26c2bbf7-12eb-42e7-a1de-85ea9ad3eb1c",
-      "t1": "dfaff542-c5d8-493b-9ca3-f6509df78b54",
-      "t2": "77baa520-a89d-4bbe-bae3-841da4f85a5a",
-      "t3": "e54b3f4c-a869-40a1-822e-b0a07234ae7d"
-    },
-    "tickSize": 0.00001,
-    "markPrice": 0.07779,
-    "unrealisedPnl": -19.76688
-  },
-  "GALAUSDT": {
-    "symbol": "GALAUSDT",
-    "bias": -1,
-    "entry": 0.001637,
-    "stop": 0.00181,
-    "initialStop": 0.00181,
-    "t1": 0.001377,
-    "t2": 0.001204,
-    "t3": 0.001031,
-    "qtyTotal": 290804,
-    "qtyRemaining": 290804,
-    "qtyT1": 72701,
-    "qtyT2": 72701,
-    "qtyT3": 145402,
-    "margin": 47.6046148,
-    "notional": 476.046148,
-    "riskAmt": 50.30909199999999,
-    "filled": {
-      "t1": false,
-      "t2": false,
-      "t3": false
-    },
-    "breakeven": false,
-    "beAfter": "t1",
-    "openedAt": 1793331901902,
-    "score": -76,
-    "orders": {
-      "entry": "71bd6050-82cb-41a4-9264-2afe2f838b7d",
-      "t1": "769c0eaa-4a92-4655-b1b6-c6d379e21adf",
-      "t2": "ab910e0d-4a27-4b19-be81-0804286189b6",
-      "t3": "0925e8b4-ca3e-4f1d-a3a5-3793d05c89de"
-    },
-    "tickSize": 0.000001,
-    "markPrice": 0.00173,
-    "unrealisedPnl": -27.044772
-  },
   "DYDXUSDT": {
     "symbol": "DYDXUSDT",
     "bias": -1,
@@ -104,7 +32,7 @@
       "t3": "bfdde6fa-ecdf-4c1c-aaf6-4f0ebca3e0b8"
     },
     "tickSize": 0.00001,
-    "markPrice": 0.10749,
-    "unrealisedPnl": -20.16819
+    "markPrice": 0.10728,
+    "unrealisedPnl": -18.823644
   }
 }

@@ -1,1 +1,25 @@
-{}
+{
+  "1000PEPEUSDT": {
+    "symbol": "1000PEPEUSDT",
+    "bias": 1,
+    "score": 72,
+    "orderId": "85dec1f0-3f77-4355-ba5b-e8ad66c4a11c",
+    "price": 0.005119,
+    "qty": 144500,
+    "stopLoss": 0.004787,
+    "ratios": {
+      "t1": 1.0971510091064192,
+      "t2": 1.1619183485106988,
+      "t3": 1.2266856879149781
+    },
+    "inst": {
+      "qtyStep": 100,
+      "minOrderQty": 100,
+      "minNotional": 5,
+      "tickSize": 0.000001
+    },
+    "margin": 73.96955,
+    "placedAt": 1793808081149,
+    "expiresAt": 1793822481149
+  }
+}

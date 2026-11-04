@@ -690,5 +690,39 @@
     "t2": 0.6677,
     "t3": 0.5847,
     "qtyTotal": 600
+  },
+  {
+    "symbol": "DOGEUSDT",
+    "bias": -1,
+    "entry": 0.07567,
+    "exit": 0.07751,
+    "qty": 9324,
+    "pnl": -17.62457566,
+    "reason": "signal-flip",
+    "openedAt": 1793331302048,
+    "closedAt": 1793808082647,
+    "score": -76,
+    "stop": 0.08107,
+    "t1": 0.06757,
+    "t2": 0.06218,
+    "t3": 0.05678,
+    "qtyTotal": 9324
+  },
+  {
+    "symbol": "GALAUSDT",
+    "bias": -1,
+    "entry": 0.001637,
+    "exit": 0.00173,
+    "qty": 290804,
+    "pnl": -26.87080657,
+    "reason": "signal-flip",
+    "openedAt": 1793331901902,
+    "closedAt": 1793808083428,
+    "score": -76,
+    "stop": 0.00181,
+    "t1": 0.001377,
+    "t2": 0.001204,
+    "t3": 0.001031,
+    "qtyTotal": 290804
   }
 ]

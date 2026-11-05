@@ -32,8 +32,80 @@
       "t3": "bfdde6fa-ecdf-4c1c-aaf6-4f0ebca3e0b8"
     },
     "tickSize": 0.00001,
-    "markPrice": 0.09303,
-    "unrealisedPnl": 54.31062,
+    "markPrice": 0.09425,
+    "unrealisedPnl": 48.45218,
     "funding": 0.10409966000000001
+  },
+  "CHZUSDT": {
+    "symbol": "CHZUSDT",
+    "bias": -1,
+    "entry": 0.01128,
+    "stop": 0.01208,
+    "initialStop": 0.01208,
+    "t1": 0.01007,
+    "t2": 0.00927,
+    "t3": 0.00847,
+    "qtyTotal": 59191,
+    "qtyRemaining": 59191,
+    "qtyT1": 14797,
+    "qtyT2": 14797,
+    "qtyT3": 29597,
+    "margin": 66.767448,
+    "notional": 667.67448,
+    "riskAmt": 47.35280000000002,
+    "filled": {
+      "t1": false,
+      "t2": false,
+      "t3": false
+    },
+    "breakeven": false,
+    "beAfter": "t1",
+    "openedAt": 1793895001344,
+    "score": -81,
+    "orders": {
+      "entry": "c70a1fb3-9cee-4923-8453-abe4cc793537",
+      "t1": "57eadca5-73c4-4eca-979b-b0c580a16a01",
+      "t2": "de5abfe7-a92c-4117-9ccf-c76a3a1f2b83",
+      "t3": "b696b743-f746-4eee-a67a-f1ef0f373860"
+    },
+    "tickSize": 0.00001,
+    "markPrice": 0.01126,
+    "unrealisedPnl": 1.18382
+  },
+  "XLMUSDT": {
+    "symbol": "XLMUSDT",
+    "bias": -1,
+    "entry": 0.1551,
+    "stop": 0.1677,
+    "initialStop": 0.1677,
+    "t1": 0.1362,
+    "t2": 0.1236,
+    "t3": 0.111,
+    "qtyTotal": 3770,
+    "qtyRemaining": 3770,
+    "qtyT1": 942,
+    "qtyT2": 942,
+    "qtyT3": 1886,
+    "margin": 58.472699999999996,
+    "notional": 584.727,
+    "riskAmt": 47.502,
+    "filled": {
+      "t1": false,
+      "t2": false,
+      "t3": false
+    },
+    "breakeven": false,
+    "beAfter": "t1",
+    "openedAt": 1793895001344,
+    "score": -74,
+    "orders": {
+      "entry": "a5bbd0d3-1817-40c8-acf1-570a5782d741",
+      "t1": "3a12386b-6d9b-4aa6-864e-e9be98027245",
+      "t2": "d58f4cf6-04ff-4d57-b310-a5f8b5ae985e",
+      "t3": "98710fed-7cfc-4a2d-a516-705d47ef9364"
+    },
+    "tickSize": 0.0001,
+    "markPrice": 0.15451,
+    "unrealisedPnl": 2.2243
   }
 }

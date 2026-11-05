@@ -741,5 +741,22 @@
     "t2": 0.005948,
     "t3": 0.006279,
     "qtyTotal": 144500
+  },
+  {
+    "symbol": "DYDXUSDT",
+    "bias": -1,
+    "entry": 0.10434,
+    "exit": 0.09256,
+    "qty": 1600.6,
+    "pnl": 19.10277038,
+    "reason": "T1 hit, stop moved to breakeven",
+    "openedAt": 1793334601521,
+    "closedAt": 1793893992690,
+    "score": -78,
+    "stop": 0.11219,
+    "t1": 0.09256,
+    "t2": 0.0847,
+    "t3": 0.07685,
+    "qtyTotal": 6402.6
   }
 ]

@@ -1,35 +1,5 @@
 {
-  "open": {
-    "ZILUSDT": {
-      "symbol": "ZILUSDT",
-      "bias": -1,
-      "entry": 0.001901,
-      "stop": 0.0017144002928609675,
-      "t1": 0.0017144002928609675,
-      "t2": 0.0015900004881016126,
-      "t3": 0.0014656006833422576,
-      "qty": 404401.864,
-      "qtyRemaining": 202200.93199999997,
-      "split": {
-        "t1": 0.25,
-        "t2": 0.25,
-        "t3": 0.5
-      },
-      "filled": {
-        "t1": true,
-        "t2": true,
-        "t3": false
-      },
-      "breakeven": true,
-      "beAfter": "t1",
-      "pnl": 50.30751292591921,
-      "score": -68,
-      "openedAt": 1793491200000,
-      "lastCandle": 1793937600000,
-      "blockedBy": "up 7.8%",
-      "lockedT1": true
-    }
-  },
+  "open": {},
   "closed": [
     {
       "symbol": "WLDUSDT",
@@ -41,12 +11,18 @@
       "exitReason": "signal-flip",
       "score": 50,
       "blockedBy": "down 15.9%"
+    },
+    {
+      "symbol": "ZILUSDT",
+      "bias": -1,
+      "entry": 0.001901,
+      "openedAt": 1793491200000,
+      "closedAt": 1793952000000,
+      "pnl": 88.03814762035861,
+      "exitReason": "breakeven stop hit",
+      "score": -68,
+      "blockedBy": "up 7.8%"
     }
   ],
-  "used": {
-    "ZILUSDT": {
-      "bias": -1,
-      "reset": true
-    }
-  }
+  "used": {}
 }

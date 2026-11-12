@@ -1,8 +1,8 @@
 {
   "SOLUSDT": {
-    "score": -83,
+    "score": -86,
     "bias": -1,
-    "at": 1794517262861,
+    "at": 1794520862374,
     "src": "bybit",
     "atr": 1.63338,
     "adx": 44.6,
@@ -14,12 +14,12 @@
       "why": "price is 2.0× ATR from the signal price (max 1×) — too late to take it"
     },
     "wait": "stale",
-    "why": "signal candle closed 62 min ago — new entries only right after a 4H close"
+    "why": "signal candle closed 121 min ago — new entries only right after a 4H close"
   },
   "DOGEUSDT": {
-    "score": -75,
+    "score": -80,
     "bias": -1,
-    "at": 1794517263541,
+    "at": 1794520863076,
     "src": "bybit",
     "atr": 0.00137242,
     "adx": 46.6,
@@ -31,12 +31,12 @@
       "why": "price is 4.2× ATR from the signal price (max 1×) — too late to take it"
     },
     "wait": "stale",
-    "why": "signal candle closed 62 min ago — new entries only right after a 4H close"
+    "why": "signal candle closed 121 min ago — new entries only right after a 4H close"
   },
   "SUIUSDT": {
     "score": -65,
     "bias": -1,
-    "at": 1794517264240,
+    "at": 1794520864247,
     "src": "bybit",
     "atr": 0.0197324,
     "adx": 29,
@@ -48,12 +48,12 @@
       "why": "already 4 shorts open (max 4 in one direction)"
     },
     "wait": "stale",
-    "why": "signal candle closed 62 min ago — new entries only right after a 4H close"
+    "why": "signal candle closed 121 min ago — new entries only right after a 4H close"
   },
   "ENAUSDT": {
     "score": -78,
     "bias": -1,
-    "at": 1794517265195,
+    "at": 1794520865260,
     "src": "bybit",
     "atr": 0.0050566,
     "adx": 38,
@@ -65,12 +65,12 @@
       "why": "price is 2.2× ATR from the signal price (max 1×) — too late to take it"
     },
     "wait": "stale",
-    "why": "signal candle closed 62 min ago — new entries only right after a 4H close"
+    "why": "signal candle closed 121 min ago — new entries only right after a 4H close"
   },
   "WLDUSDT": {
-    "score": -55,
+    "score": -58,
     "bias": -1,
-    "at": 1794517266272,
+    "at": 1794520866328,
     "src": "bybit",
     "atr": 0.00921424,
     "adx": 38.4,
@@ -82,92 +82,92 @@
       "why": "price is 2.1× ATR from the signal price (max 1×) — too late to take it"
     },
     "wait": "weak",
-    "why": "score -55 is below the entry minimum of 65"
+    "why": "score -58 is below the entry minimum of 65"
   },
   "DYDXUSDT": {
-    "score": -27,
+    "score": -25,
     "bias": -1,
-    "at": 1794517266930,
+    "at": 1794520866799,
     "src": "bybit",
     "atr": 0.002292,
     "adx": 27.8,
     "candle": 1794499200000
   },
   "GALAUSDT": {
-    "score": -62,
+    "score": -67,
     "bias": -1,
-    "at": 1794517268655,
+    "at": 1794520868376,
     "src": "bybit",
     "atr": 0.0000349091,
     "adx": 40.5,
     "candle": 1794499200000,
-    "wait": "weak",
-    "why": "score -62 is below the entry minimum of 65"
+    "wait": "stale",
+    "why": "signal candle closed 121 min ago — new entries only right after a 4H close"
   },
   "EGLDUSDT": {
     "score": -14,
     "bias": 0,
-    "at": 1794517269712,
+    "at": 1794520869776,
     "src": "bybit",
     "atr": 0.0753226,
     "adx": 38.8,
     "candle": 1794499200000
   },
   "NEARUSDT": {
-    "score": -65,
+    "score": -61,
     "bias": -1,
-    "at": 1794517271210,
-    "src": "bybit",
-    "atr": 0.123761,
-    "adx": 20.4,
+    "at": 1794520871255,
+    "src": "okx",
+    "atr": 0.123271,
+    "adx": 20.3,
     "candle": 1794499200000,
-    "wait": "stale",
-    "why": "signal candle closed 62 min ago — new entries only right after a 4H close"
+    "wait": "weak",
+    "why": "score -61 is below the entry minimum of 65"
   },
   "XLMUSDT": {
-    "score": -23,
+    "score": -21,
     "bias": 0,
-    "at": 1794517272717,
+    "at": 1794520873342,
     "src": "bybit",
     "atr": 0.00342222,
     "adx": 25.5,
     "candle": 1794499200000
   },
   "BLURUSDT": {
-    "score": -45,
+    "score": -49,
     "bias": -1,
-    "at": 1794517274337,
+    "at": 1794520874538,
     "src": "bybit",
     "atr": 0.000169467,
     "adx": 29.5,
     "candle": 1794499200000
   },
   "SANDUSDT": {
-    "score": -60,
+    "score": -65,
     "bias": -1,
-    "at": 1794517275691,
+    "at": 1794520875677,
     "src": "bybit",
     "atr": 0.00102917,
     "adx": 23.2,
     "candle": 1794499200000,
-    "wait": "weak",
-    "why": "score -60 is below the entry minimum of 65"
+    "wait": "stale",
+    "why": "signal candle closed 121 min ago — new entries only right after a 4H close"
   },
   "AXSUSDT": {
-    "score": -59,
+    "score": -64,
     "bias": -1,
-    "at": 1794517277554,
+    "at": 1794520877718,
     "src": "bybit",
     "atr": 0.0175722,
     "adx": 31.5,
     "candle": 1794499200000,
     "wait": "weak",
-    "why": "score -59 is below the entry minimum of 65"
+    "why": "score -64 is below the entry minimum of 65"
   },
   "ZILUSDT": {
-    "score": -67,
+    "score": -65,
     "bias": -1,
-    "at": 1794517279276,
+    "at": 1794520879631,
     "src": "bybit",
     "atr": 0.0000508516,
     "adx": 14.8,
@@ -179,12 +179,12 @@
       "why": "price is 2.6× ATR from the signal price (max 1×) — too late to take it"
     },
     "wait": "stale",
-    "why": "signal candle closed 62 min ago — new entries only right after a 4H close"
+    "why": "signal candle closed 121 min ago — new entries only right after a 4H close"
   },
   "CHZUSDT": {
-    "score": -57,
+    "score": -61,
     "bias": -1,
-    "at": 1794517280631,
+    "at": 1794520881075,
     "src": "bybit",
     "atr": 0.000224747,
     "adx": 44.8,
@@ -207,9 +207,9 @@
     "wait": "stale"
   },
   "GRAMUSDT": {
-    "score": 14,
+    "score": 9,
     "bias": 0,
-    "at": 1794517281900,
+    "at": 1794520882563,
     "src": "bybit",
     "atr": 0.0537247,
     "adx": 48.2,
@@ -224,40 +224,40 @@
     "wait": "weak"
   },
   "1000PEPEUSDT": {
-    "score": -53,
+    "score": -57,
     "bias": -1,
-    "at": 1794517283295,
+    "at": 1794520883286,
     "src": "bybit",
     "atr": 0.000195226,
     "adx": 25.7,
     "candle": 1794499200000,
     "wait": "weak",
-    "why": "score -53 is below the entry minimum of 65"
+    "why": "score -57 is below the entry minimum of 65"
   },
   "BTCUSDT": {
-    "score": -72,
+    "score": -67,
     "bias": -1,
-    "at": 1794517291150,
+    "at": 1794520889602,
     "src": "bybit",
     "atr": 948.931,
     "adx": 45.8,
     "candle": 1794499200000
   },
   "KAITOUSDT": {
-    "score": -30,
+    "score": -29,
     "bias": -1,
-    "at": 1794517284788,
+    "at": 1794520884525,
     "src": "bybit",
     "atr": 0.00438843,
     "adx": 27.9,
     "candle": 1794499200000,
     "wait": "weak",
-    "why": "score -30 is below the entry minimum of 65"
+    "why": "score -29 is below the entry minimum of 65"
   },
   "XRPUSDT": {
-    "score": -68,
+    "score": -74,
     "bias": -1,
-    "at": 1794517286864,
+    "at": 1794520885986,
     "src": "bybit",
     "atr": 0.0225089,
     "adx": 58.1,
@@ -269,28 +269,28 @@
       "why": "price is 9.4× ATR from the signal price (max 1×) — too late to take it"
     },
     "wait": "stale",
-    "why": "signal candle closed 62 min ago — new entries only right after a 4H close"
+    "why": "signal candle closed 121 min ago — new entries only right after a 4H close"
   },
   "ATOMUSDT": {
-    "score": 46,
+    "score": 49,
     "bias": 1,
-    "at": 1794517288919,
+    "at": 1794520887573,
     "src": "bybit",
     "atr": 0.028371,
     "adx": 19.7,
     "candle": 1794499200000,
     "wait": "weak",
-    "why": "score 46 is below the entry minimum of 65"
+    "why": "score 49 is below the entry minimum of 65"
   },
   "1000BONKUSDT": {
-    "score": -61,
+    "score": -66,
     "bias": -1,
-    "at": 1794517290234,
+    "at": 1794520888444,
     "src": "bybit",
     "atr": 0.0000758644,
     "adx": 21.9,
     "candle": 1794499200000,
-    "wait": "weak",
-    "why": "score -61 is below the entry minimum of 65"
+    "wait": "stale",
+    "why": "signal candle closed 121 min ago — new entries only right after a 4H close"
   }
 }

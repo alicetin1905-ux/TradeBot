@@ -1,42 +1,4 @@
 {
-  "DYDXUSDT": {
-    "symbol": "DYDXUSDT",
-    "bias": -1,
-    "entry": 0.10434,
-    "stop": 0.09256,
-    "initialStop": 0.11219,
-    "t1": 0.09256,
-    "t2": 0.0847,
-    "t3": 0.07685,
-    "qtyTotal": 6402.6,
-    "qtyRemaining": 3201.4,
-    "qtyT1": 1600.6,
-    "qtyT2": 1600.6,
-    "qtyT3": 3201.4,
-    "margin": 66.80472840000002,
-    "notional": 668.0472840000001,
-    "riskAmt": 50.26040999999998,
-    "filled": {
-      "t1": true,
-      "t2": true,
-      "t3": false
-    },
-    "breakeven": true,
-    "beAfter": "t1",
-    "openedAt": 1793334601521,
-    "score": -78,
-    "orders": {
-      "entry": "9d8763d6-ae3a-416e-b669-1b6e78f72b7f",
-      "t1": "5e7c2a42-8357-461e-b9c2-df923c321deb",
-      "t2": "b746c1c5-adfc-4771-8db7-83f9f4e6d215",
-      "t3": "bfdde6fa-ecdf-4c1c-aaf6-4f0ebca3e0b8"
-    },
-    "tickSize": 0.00001,
-    "markPrice": 0.07809,
-    "unrealisedPnl": 84.03675,
-    "funding": 1.4149791200000006,
-    "lockedT1": true
-  },
   "CHZUSDT": {
     "symbol": "CHZUSDT",
     "bias": -1,
@@ -70,8 +32,8 @@
       "t3": "b696b743-f746-4eee-a67a-f1ef0f373860"
     },
     "tickSize": 0.00001,
-    "markPrice": 0.00989,
-    "unrealisedPnl": 61.70766,
+    "markPrice": 0.00972,
+    "unrealisedPnl": 69.25464,
     "funding": 0.5479895199999999
   },
   "XLMUSDT": {
@@ -107,8 +69,8 @@
       "t3": "98710fed-7cfc-4a2d-a516-705d47ef9364"
     },
     "tickSize": 0.0001,
-    "markPrice": 0.13683,
-    "unrealisedPnl": 51.66756,
+    "markPrice": 0.1346,
+    "unrealisedPnl": 57.974,
     "funding": -0.31791983
   },
   "BLURUSDT": {
@@ -144,8 +106,8 @@
       "t3": "480fa9d6-d7be-4c92-8ba2-83e5cfa2071e"
     },
     "tickSize": 0.000001,
-    "markPrice": 0.005978,
-    "unrealisedPnl": 75.065157,
+    "markPrice": 0.005898,
+    "unrealisedPnl": 80.107317,
     "funding": -0.07688281
   }
 }

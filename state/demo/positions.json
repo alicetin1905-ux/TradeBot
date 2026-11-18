@@ -32,8 +32,8 @@
       "t3": "b696b743-f746-4eee-a67a-f1ef0f373860"
     },
     "tickSize": 0.00001,
-    "markPrice": 0.00964,
-    "unrealisedPnl": 48.53908,
+    "markPrice": 0.00965,
+    "unrealisedPnl": 48.24311,
     "funding": 0.9504088799999999,
     "lockedT1": true
   },
@@ -70,8 +70,8 @@
       "t3": "98710fed-7cfc-4a2d-a516-705d47ef9364"
     },
     "tickSize": 0.0001,
-    "markPrice": 0.13755,
-    "unrealisedPnl": 49.6314,
+    "markPrice": 0.1375,
+    "unrealisedPnl": 49.7728,
     "funding": -0.34698935999999997
   },
   "SUIUSDT": {
@@ -107,7 +107,43 @@
       "t3": "43385c11-512c-4324-878e-de06e1b9130d"
     },
     "tickSize": 0.0001,
-    "markPrice": 0.71836,
-    "unrealisedPnl": 8.9394
+    "markPrice": 0.71803,
+    "unrealisedPnl": 9.4047
+  },
+  "ATOMUSDT": {
+    "symbol": "ATOMUSDT",
+    "bias": -1,
+    "entry": 1.291,
+    "stop": 1.337,
+    "initialStop": 1.337,
+    "t1": 1.222,
+    "t2": 1.176,
+    "t3": 1.131,
+    "qtyTotal": 1009.9,
+    "qtyRemaining": 1009.9,
+    "qtyT1": 252.4,
+    "qtyT2": 252.4,
+    "qtyT3": 505.1,
+    "margin": 130.37809,
+    "notional": 1303.7809,
+    "riskAmt": 46.45540000000004,
+    "filled": {
+      "t1": false,
+      "t2": false,
+      "t3": false
+    },
+    "breakeven": false,
+    "beAfter": "t1",
+    "openedAt": 1795036201269,
+    "score": -69,
+    "orders": {
+      "entry": "9ea6b1f1-d565-4c0d-8ead-117e5970cc12",
+      "t1": "30b8622a-e46f-499a-b4db-f7f6f97a3c83",
+      "t2": "6d7d2f82-230c-478d-baaa-8f86a47691c6",
+      "t3": "896167b7-094c-4e8a-84f0-c0cacd9f9856"
+    },
+    "tickSize": 0.001,
+    "markPrice": 1.29,
+    "unrealisedPnl": 1.0099
   }
 }

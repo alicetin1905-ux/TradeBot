@@ -4,29 +4,30 @@
       "symbol": "DOGEUSDT",
       "bias": -1,
       "entry": 0.05862,
-      "stop": 0.06148012469589823,
+      "stop": 0.05432981295615265,
       "t1": 0.05432981295615265,
       "t2": 0.051469688260254415,
       "t3": 0.04860956356435618,
       "qty": 16191,
-      "qtyRemaining": 16191,
+      "qtyRemaining": 8095.5,
       "split": {
         "t1": 0.25,
         "t2": 0.25,
         "t3": 0.5
       },
       "filled": {
-        "t1": false,
-        "t2": false,
+        "t1": true,
+        "t2": true,
         "t3": false
       },
-      "breakeven": false,
+      "breakeven": true,
       "beAfter": "t1",
-      "pnl": 0,
+      "pnl": 46.3082789512883,
       "score": -70,
       "openedAt": 1795017600000,
-      "lastCandle": 1795132800000,
-      "blockedBy": "up 5.3%"
+      "lastCandle": 1795248000000,
+      "blockedBy": "up 5.3%",
+      "lockedT1": true
     }
   },
   "closed": [

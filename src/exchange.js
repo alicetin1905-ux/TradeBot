@@ -116,16 +116,20 @@ async function reconcile({ client, st, exPos, signals, events, now }) {
   // a newer open trade on the same coin — otherwise that trade's target
   // fills get booked under the old trade (and mislabelled 'stop hit').
   const CLOSE_GRACE_MS = 5 * 60000;
-  for (const [sym, pos] of Object.entries(st.closing)) {
+  for (const [key, pos] of Object.entries(st.closing)) {
+    const sym = pos.symbol || key; // a re-booked trade is keyed symbol:openedAt (see run.js rebook)
     const newer = st.positions[sym];
     await recordFills(client, st, pos, events, {
-      until: (pos.closedDetectedAt || now) + CLOSE_GRACE_MS,
+      until: pos.bookUntil || (pos.closedDetectedAt || now) + CLOSE_GRACE_MS,
       skipIds: newer && newer.orders ? Object.values(newer.orders) : [],
     });
-    // Forget it a day after the close once its P&L is booked; one still
-    // without any booked record is retried for up to 7 days.
-    const booked = st.trades.some(t => t.symbol === sym && t.openedAt === pos.openedAt);
-    if (now - pos.closedDetectedAt > (booked ? DAY_MS : 7 * DAY_MS)) delete st.closing[sym];
+    // Forget it a day after the close once its P&L is fully booked (closed
+    // qty adds up to the position; a T1 partial alone doesn't count); one
+    // still missing records is retried for up to 7 days.
+    const fills = st.trades.filter(t => t.symbol === sym && t.openedAt === pos.openedAt);
+    const bookedQty = fills.reduce((s, t) => s + (t.qty || 0), 0);
+    const booked = fills.length > 0 && (!(pos.qtyTotal > 0) || bookedQty >= pos.qtyTotal * 0.999);
+    if (now - pos.closedDetectedAt > (booked ? DAY_MS : 7 * DAY_MS)) delete st.closing[key];
   }
 
   for (const sym of Object.keys(st.positions)) {

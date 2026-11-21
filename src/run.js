@@ -247,6 +247,18 @@ async function runCommands(client, st, events) {
         tags: ['octagonal_sign'],
       }]);
       if (failed.length) continue;
+    } else if (c.action === 'rebook') {
+      // Re-check a closed position whose fills never got booked (dropped from
+      // closing): { "action": "rebook", "position": { ...as it was in closing.json } }.
+      // Only records up to its original close count (bookUntil); it is retried
+      // for the usual 7 days from now.
+      const p = c.position;
+      if (!p || !p.symbol || !p.openedAt || !p.closedDetectedAt) {
+        events.push({ symbol: '-', type: 'error', reason: `rebook ${c.id}: position with symbol, openedAt and closedDetectedAt needed` });
+      } else if (!st.positions[p.symbol] || st.positions[p.symbol].openedAt !== p.openedAt) {
+        st.closing[p.symbol + ':' + p.openedAt] = { ...p, bookUntil: p.closedDetectedAt + 5 * 60000, closedDetectedAt: Date.now() };
+        events.push({ symbol: p.symbol, type: 'info', reason: 'closed trade queued to re-check its Bybit fills' });
+      }
     } else if (c.action === 'reset') {
       // Fresh start: close everything on Bybit, then reset the tracking to
       // STARTING_BALANCE. { "clearHistory": true } also wipes the trade log

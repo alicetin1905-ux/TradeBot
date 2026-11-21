@@ -1010,3 +1010,36 @@ test('ADX cap: the entry gate holds a signal back when the 4H ADX is at or above
     config.USE_FIB = saved.fib; config.ADX_MAX = saved.adx; config.MAX_CHASE_ATR = saved.chase;
   }
 });
+
+test('closed-pnl: asks the whole span since the position opened in 7-day windows', async () => {
+  const seen = [];
+  const day = 86400000, now = Date.now();
+  const fetchImpl = async (url) => {
+    const q = new URL(url).searchParams;
+    seen.push([+q.get('startTime'), +q.get('endTime')]);
+    // Bybit files a record under its order's creation time: this target was placed 9 days ago
+    const created = now - 9 * day;
+    const list = created >= +q.get('startTime') && created <= +q.get('endTime')
+      ? [{ orderId: 'tp1', closedSize: '10', avgExitPrice: '1.1', closedPnl: '5', updatedTime: String(now - day) }] : [];
+    return { status: 200, text: async () => JSON.stringify({ retCode: 0, result: { list } }) };
+  };
+  const c = createClient({ env: 'demo', apiKey: 'key', apiSecret: 'sec', fetchImpl });
+  const recs = await c.getClosedPnl('CHZUSDT', now - 10 * day);
+  assert.deepEqual(recs.map(r => r.orderId), ['tp1']);
+  assert.equal(seen.length, 2);
+  for (const [s, e] of seen) assert.ok(e - s <= 7 * day, 'each window at most 7 days');
+  assert.ok(seen[0][0] <= now - 10 * day + 1 && seen[1][1] >= now - 1000, 'windows cover the whole span');
+});
+
+test('closing: a position with only its T1 booked is kept and retried, not dropped after a day', async () => {
+  const { client } = fakeBybit();
+  const st = freshState();
+  const t0 = Date.now() - 2 * 86400000;
+  st.closing.XRPUSDT = { symbol: 'XRPUSDT', bias: 1, entry: 2, qtyTotal: 100, openedAt: t0, closedDetectedAt: t0 + 3600000, orders: {}, filled: { t1: true } };
+  st.trades.push({ symbol: 'XRPUSDT', openedAt: t0, qty: 25, pnl: 5 });
+  await exchange.runExchange({ client, st, signals: {}, candidates: [], events: [] });
+  assert.ok(st.closing.XRPUSDT, 'kept: 25 of 100 booked');
+  st.trades.push({ symbol: 'XRPUSDT', openedAt: t0, qty: 75, pnl: 9 });
+  await exchange.runExchange({ client, st, signals: {}, candidates: [], events: [] });
+  assert.equal(st.closing.XRPUSDT, undefined, 'dropped once fully booked');
+});

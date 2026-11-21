@@ -222,18 +222,25 @@ function createClient({ apiKey, apiSecret, env = 'demo', fetchImpl = fetch }) {
     // startTime null = Bybit's default window (the last 7 days). With a
     // startTime, endTime is sent too (now, at most 7 days later) so the
     // window is explicit rather than left to the API's defaults.
+    // Closed-pnl records since startTime (null: Bybit's default last 7 days).
+    // Bybit filters this endpoint on when the closing ORDER was created, not
+    // when it filled, and allows at most 7 days per query: a target placed
+    // at entry that fills 9 days later only shows up in the window holding
+    // the entry. So the whole span since startTime is asked in 7-day windows
+    // (seen live: CHZ/BLUR/XLM/DYDX fills in Nov never booked).
     async getClosedPnl(symbol, startTime) {
-      const params = { category: 'linear', symbol, limit: '100' };
-      if (startTime != null) {
-        const end = Date.now(), start = Math.max(startTime, end - 7 * 86400000 + 60000);
-        params.startTime = String(start);
-        params.endTime = String(end);
-      }
-      const r = await request('GET', '/v5/position/closed-pnl', params);
-      return (r.list || []).map(x => ({
+      const map = (r) => (r.list || []).map(x => ({
         orderId: x.orderId, qty: num(x.closedSize), exit: num(x.avgExitPrice),
         pnl: num(x.closedPnl), at: num(x.updatedTime),
       }));
+      if (startTime == null) return map(await request('GET', '/v5/position/closed-pnl', { category: 'linear', symbol, limit: '100' }));
+      const WEEK = 7 * 86400000 - 60000, now = Date.now();
+      const out = [], ids = new Set();
+      for (let start = Math.max(startTime, now - 180 * 86400000); start < now; start += WEEK) {
+        const r = await request('GET', '/v5/position/closed-pnl', { category: 'linear', symbol, limit: '100', startTime: String(start), endTime: String(Math.min(start + WEEK, now)) });
+        for (const x of map(r)) if (!ids.has(x.orderId)) { ids.add(x.orderId); out.push(x); }
+      }
+      return out;
     },
   };
 }

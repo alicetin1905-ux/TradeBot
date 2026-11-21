@@ -835,8 +835,8 @@
       if (!g.lv && levels[k]) g.lv = levels[k];
       return g;
     });
-    Object.keys(closing || {}).forEach(function (sym) {
-      var c = closing[sym];
+    Object.keys(closing || {}).forEach(function (key) {
+      var c = closing[key], sym = c.symbol || key; // a re-checked trade is keyed symbol:openedAt
       if (groups[sym + ':' + c.openedAt]) return; // already booked
       list.push({ symbol: sym, bias: c.bias, entry: c.entry, openedAt: c.openedAt, closedAt: c.closedDetectedAt, score: c.score, pnl: null, fills: [],
         lv: c.t1 != null ? { stop: c.initialStop != null ? c.initialStop : c.stop, t1: c.t1, t2: c.t2, t3: c.t3 } : null, pending: true });

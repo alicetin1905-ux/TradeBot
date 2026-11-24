@@ -1,1 +1,25 @@
-{}
+{
+  "XLMUSDT": {
+    "symbol": "XLMUSDT",
+    "bias": -1,
+    "score": -70,
+    "orderId": "25cd92ea-68a3-475f-b608-6fc6f8a97301",
+    "price": 0.1244,
+    "qty": 11851,
+    "stopLoss": 0.1296,
+    "ratios": {
+      "t1": 0.9376298417358507,
+      "t2": 0.8960497362264178,
+      "t3": 0.854469630716985
+    },
+    "inst": {
+      "qtyStep": 1,
+      "minOrderQty": 1,
+      "minNotional": 5,
+      "tickSize": 0.0001
+    },
+    "margin": 147.42644,
+    "placedAt": 1795536086733,
+    "expiresAt": 1795550486733
+  }
+}

@@ -104,5 +104,42 @@
     "unrealisedPnl": -53.613,
     "funding": 0.06014433,
     "closedDetectedAt": 1795634401060
+  },
+  "NEARUSDT": {
+    "symbol": "NEARUSDT",
+    "bias": -1,
+    "entry": 2.781,
+    "stop": 2.945,
+    "initialStop": 2.945,
+    "t1": 2.535,
+    "t2": 2.372,
+    "t3": 2.208,
+    "qtyTotal": 374.4,
+    "qtyRemaining": 374.4,
+    "qtyT1": 93.6,
+    "qtyT2": 93.6,
+    "qtyT3": 187.2,
+    "margin": 104.12064000000001,
+    "notional": 1041.2064,
+    "riskAmt": 61.40159999999988,
+    "filled": {
+      "t1": false,
+      "t2": false,
+      "t3": false
+    },
+    "breakeven": false,
+    "beAfter": "t1",
+    "openedAt": 1795626601941,
+    "score": -73,
+    "orders": {
+      "entry": "0fc853e4-46f7-43c6-8987-54c7e83472d4",
+      "t1": "dd19b439-ae96-430d-85ab-d42123bcc451",
+      "t2": "eca3246f-81b6-4727-a3bc-c33f2d5a7a4c",
+      "t3": "fcbdc713-dfce-4f08-ac93-361a7308f168"
+    },
+    "tickSize": 0.001,
+    "markPrice": 2.909,
+    "unrealisedPnl": -47.9232,
+    "closedDetectedAt": 1795635601604
   }
 }

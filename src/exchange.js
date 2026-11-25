@@ -84,7 +84,13 @@ function reasonFor(pos, orderId) {
 // that belong to a newer trade on the same coin.
 async function recordFills(client, st, pos, events, { until = Infinity, skipIds = [] } = {}) {
   const seen = new Set([...st.seenOrderIds, ...skipIds]);
-  let records = await client.getClosedPnl(pos.symbol, pos.openedAt - 60000);
+  // Bybit files a close under its order's creation time, and the stop rides on
+  // the entry order — for a pullback limit that was placed up to
+  // LIMIT_ENTRY_HOURS before the fill (seen live: XLM's final close, created
+  // 2 min before the fill). So ask from well before the fill; which records
+  // belong to this trade is still decided on their fill time below.
+  const lookBack = ((config.LIMIT_ENTRY_HOURS || 4) + 1) * 3600000;
+  let records = await client.getClosedPnl(pos.symbol, pos.openedAt - lookBack);
   // A close whose record didn't come back for that window (seen live: BLUR,
   // 5 Oct): ask again with Bybit's default last-7-days window.
   if (pos.closedDetectedAt && !records.some(r => r.at >= pos.openedAt - 60000 && r.at <= until && !seen.has(r.orderId))) {
@@ -141,7 +147,7 @@ async function reconcile({ client, st, exPos, signals, events, now }) {
       if (!live || live.bias !== pos.bias) {
         await client.cancelAll(sym); // leftover reduce-only target orders
         pos.closedDetectedAt = now;
-        st.closing[sym] = pos;
+        toClosing(st, sym, pos);
         delete st.positions[sym];
         if (!events.some(e => e.symbol === sym && e.type === 'exit')) {
           events.push({ symbol: sym, type: 'exit', reason: 'closed on exchange (P&L record pending)', pnl: 0 });
@@ -175,7 +181,7 @@ async function reconcile({ client, st, exPos, signals, events, now }) {
           events.push({ symbol: sym, type: 'info', reason: `couldn't move stop to breakeven (${err.message}) — closed at market` });
           await recordFills(client, st, pos, events);
           pos.closedDetectedAt = now;
-          st.closing[sym] = pos;
+          toClosing(st, sym, pos);
           delete st.positions[sym];
           delete exPos[sym];
           continue;
@@ -202,7 +208,7 @@ async function reconcile({ client, st, exPos, signals, events, now }) {
             events.push({ symbol: sym, type: 'info', reason: `couldn't move stop to T1 (${err.message}) — price is past T1, closed at market` });
             await recordFills(client, st, pos, events);
             pos.closedDetectedAt = now;
-            st.closing[sym] = pos;
+            toClosing(st, sym, pos);
             delete st.positions[sym];
             delete exPos[sym];
             continue;
@@ -219,7 +225,7 @@ async function reconcile({ client, st, exPos, signals, events, now }) {
         events.push({ symbol: sym, type: 'info', reason: 'score flipped against open position — closed at market' });
         await recordFills(client, st, pos, events);
         pos.closedDetectedAt = now;
-        st.closing[sym] = pos;
+        toClosing(st, sym, pos);
         delete st.positions[sym];
         delete exPos[sym];
       }
@@ -309,7 +315,7 @@ async function processPending({ client, st, exPos, events, now }) {
       if (status === 'Filled') {
         // Filled and already closed again between two syncs: book it.
         const pos = { symbol: sym, bias: o.bias, entry: o.price, orders: { entry: o.orderId }, openedAt: o.placedAt, score: o.score, filled: {}, closedDetectedAt: now };
-        st.closing[sym] = pos;
+        toClosing(st, sym, pos);
         events.push({ symbol: sym, type: 'info', reason: 'limit entry filled and closed again before the next sync' });
       } else {
         events.push({ symbol: sym, type: 'expired', bias: o.bias, price: o.price,
@@ -319,6 +325,15 @@ async function processPending({ client, st, exPos, events, now }) {
       events.push({ symbol: sym, type: 'error', reason: `pending entry: ${err.message}` });
     }
   }
+}
+
+// Moves a position into closing (awaiting its final records). An older trade
+// on the same coin still waiting there is kept under symbol:openedAt so the
+// new one doesn't overwrite it.
+function toClosing(st, sym, pos) {
+  const old = st.closing[sym];
+  if (old && old.openedAt !== pos.openedAt) st.closing[sym + ':' + old.openedAt] = old;
+  st.closing[sym] = pos;
 }
 
 function pendingMargin(st) { return Object.values(st.pending || {}).reduce((s, o) => s + o.margin, 0); }
@@ -489,7 +504,7 @@ async function closeAll({ client, st, events, now = Date.now() }) {
         pos.orders = { ...pos.orders, close: id };
         pos.closedBy = 'command';
         pos.closedDetectedAt = now;
-        st.closing[sym] = pos;
+        toClosing(st, sym, pos);
         delete st.positions[sym];
       }
     } catch (err) {

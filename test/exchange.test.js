@@ -1043,3 +1043,29 @@ test('closing: a position with only its T1 booked is kept and retried, not dropp
   await exchange.runExchange({ client, st, signals: {}, candidates: [], events: [] });
   assert.equal(st.closing.XRPUSDT, undefined, 'dropped once fully booked');
 });
+
+test('fills: closed-pnl is asked from before the fill (a limit entry\'s stop is filed under its order time)', async () => {
+  const { client } = fakeBybit();
+  const asked = [];
+  const orig = client.getClosedPnl;
+  client.getClosedPnl = async (sym, since) => { asked.push(since); return orig(sym, since); };
+  const st = freshState();
+  const t0 = Date.now() - 3 * 86400000;
+  st.closing.XRPUSDT = { symbol: 'XRPUSDT', bias: 1, entry: 2, qtyTotal: 100, openedAt: t0, closedDetectedAt: Date.now() - 3600000, orders: {}, filled: {} };
+  await exchange.runExchange({ client, st, signals: {}, candidates: [], events: [] });
+  assert.ok(asked.length && asked[0] <= t0 - ((config.LIMIT_ENTRY_HOURS || 4) * 3600000), 'asks from at least LIMIT_ENTRY_HOURS before the fill');
+});
+
+test('closing: a new trade on the same coin does not overwrite an older one still waiting for its records', async () => {
+  const { ex, client } = fakeBybit({ marks: { XRPUSDT: 2.5 } });
+  const st = freshState();
+  const old = { symbol: 'XRPUSDT', bias: 1, entry: 2, qtyTotal: 100, openedAt: Date.now() - 5 * 86400000, closedDetectedAt: Date.now() - 2 * 86400000, orders: {}, filled: {} };
+  st.closing.XRPUSDT = old;
+  // a newer XRP position the bot tracks, already gone on the exchange
+  st.positions.XRPUSDT = { symbol: 'XRPUSDT', bias: 1, entry: 2.4, qtyTotal: 50, qtyRemaining: 50, openedAt: Date.now() - 3600000, orders: {}, filled: {}, stop: 2.3 };
+  await exchange.runExchange({ client, st, signals: {}, candidates: [], events: [] });
+  assert.equal(st.closing.XRPUSDT.openedAt, st.closing.XRPUSDT.openedAt);
+  assert.ok(st.closing['XRPUSDT:' + old.openedAt], 'older trade kept under symbol:openedAt');
+  assert.notEqual(st.closing.XRPUSDT.openedAt, old.openedAt, 'newer trade under the plain symbol');
+  void ex;
+});

@@ -1064,5 +1064,39 @@
     "t2": 0.005754,
     "t3": 0.005188,
     "qtyTotal": 84036
+  },
+  {
+    "symbol": "SOLUSDT",
+    "bias": -1,
+    "entry": 68.02,
+    "exit": 70.76,
+    "qty": 22.4,
+    "pnl": -62.88291829,
+    "reason": "stop hit",
+    "openedAt": 1795619101395,
+    "closedAt": 1795634258476,
+    "score": -79,
+    "stop": 70.75,
+    "t1": 63.92,
+    "t2": 61.19,
+    "t3": 58.46,
+    "qtyTotal": 22.4
+  },
+  {
+    "symbol": "SUIUSDT",
+    "bias": -1,
+    "entry": 0.6338,
+    "exit": 0.6635,
+    "qty": 2070,
+    "pnl": -62.72896512,
+    "reason": "stop hit",
+    "openedAt": 1795619101395,
+    "closedAt": 1795634253292,
+    "score": -79,
+    "stop": 0.6633,
+    "t1": 0.5895,
+    "t2": 0.56,
+    "t3": 0.5305,
+    "qtyTotal": 2070
   }
 ]

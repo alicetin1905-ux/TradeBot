@@ -32,8 +32,8 @@
       "t3": "d4f06e57-6a0e-4e24-90de-dcd6af20c9d0"
     },
     "tickSize": 0.0001,
-    "markPrice": 0.12253,
-    "unrealisedPnl": 22.16137,
+    "markPrice": 0.12391,
+    "unrealisedPnl": 5.80699,
     "funding": 0.0029823999999999996
   },
   "SOLUSDT": {
@@ -69,8 +69,8 @@
       "t3": "5f4dbd1a-1596-4080-ba66-d66cf5f860c4"
     },
     "tickSize": 0.01,
-    "markPrice": 67.701,
-    "unrealisedPnl": 7.1456
+    "markPrice": 68.442,
+    "unrealisedPnl": -9.4528
   },
   "SUIUSDT": {
     "symbol": "SUIUSDT",
@@ -105,8 +105,44 @@
       "t3": "7af4d905-7fa7-405d-b08e-96891bc28e85"
     },
     "tickSize": 0.0001,
-    "markPrice": 0.6312,
-    "unrealisedPnl": 5.382,
+    "markPrice": 0.64103,
+    "unrealisedPnl": -14.9661,
     "funding": 0.06014433
+  },
+  "NEARUSDT": {
+    "symbol": "NEARUSDT",
+    "bias": -1,
+    "entry": 2.781,
+    "stop": 2.945,
+    "initialStop": 2.945,
+    "t1": 2.535,
+    "t2": 2.372,
+    "t3": 2.208,
+    "qtyTotal": 374.4,
+    "qtyRemaining": 374.4,
+    "qtyT1": 93.6,
+    "qtyT2": 93.6,
+    "qtyT3": 187.2,
+    "margin": 104.12064000000001,
+    "notional": 1041.2064,
+    "riskAmt": 61.40159999999988,
+    "filled": {
+      "t1": false,
+      "t2": false,
+      "t3": false
+    },
+    "breakeven": false,
+    "beAfter": "t1",
+    "openedAt": 1795626601941,
+    "score": -73,
+    "orders": {
+      "entry": "0fc853e4-46f7-43c6-8987-54c7e83472d4",
+      "t1": "dd19b439-ae96-430d-85ab-d42123bcc451",
+      "t2": "eca3246f-81b6-4727-a3bc-c33f2d5a7a4c",
+      "t3": "fcbdc713-dfce-4f08-ac93-361a7308f168"
+    },
+    "tickSize": 0.001,
+    "markPrice": 2.7811,
+    "unrealisedPnl": -0.03744
   }
 }

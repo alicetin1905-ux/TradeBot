@@ -769,6 +769,8 @@ const LEAK = args.includes('--leak');
 const PF3_LAB = args.includes('--pf3-lab');
 // --adx-lab: ADX cap 35/40/45/50 on the live setup, with both coin halves; written to backtest/ADX_LAB.md.
 const ADX_LAB = args.includes('--adx-lab');
+// --slot-lab2: fewer trades in one direction / per candle on the live setup; backtest/SLOT_LAB2.md.
+const SLOT_LAB2 = args.includes('--slot-lab2');
 // --live-compare YYYY-MM-DD: the live setup simulated from that date to now (trade list), plus how
 // often a run of the same number of trades did as badly over the whole backtest; backtest/LIVE_COMPARE.md.
 // --be-roe-lab: stop to breakeven once the trade is +X% on its margin (ROE); backtest/BE_ROE_LAB.md.
@@ -809,7 +811,7 @@ async function main() {
   }
   for (const s of symbols) {
     process.stderr.write(`scoring ${s}…\n`);
-    series[s].sig1 = SCORE_LAB ? new Map() : TF_COMPARE ? precompute(s, series[s].h1, 1, start) : SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB || RISK_GRID || LEV_GRID || DD_LAB || RISK_STARTS || COIN_WF || SCORE_MOM || LAB2 || LAB3 || TF_DAY || PER_CANDLE || COINSET || TUNE || COMBO || SPLIT || SLOTS || BTC_COOL || BTC_LINE || TIME_STOP || SCORE_JUMP || SCORE_JUMP_ROB || PF_LAB || SCORE_RISE || LIMIT_ROB || LIVE_NOW || STOP_LAB || STREAK_ROB || SCORE_NOW || NEW_COINS || ADD_CHECK || CHASE_LAB || DROP_CHECK || FLIP_LAB || DAY_LAB || COOL_LAB || PF2_LAB || MARGIN_LAB || LEAK || PF3_LAB || ADX_LAB || LIVE_COMPARE || BE_ROE_LAB || FUND_LAB ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
+    series[s].sig1 = SCORE_LAB ? new Map() : TF_COMPARE ? precompute(s, series[s].h1, 1, start) : SCAN || COINS || TP_GRID || ANALYZE || SCORE_SCAN || SCORE_WF || EXIT_LAB || RISK_GRID || LEV_GRID || DD_LAB || RISK_STARTS || COIN_WF || SCORE_MOM || LAB2 || LAB3 || TF_DAY || PER_CANDLE || COINSET || TUNE || COMBO || SPLIT || SLOTS || BTC_COOL || BTC_LINE || TIME_STOP || SCORE_JUMP || SCORE_JUMP_ROB || PF_LAB || SCORE_RISE || LIMIT_ROB || LIVE_NOW || STOP_LAB || STREAK_ROB || SCORE_NOW || NEW_COINS || ADD_CHECK || CHASE_LAB || DROP_CHECK || FLIP_LAB || DAY_LAB || COOL_LAB || PF2_LAB || MARGIN_LAB || LEAK || PF3_LAB || ADX_LAB || SLOT_LAB2 || LIVE_COMPARE || BE_ROE_LAB || FUND_LAB ? new Map() : precompute(s, series[s].h1, 1, start); // the scan only uses 4H
     series[s].sig4 = SCORE_LAB ? precompute(s, to4h(series[s].h1), 4, start, { h1: series[s].h1, mode: LAB_MODE, mtfTrim: LAB_MTF }) : precompute(s, to4h(series[s].h1), 4, start);
     if (FUND_LAB) series[s].fund = loadFunding(s);
     if (DAY_LAB) series[s].dEma = dailyEma(to1d(series[s].h1));
@@ -911,6 +913,21 @@ async function main() {
     fs.writeFileSync(path.join(OUT, 'LIVE_COMPARE.md'), L.join('\n') + '\n');
     console.log(L.join('\n'));
     return;
+  }
+  if (SLOT_LAB2) {
+    const NOW = { minScore: 65, limit: { atr: 0.3, hours: 4 }, beBufferPct: 0.2, maxAdx: 40 };
+    const all = config.SYMBOLS, n = Math.ceil(all.length / 2), A = all.slice(0, n), B = all.slice(n);
+    const halves = (...vs) => [['-- first half of the coins --', null], ['live, first half', { ...NOW, coins: A }], ...vs.map(([l, x]) => [l + ', first half', { ...NOW, ...x, coins: A }]),
+      ['-- second half of the coins --', null], ['live, second half', { ...NOW, coins: B }], ...vs.map(([l, x]) => [l + ', second half', { ...NOW, ...x, coins: B }])];
+    return variantTable('Trades in one direction / per candle (live setup)', [
+      ['A  live: 5 open, 4 per direction, 3 new per candle', { ...NOW }],
+      ['3 per direction', { ...NOW, maxSameDir: 3 }],
+      ['2 new per candle', { ...NOW, maxNewPerCandle: 2 }],
+      ['3 per direction + 2 new per candle', { ...NOW, maxSameDir: 3, maxNewPerCandle: 2 }],
+      ['4 open, 3 per direction', { ...NOW, maxOpen: 4, maxSameDir: 3 }],
+      ['1 new per candle', { ...NOW, maxNewPerCandle: 1 }],
+      ...halves(['3 per direction', { maxSameDir: 3 }], ['2 new per candle', { maxNewPerCandle: 2 }]),
+    ], series, times, start, now, 'SLOT_LAB2.md', 'Live setup (score 65, limit 0.3 ATR 4h, BE +0.2%, ADX < 40, ' + all.length + ' coins, 2.5% risk). Fewer trades open in one direction, or fewer new trades per 4H candle, so a sharp reversal hits fewer positions at once (like 25 Nov: 4 shorts stopped in one evening).');
   }
   if (ADX_LAB) {
     const NOW = { minScore: 65, limit: { atr: 0.3, hours: 4 }, beBufferPct: 0.2 };
@@ -1898,14 +1915,14 @@ function variantTable(title, V, series, times, start, end, file, note) {
 function newCoinsLive(series, cands, times, start, end) {
   const live = VARIANTS.find(v => v.focus);
   const P = config.PORTFOLIO;
-  const NOW = { minScore: 65, limit: { atr: 0.3, hours: 4 }, beBufferPct: 0.2 };
+  const NOW = { minScore: 65, limit: { atr: 0.3, hours: 4 }, beBufferPct: 0.2, maxAdx: 40 };
   const base = { ...live.rules, start: P.STARTING_BALANCE, margin: P.MARGIN_USDT, leverage: P.LEVERAGE, maxOpen: P.MAX_OPEN_POSITIONS, maxSameDir: P.MAX_SAME_DIRECTION, ...NOW };
   const pad = (x, n) => String(x).padStart(n);
   const pf = (r) => { let w = 0, l = 0; for (const t of r.tradeList) { if (t.pnl > 0) w += t.pnl; else l -= t.pnl; } return l ? w / l : 0; };
   const split = Date.UTC(2024, 0, 1);
   const tA = times.filter(t => t < split), tB = times.filter(t => t >= split);
   const L = [];
-  L.push(`Candidate coins on the live setup (score 65, limit 0.3 ATR 4h, BE +0.2%) · ${new Date(start).toISOString().slice(0, 10)} -> ${new Date(end).toISOString().slice(0, 10)}`, '');
+  L.push(`Candidate coins on the live setup (score 65, limit 0.3 ATR 4h, BE +0.2%, ADX < 40) · ${new Date(start).toISOString().slice(0, 10)} -> ${new Date(end).toISOString().slice(0, 10)}`, '');
   L.push('1) Each coin alone · $100 fixed risk per trade · 2000 start · since its listing', '');
   L.push('coin'.padEnd(10) + pad('since', 9) + pad('trades', 8) + pad('net $', 9) + pad('PF', 6) + pad('win%', 6) + pad('drop', 7) + pad('20-23 $', 9) + pad('24-26 $', 9));
   const rows = [];

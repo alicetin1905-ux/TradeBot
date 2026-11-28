@@ -1092,7 +1092,7 @@ async function main() {
       'Live setup: score 65, limit 0.3 ATR 4h, BE +0.2%, 2.5% risk, max 5 open / 4 per direction / 3 per candle. The half check repeats the removal on the half of the list that holds the coin.');
   }
   if (ADD_CHECK) {
-    const NOW = { minScore: 65, limit: { atr: 0.3, hours: 4 }, beBufferPct: 0.2 };
+    const NOW = { minScore: 65, limit: { atr: 0.3, hours: 4 }, beBufferPct: 0.2, maxAdx: 40 };
     const add = CANDIDATES.filter(c => series[c]), base = config.SYMBOLS, n = Math.ceil(base.length / 2);
     const A = base.slice(0, n), B = base.slice(n);
     const V = [['A  live ' + base.length + ' coins', { ...NOW }]];
@@ -1101,7 +1101,7 @@ async function main() {
     V.push(['-- first half of the live list --', null], ['first half', { ...NOW, coins: A }], ['first half + new', { ...NOW, coins: [...A, ...add] }]);
     V.push(['-- second half of the live list --', null], ['second half', { ...NOW, coins: B }], ['second half + new', { ...NOW, coins: [...B, ...add] }]);
     return variantTable('Adding ' + add.map(c => c.replace('USDT', '')).join(' + ') + ' to the live coins (live setup)', V, series, times, start, now, 'ADD_CHECK.md',
-      'Live setup: score 65, limit 0.3 ATR 4h, BE +0.2%, 2.5% risk, max 5 open / 4 per direction / 3 per candle. The halves check whether the new coins help on a different base list.');
+      'Live setup: score 65, limit 0.3 ATR 4h, BE +0.2%, ADX < 40, 2.5% risk, max 5 open / 4 per direction / 3 per candle. The halves check whether the new coins help on a different base list.');
   }
   if (NEW_COINS) return newCoinsLive(series, symbols.filter(s => CANDIDATES.includes(s) && !config.SYMBOLS.includes(s)), times, start, now);
   if (SCORE_NOW) {
